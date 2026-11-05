@@ -1,0 +1,39 @@
+# .NET
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+TestResults/
+artifacts/
+
+# Node
+node_modules/
+dist/
+.vite/
+web/dist/
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+appsettings.Development.local.json
+appsettings.Local.json
+secrets/
+*.secrets.json
+*.pfx
+*.snk
+
+# Logs and databases
+logs/
+*.log
+*.mdf
+*.ldf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local reference material (SPEC docs of the legacy system) — not for publication
+_ref/
