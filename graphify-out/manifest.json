@@ -1,924 +1,1134 @@
 {
   "NovaFleet.sln": {
-    "mtime": 1794166852.33362,
-    "seen": 1794167532.6010296,
+    "mtime": 1794168473.2031715,
+    "seen": 1794168550.9561365,
     "ast_hash": "bab6c26559251bd28e9cc9a28621c638",
     "semantic_hash": "bab6c26559251bd28e9cc9a28621c638"
   },
   "dotnet-tools.json": {
-    "mtime": 1794166852.4037824,
-    "seen": 1794167532.6010296,
+    "mtime": 1794168473.2781787,
+    "seen": 1794168550.9561365,
     "ast_hash": "6b229f907365e56e0ba992691e9244f8",
     "semantic_hash": "6b229f907365e56e0ba992691e9244f8",
     "ast_empty": true
   },
   "global.json": {
-    "mtime": 1794166852.4037824,
-    "seen": 1794167532.6010296,
+    "mtime": 1794168473.2791705,
+    "seen": 1794168550.9561365,
     "ast_hash": "2321e67e65fbacc60d3a2da32a532cb6",
     "semantic_hash": "2321e67e65fbacc60d3a2da32a532cb6",
     "ast_empty": true
   },
   "src/NovaFleet.Api/Endpoints/EndpointMapper.cs": {
-    "mtime": 1794166852.4067757,
-    "seen": 1794167532.6010296,
+    "mtime": 1794168473.383263,
+    "seen": 1794168550.9561365,
     "ast_hash": "02d4e7a2fed1e523d07d25198152130e",
     "semantic_hash": "02d4e7a2fed1e523d07d25198152130e"
   },
   "src/NovaFleet.Api/Identity/CurrentUser.cs": {
-    "mtime": 1794166852.4077766,
-    "seen": 1794167532.6010296,
+    "mtime": 1794168473.3842638,
+    "seen": 1794168550.9561365,
     "ast_hash": "8e64f997c4c16869096900d6c8bec64c",
     "semantic_hash": "8e64f997c4c16869096900d6c8bec64c"
   },
   "src/NovaFleet.Api/Identity/CurrentUserMiddleware.cs": {
-    "mtime": 1794166852.4077766,
-    "seen": 1794167532.6020305,
+    "mtime": 1794168473.3842638,
+    "seen": 1794168550.9561365,
     "ast_hash": "36942fc9060ac366dc5fdcf85a484151",
     "semantic_hash": "36942fc9060ac366dc5fdcf85a484151"
   },
   "src/NovaFleet.Api/Identity/HttpContextRequestContext.cs": {
-    "mtime": 1794166852.4087892,
-    "seen": 1794167532.6020305,
+    "mtime": 1794168473.385263,
+    "seen": 1794168550.9561365,
     "ast_hash": "c593222a6ca903de4feafa301a03420f",
     "semantic_hash": "c593222a6ca903de4feafa301a03420f"
   },
   "src/NovaFleet.Api/Middleware/ApiExceptionHandlerMiddleware.cs": {
-    "mtime": 1794166852.4087892,
-    "seen": 1794167532.6020305,
+    "mtime": 1794168473.385263,
+    "seen": 1794168550.9561365,
     "ast_hash": "c3eb641aa4ca173c4a2e843bd3c8f231",
     "semantic_hash": "c3eb641aa4ca173c4a2e843bd3c8f231"
   },
   "src/NovaFleet.Api/NovaFleet.Api.csproj": {
-    "mtime": 1794166852.409778,
-    "seen": 1794167532.6020305,
+    "mtime": 1794168473.3862624,
+    "seen": 1794168550.9561365,
     "ast_hash": "ab58dcd62923dc64b9610b258e85d69f",
     "semantic_hash": "ab58dcd62923dc64b9610b258e85d69f"
   },
   "src/NovaFleet.Api/Program.cs": {
-    "mtime": 1794166852.410797,
-    "seen": 1794167532.6030307,
+    "mtime": 1794168473.3862624,
+    "seen": 1794168550.9561365,
     "ast_hash": "d3a0a65510be402a4080fac82c0cb8ac",
     "semantic_hash": "d3a0a65510be402a4080fac82c0cb8ac"
   },
   "src/NovaFleet.Api/Properties/launchSettings.json": {
-    "mtime": 1794166852.410797,
-    "seen": 1794167532.6030307,
+    "mtime": 1794168473.3872628,
+    "seen": 1794168550.9561365,
     "ast_hash": "e4afe8a7eeb9a866af2bcec2d8a2ec6b",
     "semantic_hash": "e4afe8a7eeb9a866af2bcec2d8a2ec6b"
   },
   "src/NovaFleet.Api/Workers/MissionLifecycleWorker.cs": {
-    "mtime": 1794166852.4117756,
-    "seen": 1794167532.6030307,
+    "mtime": 1794168473.388271,
+    "seen": 1794168550.9561365,
     "ast_hash": "9086f4412f42c59d8f7cb88ae07c5c35",
     "semantic_hash": "9086f4412f42c59d8f7cb88ae07c5c35"
   },
   "src/NovaFleet.Api/Workers/SmsQueueWorker.cs": {
-    "mtime": 1794166852.412776,
-    "seen": 1794167532.6030307,
+    "mtime": 1794168473.388271,
+    "seen": 1794168550.9561365,
     "ast_hash": "55e42cbf32059e5ca34370404d49e15c",
     "semantic_hash": "55e42cbf32059e5ca34370404d49e15c"
   },
   "src/NovaFleet.Api/appsettings.Development.json": {
-    "mtime": 1794166852.412776,
-    "seen": 1794167532.6040292,
+    "mtime": 1794168473.3892646,
+    "seen": 1794168550.9561365,
     "ast_hash": "804b473502a4c415cf75db61c56c32aa",
     "semantic_hash": "804b473502a4c415cf75db61c56c32aa",
     "ast_empty": true
   },
   "src/NovaFleet.Api/appsettings.json": {
-    "mtime": 1794166852.4137926,
-    "seen": 1794167532.6040292,
+    "mtime": 1794168473.3892646,
+    "seen": 1794168550.9561365,
     "ast_hash": "a8506e8bcd3b8d7a2cc83fa42157340f",
     "semantic_hash": "a8506e8bcd3b8d7a2cc83fa42157340f",
     "ast_empty": true
   },
   "src/NovaFleet.Application/Abstractions/IAuditTrail.cs": {
-    "mtime": 1794166852.414775,
-    "seen": 1794167532.6040292,
+    "mtime": 1794168473.3902638,
+    "seen": 1794168550.9561365,
     "ast_hash": "6449a1203d13f0f2cf31b6d67abf138f",
     "semantic_hash": "6449a1203d13f0f2cf31b6d67abf138f"
   },
   "src/NovaFleet.Application/Abstractions/IClock.cs": {
-    "mtime": 1794166852.414775,
-    "seen": 1794167532.6040292,
+    "mtime": 1794168473.3902638,
+    "seen": 1794168550.9561365,
     "ast_hash": "6ca675e72a37e0ac53faed457bf13148",
     "semantic_hash": "6ca675e72a37e0ac53faed457bf13148"
   },
   "src/NovaFleet.Application/Abstractions/ICurrentUser.cs": {
-    "mtime": 1794166852.414775,
-    "seen": 1794167532.6040292,
+    "mtime": 1794168473.3902638,
+    "seen": 1794168550.9561365,
     "ast_hash": "6cd6c2c8a3718a7fd05baa8f5157aa30",
     "semantic_hash": "6cd6c2c8a3718a7fd05baa8f5157aa30"
   },
   "src/NovaFleet.Application/Abstractions/IDirectoryAuthenticator.cs": {
-    "mtime": 1794166852.4157767,
-    "seen": 1794167532.6040292,
+    "mtime": 1794168473.3902638,
+    "seen": 1794168550.9561365,
     "ast_hash": "923a259daf381cecad748258bac6d443",
     "semantic_hash": "923a259daf381cecad748258bac6d443"
   },
   "src/NovaFleet.Application/Abstractions/INotificationPublisher.cs": {
-    "mtime": 1794166852.4157767,
-    "seen": 1794167532.6050313,
+    "mtime": 1794168473.391263,
+    "seen": 1794168550.9561365,
     "ast_hash": "9ca39e3e5c8c3003778c54e2e6e71617",
     "semantic_hash": "9ca39e3e5c8c3003778c54e2e6e71617"
   },
   "src/NovaFleet.Application/Abstractions/IPasswordHasher.cs": {
-    "mtime": 1794166852.416785,
-    "seen": 1794167532.6050313,
+    "mtime": 1794168473.391263,
+    "seen": 1794168550.9561365,
     "ast_hash": "26557d33797584cfc74c9b77d94bba93",
     "semantic_hash": "26557d33797584cfc74c9b77d94bba93"
   },
   "src/NovaFleet.Application/Abstractions/IPermissionResolver.cs": {
-    "mtime": 1794166852.416785,
-    "seen": 1794167532.6050313,
+    "mtime": 1794168473.392263,
+    "seen": 1794168550.9561365,
     "ast_hash": "98abca69052508a16db1a03ae5c0cb0d",
     "semantic_hash": "98abca69052508a16db1a03ae5c0cb0d"
   },
   "src/NovaFleet.Application/Abstractions/IRealtimeNotifier.cs": {
-    "mtime": 1794166852.4177766,
-    "seen": 1794167532.6050313,
+    "mtime": 1794168473.392263,
+    "seen": 1794168550.9561365,
     "ast_hash": "9eb65a539d6a08aa1cb42f8eb249918c",
     "semantic_hash": "9eb65a539d6a08aa1cb42f8eb249918c"
   },
   "src/NovaFleet.Application/Abstractions/IRequestContext.cs": {
-    "mtime": 1794166852.4177766,
-    "seen": 1794167532.6060622,
+    "mtime": 1794168473.392263,
+    "seen": 1794168550.9561365,
     "ast_hash": "c14f2d3d1e8dd709f52de768f4049abd",
     "semantic_hash": "c14f2d3d1e8dd709f52de768f4049abd"
   },
   "src/NovaFleet.Application/Abstractions/ISmsGateway.cs": {
-    "mtime": 1794166852.418777,
-    "seen": 1794167532.6060622,
+    "mtime": 1794168473.3932626,
+    "seen": 1794168550.9561365,
     "ast_hash": "3cdc95e68b9ad7f497c50ab16fce53c0",
     "semantic_hash": "3cdc95e68b9ad7f497c50ab16fce53c0"
   },
   "src/NovaFleet.Application/Auditing/AuditModels.cs": {
-    "mtime": 1794166852.418777,
-    "seen": 1794167532.6060622,
+    "mtime": 1794168473.3932626,
+    "seen": 1794168550.9561365,
     "ast_hash": "f627de7f98b123253f2b1a218a0f0ce2",
     "semantic_hash": "f627de7f98b123253f2b1a218a0f0ce2"
   },
   "src/NovaFleet.Application/Authorization/EffectivePermissionSet.cs": {
-    "mtime": 1794166852.4197764,
-    "seen": 1794167532.6060622,
+    "mtime": 1794168473.3942652,
+    "seen": 1794168550.9561365,
     "ast_hash": "333da78c51d730786f41de749fb72905",
     "semantic_hash": "333da78c51d730786f41de749fb72905"
   },
   "src/NovaFleet.Application/Authorization/PermissionCatalog.cs": {
-    "mtime": 1794166852.4207764,
-    "seen": 1794167532.607059,
+    "mtime": 1794168473.3952649,
+    "seen": 1794168550.9561365,
     "ast_hash": "c56dd6c392962018823ab6f61dc2c7ab",
     "semantic_hash": "c56dd6c392962018823ab6f61dc2c7ab"
   },
   "src/NovaFleet.Application/Common/AppException.cs": {
-    "mtime": 1794166852.4207764,
-    "seen": 1794167532.607059,
+    "mtime": 1794168473.3952649,
+    "seen": 1794168550.9561365,
     "ast_hash": "16836ee1dd4588ed474653c39a3e5022",
     "semantic_hash": "16836ee1dd4588ed474653c39a3e5022"
   },
   "src/NovaFleet.Application/Common/PagedResult.cs": {
-    "mtime": 1794166852.4217768,
-    "seen": 1794167532.607059,
+    "mtime": 1794168473.3962643,
+    "seen": 1794168550.9561365,
     "ast_hash": "993cc4c1bd5743582cc2d6e1ed6a321a",
     "semantic_hash": "993cc4c1bd5743582cc2d6e1ed6a321a"
   },
   "src/NovaFleet.Application/Dashboard/DashboardModels.cs": {
-    "mtime": 1794166852.4217768,
-    "seen": 1794167532.607059,
+    "mtime": 1794168473.3962643,
+    "seen": 1794168550.9561365,
     "ast_hash": "003801c44a64ce87d7fa1ee4c93653b9",
     "semantic_hash": "003801c44a64ce87d7fa1ee4c93653b9"
   },
   "src/NovaFleet.Application/Drivers/DriverModels.cs": {
-    "mtime": 1794166852.4227753,
-    "seen": 1794167532.6080604,
+    "mtime": 1794168473.397263,
+    "seen": 1794168550.9561365,
     "ast_hash": "cd02d160d4b97aecc0a02b4d504797d1",
     "semantic_hash": "cd02d160d4b97aecc0a02b4d504797d1"
   },
   "src/NovaFleet.Application/Identity/IdentityModels.cs": {
-    "mtime": 1794166852.4237769,
-    "seen": 1794167532.6080604,
+    "mtime": 1794168473.398264,
+    "seen": 1794168550.9561365,
     "ast_hash": "518659aac9fc65c8b83aedff062501fb",
     "semantic_hash": "518659aac9fc65c8b83aedff062501fb"
   },
   "src/NovaFleet.Application/Locations/LocationModels.cs": {
-    "mtime": 1794166852.424781,
-    "seen": 1794167532.6080604,
+    "mtime": 1794168473.399263,
+    "seen": 1794168550.9561365,
     "ast_hash": "deeaadc4fb20cd174051a08d12a6bb44",
     "semantic_hash": "deeaadc4fb20cd174051a08d12a6bb44"
   },
   "src/NovaFleet.Application/Missions/MissionModels.cs": {
-    "mtime": 1794166852.4257767,
-    "seen": 1794167532.6080604,
+    "mtime": 1794168473.399263,
+    "seen": 1794168550.9561365,
     "ast_hash": "dec2b2bee62333a1d34f37f0fb1f5d9e",
     "semantic_hash": "dec2b2bee62333a1d34f37f0fb1f5d9e"
   },
   "src/NovaFleet.Application/Notifications/NotificationModels.cs": {
-    "mtime": 1794166852.4257767,
-    "seen": 1794167532.6080604,
+    "mtime": 1794168473.400264,
+    "seen": 1794168550.9561365,
     "ast_hash": "477990448cf77ce6f55ced2112a2061a",
     "semantic_hash": "477990448cf77ce6f55ced2112a2061a"
   },
   "src/NovaFleet.Application/Notifications/SmsDefaults.cs": {
-    "mtime": 1794166852.4267764,
-    "seen": 1794167532.6090593,
+    "mtime": 1794168473.400264,
+    "seen": 1794168550.9561365,
     "ast_hash": "4b79ea2e02cc45d0f81a67c965a7d227",
     "semantic_hash": "4b79ea2e02cc45d0f81a67c965a7d227"
   },
   "src/NovaFleet.Application/NovaFleet.Application.csproj": {
-    "mtime": 1794166852.4267764,
-    "seen": 1794167532.6090593,
+    "mtime": 1794168473.400264,
+    "seen": 1794168550.9561365,
     "ast_hash": "b9d2e0895871fce7519f76b1826197c2",
     "semantic_hash": "b9d2e0895871fce7519f76b1826197c2"
   },
   "src/NovaFleet.Application/Organization/OrganizationModels.cs": {
-    "mtime": 1794166852.427778,
-    "seen": 1794167532.6090593,
+    "mtime": 1794168473.401263,
+    "seen": 1794168550.9561365,
     "ast_hash": "1722161ecd15ffc7f1e8a2e48dce27c4",
     "semantic_hash": "1722161ecd15ffc7f1e8a2e48dce27c4"
   },
   "src/NovaFleet.Application/Reports/ReportModels.cs": {
-    "mtime": 1794166852.4287765,
-    "seen": 1794167532.6090593,
+    "mtime": 1794168473.401263,
+    "seen": 1794168550.9561365,
     "ast_hash": "a2de7d15709a295c9666b0423e1998c0",
     "semantic_hash": "a2de7d15709a295c9666b0423e1998c0"
   },
   "src/NovaFleet.Application/Sessions/SessionModels.cs": {
-    "mtime": 1794166852.4287765,
-    "seen": 1794167532.610059,
+    "mtime": 1794168473.4022636,
+    "seen": 1794168550.9561365,
     "ast_hash": "66a49b0d7f59074ed8568ff6562045f3",
     "semantic_hash": "66a49b0d7f59074ed8568ff6562045f3"
   },
   "src/NovaFleet.Application/Settings/SettingKeys.cs": {
-    "mtime": 1794166852.429777,
-    "seen": 1794167532.610059,
+    "mtime": 1794168473.4022636,
+    "seen": 1794168550.9561365,
     "ast_hash": "654f653874dd120145dc9563b06d0034",
     "semantic_hash": "654f653874dd120145dc9563b06d0034"
   },
   "src/NovaFleet.Application/Settings/SettingsModels.cs": {
-    "mtime": 1794166852.430775,
-    "seen": 1794167532.610059,
+    "mtime": 1794168473.4032636,
+    "seen": 1794168550.9561365,
     "ast_hash": "4009696116d99abd14d0b4ae098e0dd0",
     "semantic_hash": "4009696116d99abd14d0b4ae098e0dd0"
   },
   "src/NovaFleet.Application/Setup/SetupModels.cs": {
-    "mtime": 1794166852.430775,
-    "seen": 1794167532.610059,
+    "mtime": 1794168473.4032636,
+    "seen": 1794168550.9561365,
     "ast_hash": "775c1c0c113342a9f33e3debb541693d",
     "semantic_hash": "775c1c0c113342a9f33e3debb541693d"
   },
   "src/NovaFleet.Application/Timeline/TimelineModels.cs": {
-    "mtime": 1794166852.4317768,
-    "seen": 1794167532.6110601,
+    "mtime": 1794168473.4142663,
+    "seen": 1794168550.9561365,
     "ast_hash": "82a02820cd481e111d8faddd447c8356",
     "semantic_hash": "82a02820cd481e111d8faddd447c8356"
   },
   "src/NovaFleet.Application/Vehicles/VehicleModels.cs": {
-    "mtime": 1794166852.432777,
-    "seen": 1794167532.6110601,
+    "mtime": 1794168473.4152625,
+    "seen": 1794168550.9561365,
     "ast_hash": "cc0b51ac3be06450299e4efaddc9abd1",
     "semantic_hash": "cc0b51ac3be06450299e4efaddc9abd1"
   },
   "src/NovaFleet.Domain/Auditing/AuditEntry.cs": {
-    "mtime": 1794166852.433776,
-    "seen": 1794167532.6110601,
+    "mtime": 1794168473.465808,
+    "seen": 1794168550.9561365,
     "ast_hash": "0041eec6a54b28e052111348efb8b4e4",
     "semantic_hash": "0041eec6a54b28e052111348efb8b4e4"
   },
   "src/NovaFleet.Domain/Common/Entity.cs": {
-    "mtime": 1794166852.433776,
-    "seen": 1794167532.6110601,
+    "mtime": 1794168473.4668064,
+    "seen": 1794168550.9561365,
     "ast_hash": "acc018f3d18c014e3520a864ebfb790c",
     "semantic_hash": "acc018f3d18c014e3520a864ebfb790c"
   },
   "src/NovaFleet.Domain/Common/JalaliDate.cs": {
-    "mtime": 1794166852.4347758,
-    "seen": 1794167532.6120598,
+    "mtime": 1794168473.467805,
+    "seen": 1794168550.9561365,
     "ast_hash": "45bbbb7e9417da74047e824c3735526f",
     "semantic_hash": "45bbbb7e9417da74047e824c3735526f"
   },
   "src/NovaFleet.Domain/Configuration/MissionNumberSequence.cs": {
-    "mtime": 1794166852.435776,
-    "seen": 1794167532.6120598,
+    "mtime": 1794168473.467805,
+    "seen": 1794168550.9561365,
     "ast_hash": "f8c5d7a9f9ddeb1df6e9ddde1d8b350d",
     "semantic_hash": "f8c5d7a9f9ddeb1df6e9ddde1d8b350d"
   },
   "src/NovaFleet.Domain/Configuration/SystemSetting.cs": {
-    "mtime": 1794166852.435776,
-    "seen": 1794167532.6120598,
+    "mtime": 1794168473.467805,
+    "seen": 1794168550.9561365,
     "ast_hash": "e968146ec6d2b3639e75ef64d8e5aece",
     "semantic_hash": "e968146ec6d2b3639e75ef64d8e5aece"
   },
   "src/NovaFleet.Domain/Drivers/Driver.cs": {
-    "mtime": 1794166852.4367764,
-    "seen": 1794167532.6120598,
+    "mtime": 1794168473.4688053,
+    "seen": 1794168550.9561365,
     "ast_hash": "99c43b215f020de89ae7704abc3f91df",
     "semantic_hash": "99c43b215f020de89ae7704abc3f91df"
   },
   "src/NovaFleet.Domain/Drivers/DriverEmploymentStatus.cs": {
-    "mtime": 1794166852.4367764,
-    "seen": 1794167532.6130614,
+    "mtime": 1794168473.4688053,
+    "seen": 1794168550.9561365,
     "ast_hash": "029c5c42250a4237352ea91148be05b9",
     "semantic_hash": "029c5c42250a4237352ea91148be05b9"
   },
   "src/NovaFleet.Domain/Identity/ApplicationUser.cs": {
-    "mtime": 1794166852.4377766,
-    "seen": 1794167532.6130614,
+    "mtime": 1794168473.4698057,
+    "seen": 1794168550.9561365,
     "ast_hash": "cf50c2ccd7fd6d3e48694b90fe5d3223",
     "semantic_hash": "cf50c2ccd7fd6d3e48694b90fe5d3223"
   },
   "src/NovaFleet.Domain/Identity/DirectoryGroupRoleMapping.cs": {
-    "mtime": 1794166852.4387753,
-    "seen": 1794167532.6130614,
+    "mtime": 1794168473.470806,
+    "seen": 1794168550.9561365,
     "ast_hash": "e2f04e0f4a5fd6487628ed1088e6d93c",
     "semantic_hash": "e2f04e0f4a5fd6487628ed1088e6d93c"
   },
   "src/NovaFleet.Domain/Identity/PermissionEffect.cs": {
-    "mtime": 1794166852.439785,
-    "seen": 1794167532.6130614,
+    "mtime": 1794168473.470806,
+    "seen": 1794168550.9561365,
     "ast_hash": "9a377d7b414dc3cf94973719acff026a",
     "semantic_hash": "9a377d7b414dc3cf94973719acff026a"
   },
   "src/NovaFleet.Domain/Identity/Role.cs": {
-    "mtime": 1794166852.440321,
-    "seen": 1794167532.6140592,
+    "mtime": 1794168473.470806,
+    "seen": 1794168550.9561365,
     "ast_hash": "99d9aedc200f3b29293b02898cb1e616",
     "semantic_hash": "99d9aedc200f3b29293b02898cb1e616"
   },
   "src/NovaFleet.Domain/Identity/RolePermission.cs": {
-    "mtime": 1794166852.440321,
-    "seen": 1794167532.6140592,
+    "mtime": 1794168473.4718065,
+    "seen": 1794168550.9561365,
     "ast_hash": "0558204362880a70bb7cde6c4b949dc0",
     "semantic_hash": "0558204362880a70bb7cde6c4b949dc0"
   },
   "src/NovaFleet.Domain/Identity/UserPermission.cs": {
-    "mtime": 1794166852.440321,
-    "seen": 1794167532.6140592,
+    "mtime": 1794168473.4728048,
+    "seen": 1794168550.9561365,
     "ast_hash": "9c9f91e4b0ddf22ee81a1ab56f729d29",
     "semantic_hash": "9c9f91e4b0ddf22ee81a1ab56f729d29"
   },
   "src/NovaFleet.Domain/Identity/UserRole.cs": {
-    "mtime": 1794166852.4413278,
-    "seen": 1794167532.6140592,
+    "mtime": 1794168473.4728048,
+    "seen": 1794168550.9561365,
     "ast_hash": "acc0e5f9d2f01451454bcabcdf2a2bde",
     "semantic_hash": "acc0e5f9d2f01451454bcabcdf2a2bde"
   },
   "src/NovaFleet.Domain/Locations/Location.cs": {
-    "mtime": 1794166852.4423275,
-    "seen": 1794167532.6140592,
+    "mtime": 1794168473.4738054,
+    "seen": 1794168550.9561365,
     "ast_hash": "a1cb66042c817b1bc7776fd2edb60f9d",
     "semantic_hash": "a1cb66042c817b1bc7776fd2edb60f9d"
   },
   "src/NovaFleet.Domain/Locations/LocationStatus.cs": {
-    "mtime": 1794166852.4423275,
-    "seen": 1794167532.6150625,
+    "mtime": 1794168473.4738054,
+    "seen": 1794168550.9561365,
     "ast_hash": "33d8211ec0dc22226c4e0aba9ae4ec6f",
     "semantic_hash": "33d8211ec0dc22226c4e0aba9ae4ec6f"
   },
   "src/NovaFleet.Domain/Missions/Mission.cs": {
-    "mtime": 1794166852.4433272,
-    "seen": 1794167532.6150625,
+    "mtime": 1794168473.4748054,
+    "seen": 1794168550.9561365,
     "ast_hash": "a62506d7845971ce4fce938f5813c710",
     "semantic_hash": "a62506d7845971ce4fce938f5813c710"
   },
   "src/NovaFleet.Domain/Missions/MissionChangeRequest.cs": {
-    "mtime": 1794166852.4433272,
-    "seen": 1794167532.6150625,
+    "mtime": 1794168473.4758048,
+    "seen": 1794168550.9561365,
     "ast_hash": "d41e85d47390321ecef657e186a5d13d",
     "semantic_hash": "d41e85d47390321ecef657e186a5d13d"
   },
   "src/NovaFleet.Domain/Missions/MissionChangeRequestStatus.cs": {
-    "mtime": 1794166852.4433272,
-    "seen": 1794167532.6150625,
+    "mtime": 1794168473.4758048,
+    "seen": 1794168550.9561365,
     "ast_hash": "91b358b823a8cd6105a7f2a112576fe3",
     "semantic_hash": "91b358b823a8cd6105a7f2a112576fe3"
   },
   "src/NovaFleet.Domain/Missions/MissionChanges.cs": {
-    "mtime": 1794166852.4443269,
-    "seen": 1794167532.6160593,
+    "mtime": 1794168473.4758048,
+    "seen": 1794168550.9561365,
     "ast_hash": "dec1cc08fc1cdfe4bc4a706e6f60554b",
     "semantic_hash": "dec1cc08fc1cdfe4bc4a706e6f60554b"
   },
   "src/NovaFleet.Domain/Missions/MissionSplitReason.cs": {
-    "mtime": 1794166852.4443269,
-    "seen": 1794167532.6160593,
+    "mtime": 1794168473.4758048,
+    "seen": 1794168550.9561365,
     "ast_hash": "c068d9dc647a51207d972dfdb1b0c834",
     "semantic_hash": "c068d9dc647a51207d972dfdb1b0c834"
   },
   "src/NovaFleet.Domain/Missions/MissionStatus.cs": {
-    "mtime": 1794166852.4453268,
-    "seen": 1794167532.6160593,
+    "mtime": 1794168473.476805,
+    "seen": 1794168550.9561365,
     "ast_hash": "f50f1135b3ce93ed06dbf3f513892c8d",
     "semantic_hash": "f50f1135b3ce93ed06dbf3f513892c8d"
   },
   "src/NovaFleet.Domain/Missions/MissionStatusTitles.cs": {
-    "mtime": 1794166852.4453268,
-    "seen": 1794167532.6160593,
+    "mtime": 1794168473.4778068,
+    "seen": 1794168550.9561365,
     "ast_hash": "e4c8dd4e5c067bb1df63f51d18dcad1d",
     "semantic_hash": "e4c8dd4e5c067bb1df63f51d18dcad1d"
   },
   "src/NovaFleet.Domain/Missions/MissionType.cs": {
-    "mtime": 1794166852.4463274,
-    "seen": 1794167532.6170514,
+    "mtime": 1794168473.4788065,
+    "seen": 1794168550.9561365,
     "ast_hash": "bf5282bbda1225442e12e7b4f8d0e1b9",
     "semantic_hash": "bf5282bbda1225442e12e7b4f8d0e1b9"
   },
   "src/NovaFleet.Domain/Notifications/SmsEventType.cs": {
-    "mtime": 1794166852.4463274,
-    "seen": 1794167532.6170514,
+    "mtime": 1794168473.4788065,
+    "seen": 1794168550.9561365,
     "ast_hash": "7b1adb32cc631797b6bb488ef731154e",
     "semantic_hash": "7b1adb32cc631797b6bb488ef731154e"
   },
   "src/NovaFleet.Domain/Notifications/SmsQueueItem.cs": {
-    "mtime": 1794166852.4473279,
-    "seen": 1794167532.6170514,
+    "mtime": 1794168473.4798064,
+    "seen": 1794168550.9561365,
     "ast_hash": "5c00ab9c36237904511429f08fbb96cd",
     "semantic_hash": "5c00ab9c36237904511429f08fbb96cd"
   },
   "src/NovaFleet.Domain/Notifications/SmsQueueStatus.cs": {
-    "mtime": 1794166852.4473279,
-    "seen": 1794167532.6170514,
+    "mtime": 1794168473.4798064,
+    "seen": 1794168550.9561365,
     "ast_hash": "d5813d128b6d9828e1e2c359536f0716",
     "semantic_hash": "d5813d128b6d9828e1e2c359536f0716"
   },
   "src/NovaFleet.Domain/Notifications/SmsTemplate.cs": {
-    "mtime": 1794166852.4483268,
-    "seen": 1794167532.6180518,
+    "mtime": 1794168473.4798064,
+    "seen": 1794168550.9561365,
     "ast_hash": "b9464fd37d715dea83b5cb937820b0b7",
     "semantic_hash": "b9464fd37d715dea83b5cb937820b0b7"
   },
   "src/NovaFleet.Domain/Notifications/UserNotification.cs": {
-    "mtime": 1794166852.4483268,
-    "seen": 1794167532.6180518,
+    "mtime": 1794168473.4808042,
+    "seen": 1794168550.9561365,
     "ast_hash": "9b744a6d1748a17ff245f230b63290a7",
     "semantic_hash": "9b744a6d1748a17ff245f230b63290a7"
   },
   "src/NovaFleet.Domain/NovaFleet.Domain.csproj": {
-    "mtime": 1794166852.4483268,
-    "seen": 1794167532.6180518,
+    "mtime": 1794168473.4808042,
+    "seen": 1794168550.9561365,
     "ast_hash": "46b0780bd56312ea2d1bab391f179e89",
     "semantic_hash": "46b0780bd56312ea2d1bab391f179e89"
   },
   "src/NovaFleet.Domain/Organization/OrganizationUnit.cs": {
-    "mtime": 1794166852.4493268,
-    "seen": 1794167532.6180518,
+    "mtime": 1794168473.4808042,
+    "seen": 1794168550.9561365,
     "ast_hash": "d0f830715782a99de99c817323bd6010",
     "semantic_hash": "d0f830715782a99de99c817323bd6010"
   },
   "src/NovaFleet.Domain/Sessions/UserSession.cs": {
-    "mtime": 1794166852.4503272,
-    "seen": 1794167532.6190515,
+    "mtime": 1794168473.481805,
+    "seen": 1794168550.9561365,
     "ast_hash": "121a932837cbe12f289dd0b05df87fe3",
     "semantic_hash": "121a932837cbe12f289dd0b05df87fe3"
   },
   "src/NovaFleet.Domain/Vehicles/IranianLicensePlate.cs": {
-    "mtime": 1794166852.4503272,
-    "seen": 1794167532.6190515,
+    "mtime": 1794168473.4828036,
+    "seen": 1794168550.9561365,
     "ast_hash": "07e7d6bf0228c3b269c994aabbe7da23",
     "semantic_hash": "07e7d6bf0228c3b269c994aabbe7da23"
   },
   "src/NovaFleet.Domain/Vehicles/ManualVehicleStatus.cs": {
-    "mtime": 1794166852.4513266,
-    "seen": 1794167532.6190515,
+    "mtime": 1794168473.4828036,
+    "seen": 1794168550.9561365,
     "ast_hash": "ab8d3c6d819a66ecdaa63dad7272a6e7",
     "semantic_hash": "ab8d3c6d819a66ecdaa63dad7272a6e7"
   },
   "src/NovaFleet.Domain/Vehicles/Vehicle.cs": {
-    "mtime": 1794166852.4513266,
-    "seen": 1794167532.6190515,
+    "mtime": 1794168473.4838068,
+    "seen": 1794168550.9561365,
     "ast_hash": "0f53f6e1347e4ed567cab33337762f98",
     "semantic_hash": "0f53f6e1347e4ed567cab33337762f98"
   },
   "src/NovaFleet.Domain/Vehicles/VehicleEffectiveStatus.cs": {
-    "mtime": 1794166852.452326,
-    "seen": 1794167532.620053,
+    "mtime": 1794168473.4838068,
+    "seen": 1794168550.9561365,
     "ast_hash": "1fd41eea03c0d14e271ee14dc60f6d84",
     "semantic_hash": "1fd41eea03c0d14e271ee14dc60f6d84"
   },
   "src/NovaFleet.Infrastructure/Auditing/AuditQueryService.cs": {
-    "mtime": 1794166852.4533277,
-    "seen": 1794167532.620053,
+    "mtime": 1794168473.4848056,
+    "seen": 1794168550.9561365,
     "ast_hash": "4c6c6c19d4116ec138e41b9067e8eeca",
     "semantic_hash": "4c6c6c19d4116ec138e41b9067e8eeca"
   },
   "src/NovaFleet.Infrastructure/Auditing/AuditTrail.cs": {
-    "mtime": 1794166852.4533277,
-    "seen": 1794167532.6210313,
+    "mtime": 1794168473.4848056,
+    "seen": 1794168550.9561365,
     "ast_hash": "c9cbed0cf88d5fc19cf3ec3b6276e3ad",
     "semantic_hash": "c9cbed0cf88d5fc19cf3ec3b6276e3ad"
   },
   "src/NovaFleet.Infrastructure/Dashboard/DashboardService.cs": {
-    "mtime": 1794166852.4543276,
-    "seen": 1794167532.6210313,
+    "mtime": 1794168473.4858177,
+    "seen": 1794168550.9561365,
     "ast_hash": "e38fdb0f25c1723f712a328ac15d0620",
     "semantic_hash": "e38fdb0f25c1723f712a328ac15d0620"
   },
   "src/NovaFleet.Infrastructure/Directory/LdapDirectoryAuthenticator.cs": {
-    "mtime": 1794166852.4543276,
-    "seen": 1794167532.6210313,
+    "mtime": 1794168473.4858177,
+    "seen": 1794168550.9561365,
     "ast_hash": "7c3c8cc704534c5d59d642812dc0b175",
     "semantic_hash": "7c3c8cc704534c5d59d642812dc0b175"
   },
   "src/NovaFleet.Infrastructure/Drivers/DriverService.cs": {
-    "mtime": 1794166852.455328,
-    "seen": 1794167532.6210313,
+    "mtime": 1794168473.486805,
+    "seen": 1794168550.9561365,
     "ast_hash": "dc894051500668c9f79dee558b41e7c2",
     "semantic_hash": "dc894051500668c9f79dee558b41e7c2"
   },
   "src/NovaFleet.Infrastructure/Identity/AuthService.cs": {
-    "mtime": 1794166852.4563277,
-    "seen": 1794167532.622054,
+    "mtime": 1794168473.486805,
+    "seen": 1794168550.9561365,
     "ast_hash": "6d2637104150f956f686c04085fab82a",
     "semantic_hash": "6d2637104150f956f686c04085fab82a"
   },
   "src/NovaFleet.Infrastructure/Identity/RoleService.cs": {
-    "mtime": 1794166852.4573276,
-    "seen": 1794167532.622054,
+    "mtime": 1794168473.4878058,
+    "seen": 1794168550.9561365,
     "ast_hash": "7f4a635abb4130fc72ba400158528efb",
     "semantic_hash": "7f4a635abb4130fc72ba400158528efb"
   },
   "src/NovaFleet.Infrastructure/Identity/UserService.cs": {
-    "mtime": 1794166852.4573276,
-    "seen": 1794167532.6226013,
+    "mtime": 1794168473.4878058,
+    "seen": 1794168550.9561365,
     "ast_hash": "1ef1ac81dbb1d1596a84e2e5fb79aefe",
     "semantic_hash": "1ef1ac81dbb1d1596a84e2e5fb79aefe"
   },
   "src/NovaFleet.Infrastructure/Locations/LocationService.cs": {
-    "mtime": 1794166852.4583273,
-    "seen": 1794167532.6226013,
+    "mtime": 1794168473.488805,
+    "seen": 1794168550.9561365,
     "ast_hash": "5b49dce5145e54b8c8c746488a7c9a57",
     "semantic_hash": "5b49dce5145e54b8c8c746488a7c9a57"
   },
   "src/NovaFleet.Infrastructure/Missions/MissionOrderPdf.cs": {
-    "mtime": 1794166852.4593282,
-    "seen": 1794167532.6226013,
+    "mtime": 1794168473.4898045,
+    "seen": 1794168550.9561365,
     "ast_hash": "ccfaa0e16500f670d1e471595158e8cf",
     "semantic_hash": "ccfaa0e16500f670d1e471595158e8cf"
   },
   "src/NovaFleet.Infrastructure/Missions/MissionService.cs": {
-    "mtime": 1794166852.4603276,
-    "seen": 1794167532.6236002,
+    "mtime": 1794168473.4908044,
+    "seen": 1794168550.9561365,
     "ast_hash": "c9daa5421b34fa12725c570ce9aa82fe",
     "semantic_hash": "c9daa5421b34fa12725c570ce9aa82fe"
   },
   "src/NovaFleet.Infrastructure/Notifications/NotificationPublisher.cs": {
-    "mtime": 1794166852.4603276,
-    "seen": 1794167532.6236002,
+    "mtime": 1794168473.4908044,
+    "seen": 1794168550.9561365,
     "ast_hash": "ec081976e1797e0c04139f9f9e589e20",
     "semantic_hash": "ec081976e1797e0c04139f9f9e589e20"
   },
   "src/NovaFleet.Infrastructure/Notifications/NotificationService.cs": {
-    "mtime": 1794166852.4613273,
-    "seen": 1794167532.6236002,
+    "mtime": 1794168473.491804,
+    "seen": 1794168550.9561365,
     "ast_hash": "c8739b677808a5c8c307454f6a506960",
     "semantic_hash": "c8739b677808a5c8c307454f6a506960"
   },
   "src/NovaFleet.Infrastructure/NovaFleet.Infrastructure.csproj": {
-    "mtime": 1794166852.4613273,
-    "seen": 1794167532.6236002,
+    "mtime": 1794168473.491804,
+    "seen": 1794168550.9561365,
     "ast_hash": "2e22b43be61660db726b67d80dc6fc3a",
     "semantic_hash": "2e22b43be61660db726b67d80dc6fc3a"
   },
   "src/NovaFleet.Infrastructure/Organization/OrganizationUnitService.cs": {
-    "mtime": 1794166852.4623277,
-    "seen": 1794167532.6245997,
+    "mtime": 1794168473.491804,
+    "seen": 1794168550.9561365,
     "ast_hash": "2d82a35be9fbba85f82761dff1d88058",
     "semantic_hash": "2d82a35be9fbba85f82761dff1d88058"
   },
   "src/NovaFleet.Infrastructure/Persistence/Concurrency.cs": {
-    "mtime": 1794166852.463336,
-    "seen": 1794167532.6245997,
+    "mtime": 1794168473.4928052,
+    "seen": 1794168550.9561365,
     "ast_hash": "6b49c580239ab00ea8c1e1f7f2fe7a9a",
     "semantic_hash": "6b49c580239ab00ea8c1e1f7f2fe7a9a"
   },
   "src/NovaFleet.Infrastructure/Persistence/Configurations/FleetConfiguration.cs": {
-    "mtime": 1794166852.463336,
-    "seen": 1794167532.6245997,
+    "mtime": 1794168473.4928052,
+    "seen": 1794168550.9561365,
     "ast_hash": "7e0cb99404080c437cc2bf15aaa8bc91",
     "semantic_hash": "7e0cb99404080c437cc2bf15aaa8bc91"
   },
   "src/NovaFleet.Infrastructure/Persistence/Configurations/IdentityConfiguration.cs": {
-    "mtime": 1794166852.4643264,
-    "seen": 1794167532.6245997,
+    "mtime": 1794168473.4948065,
+    "seen": 1794168550.9561365,
     "ast_hash": "bd8411c805e15c7ce2539551b36edf63",
     "semantic_hash": "bd8411c805e15c7ce2539551b36edf63"
   },
   "src/NovaFleet.Infrastructure/Persistence/Configurations/MissionConfiguration.cs": {
-    "mtime": 1794166852.4653292,
-    "seen": 1794167532.6255991,
+    "mtime": 1794168473.4948065,
+    "seen": 1794168550.9561365,
     "ast_hash": "7c8d21b5ea19d3c36edc765c12c59d08",
     "semantic_hash": "7c8d21b5ea19d3c36edc765c12c59d08"
   },
   "src/NovaFleet.Infrastructure/Persistence/Configurations/OperationsConfiguration.cs": {
-    "mtime": 1794166852.4653292,
-    "seen": 1794167532.6255991,
+    "mtime": 1794168473.4948065,
+    "seen": 1794168550.9561365,
     "ast_hash": "1706447a54e00d73f10db5a47daf0de3",
     "semantic_hash": "1706447a54e00d73f10db5a47daf0de3"
   },
   "src/NovaFleet.Infrastructure/Persistence/DesignTimeDbContextFactory.cs": {
-    "mtime": 1794166852.4663267,
-    "seen": 1794167532.6255991,
+    "mtime": 1794168473.495808,
+    "seen": 1794168550.9561365,
     "ast_hash": "880708f708ef1f9e9a4ddf0bc105e04e",
     "semantic_hash": "880708f708ef1f9e9a4ddf0bc105e04e"
   },
   "src/NovaFleet.Infrastructure/Persistence/Migrations/20261103092928_InitialCreate.Designer.cs": {
-    "mtime": 1794166852.4673283,
-    "seen": 1794167532.6255991,
+    "mtime": 1794168473.496805,
+    "seen": 1794168550.9561365,
     "ast_hash": "186a2ed430206e739f29ba9373b6d8ac",
     "semantic_hash": "186a2ed430206e739f29ba9373b6d8ac"
   },
   "src/NovaFleet.Infrastructure/Persistence/Migrations/20261103092928_InitialCreate.cs": {
-    "mtime": 1794166852.4673283,
-    "seen": 1794167532.6268208,
+    "mtime": 1794168473.496805,
+    "seen": 1794168550.9561365,
     "ast_hash": "887f0a73ee7e19f6e6d0095a35005d91",
     "semantic_hash": "887f0a73ee7e19f6e6d0095a35005d91"
   },
   "src/NovaFleet.Infrastructure/Persistence/Migrations/NovaFleetDbContextModelSnapshot.cs": {
-    "mtime": 1794166852.468328,
-    "seen": 1794167532.6268208,
+    "mtime": 1794168473.4978044,
+    "seen": 1794168550.9561365,
     "ast_hash": "7380710ff8d606d93bdea0120b40c487",
     "semantic_hash": "7380710ff8d606d93bdea0120b40c487"
   },
   "src/NovaFleet.Infrastructure/Persistence/NovaFleetDbContext.cs": {
-    "mtime": 1794166852.469357,
-    "seen": 1794167532.6268208,
+    "mtime": 1794168473.4978044,
+    "seen": 1794168550.9561365,
     "ast_hash": "ea9266f3ac24ed548e49ea2d90900409",
     "semantic_hash": "ea9266f3ac24ed548e49ea2d90900409"
   },
   "src/NovaFleet.Infrastructure/Realtime/NoopRealtimeNotifier.cs": {
-    "mtime": 1794166852.4703279,
-    "seen": 1794167532.6268208,
+    "mtime": 1794168473.4978044,
+    "seen": 1794168550.9561365,
     "ast_hash": "84a1f9bf6783ee6db6084ebb1ddbab42",
     "semantic_hash": "84a1f9bf6783ee6db6084ebb1ddbab42"
   },
   "src/NovaFleet.Infrastructure/Reports/ReportService.cs": {
-    "mtime": 1794166852.4703279,
-    "seen": 1794167532.6268208,
+    "mtime": 1794168473.5008037,
+    "seen": 1794168550.9561365,
     "ast_hash": "5e7a83668a3e603d29225c5c3e4b1bd4",
     "semantic_hash": "5e7a83668a3e603d29225c5c3e4b1bd4"
   },
   "src/NovaFleet.Infrastructure/Security/Pbkdf2PasswordHasher.cs": {
-    "mtime": 1794166852.471329,
-    "seen": 1794167532.6278477,
+    "mtime": 1794168473.5008037,
+    "seen": 1794168550.9561365,
     "ast_hash": "0fb642aff7009ed39866db1aebf74b05",
     "semantic_hash": "0fb642aff7009ed39866db1aebf74b05"
   },
   "src/NovaFleet.Infrastructure/Security/PermissionResolver.cs": {
-    "mtime": 1794166852.4723272,
-    "seen": 1794167532.6278477,
+    "mtime": 1794168473.5008037,
+    "seen": 1794168550.9561365,
     "ast_hash": "c3f4a14eccfbd1badbe7c6815889631e",
     "semantic_hash": "c3f4a14eccfbd1badbe7c6815889631e"
   },
   "src/NovaFleet.Infrastructure/Sessions/SessionService.cs": {
-    "mtime": 1794166852.4733284,
-    "seen": 1794167532.6278477,
+    "mtime": 1794168473.5188036,
+    "seen": 1794168550.9561365,
     "ast_hash": "31a888a767bc9ebc4c86d8b893d65534",
     "semantic_hash": "31a888a767bc9ebc4c86d8b893d65534"
   },
   "src/NovaFleet.Infrastructure/Settings/SettingsService.cs": {
-    "mtime": 1794166852.4733284,
-    "seen": 1794167532.6278477,
+    "mtime": 1794168473.5188036,
+    "seen": 1794168550.9561365,
     "ast_hash": "123e71d2f5e246ea544e35eb9b4a9de0",
     "semantic_hash": "123e71d2f5e246ea544e35eb9b4a9de0"
   },
   "src/NovaFleet.Infrastructure/Setup/DatabaseInitializer.cs": {
-    "mtime": 1794166852.4743273,
-    "seen": 1794167532.6288488,
+    "mtime": 1794168473.5198047,
+    "seen": 1794168550.9561365,
     "ast_hash": "b24bc1ae19c85230b12af93afc338ae2",
     "semantic_hash": "b24bc1ae19c85230b12af93afc338ae2"
   },
   "src/NovaFleet.Infrastructure/Setup/SetupService.cs": {
-    "mtime": 1794166852.4743273,
-    "seen": 1794167532.6288488,
+    "mtime": 1794168473.5208042,
+    "seen": 1794168550.9561365,
     "ast_hash": "67098f56c7c84692e713ea5d258847fc",
     "semantic_hash": "67098f56c7c84692e713ea5d258847fc"
   },
   "src/NovaFleet.Infrastructure/Sms/AdpSmsGateway.cs": {
-    "mtime": 1794166852.475327,
-    "seen": 1794167532.6288488,
+    "mtime": 1794168473.5208042,
+    "seen": 1794168550.9561365,
     "ast_hash": "7aff1ffc1a8cfb9995efe43e974bde0f",
     "semantic_hash": "7aff1ffc1a8cfb9995efe43e974bde0f"
   },
   "src/NovaFleet.Infrastructure/Sms/SimulatedSmsGateway.cs": {
-    "mtime": 1794166852.4763272,
-    "seen": 1794167532.6288488,
+    "mtime": 1794168473.5208042,
+    "seen": 1794168550.9561365,
     "ast_hash": "197a4f7817577d5db12aaf4668a950e3",
     "semantic_hash": "197a4f7817577d5db12aaf4668a950e3"
   },
   "src/NovaFleet.Infrastructure/Sms/SmsDispatcher.cs": {
-    "mtime": 1794166852.4773273,
-    "seen": 1794167532.6298492,
+    "mtime": 1794168473.5218043,
+    "seen": 1794168550.9561365,
     "ast_hash": "f126040a564e436908fdb1aa73a3bcbf",
     "semantic_hash": "f126040a564e436908fdb1aa73a3bcbf"
   },
   "src/NovaFleet.Infrastructure/Sms/SmsOptions.cs": {
-    "mtime": 1794166852.4773273,
-    "seen": 1794167532.6298492,
+    "mtime": 1794168473.5218043,
+    "seen": 1794168550.9561365,
     "ast_hash": "646d58673e4b66fc6e18d7c354d1d78b",
     "semantic_hash": "646d58673e4b66fc6e18d7c354d1d78b"
   },
   "src/NovaFleet.Infrastructure/Sms/SmsService.cs": {
-    "mtime": 1794166852.4783268,
-    "seen": 1794167532.6298492,
+    "mtime": 1794168473.5228045,
+    "seen": 1794168550.9561365,
     "ast_hash": "e33c6bf54d9f6aa421205e683aa76a2d",
     "semantic_hash": "e33c6bf54d9f6aa421205e683aa76a2d"
   },
   "src/NovaFleet.Infrastructure/Timeline/TimelineService.cs": {
-    "mtime": 1794166852.4783268,
-    "seen": 1794167532.6298492,
+    "mtime": 1794168473.5228045,
+    "seen": 1794168550.9561365,
     "ast_hash": "830597031ac260338c3b97baf260e0e3",
     "semantic_hash": "830597031ac260338c3b97baf260e0e3"
   },
   "src/NovaFleet.Infrastructure/Vehicles/VehicleService.cs": {
-    "mtime": 1794166852.479328,
-    "seen": 1794167532.6308858,
+    "mtime": 1794168473.5238044,
+    "seen": 1794168550.9561365,
     "ast_hash": "5c08a036edd16baee3ecc94742db0563",
     "semantic_hash": "5c08a036edd16baee3ecc94742db0563"
   },
   "tests/NovaFleet.IntegrationTests/NovaFleet.IntegrationTests.csproj": {
-    "mtime": 1794166852.4803288,
-    "seen": 1794167532.6308858,
+    "mtime": 1794168473.5238044,
+    "seen": 1794168550.9561365,
     "ast_hash": "5e7709e5b85cb6e3287fbff81cb7796b",
     "semantic_hash": "5e7709e5b85cb6e3287fbff81cb7796b"
   },
   "tests/NovaFleet.UnitTests/NovaFleet.UnitTests.csproj": {
-    "mtime": 1794166852.4803288,
-    "seen": 1794167532.6308858,
+    "mtime": 1794168473.524805,
+    "seen": 1794168550.9561365,
     "ast_hash": "bd82bb366463eb5580958c377cff242a",
     "semantic_hash": "bd82bb366463eb5580958c377cff242a"
   },
   "web/.oxlintrc.json": {
-    "mtime": 1794166852.4813282,
-    "seen": 1794167532.6308858,
+    "mtime": 1794168473.524805,
+    "seen": 1794168550.9561365,
     "ast_hash": "1f0703525c59e961c2b7f20e78aa1cd4",
     "semantic_hash": "1f0703525c59e961c2b7f20e78aa1cd4"
   },
   "web/package.json": {
-    "mtime": 1794166852.4843276,
-    "seen": 1794167532.6308858,
+    "mtime": 1794168473.5268035,
+    "seen": 1794168550.9561365,
     "ast_hash": "d073c96c399d3a03907105444a1fe2f6",
     "semantic_hash": "d073c96c399d3a03907105444a1fe2f6"
   },
   "web/src/App.tsx": {
-    "mtime": 1794166852.486327,
-    "seen": 1794167532.6318865,
+    "mtime": 1794168473.530805,
+    "seen": 1794168550.9561365,
     "ast_hash": "71e5f662739e69982739ee9209830e20",
     "semantic_hash": "71e5f662739e69982739ee9209830e20"
   },
   "web/src/auth/AuthContext.tsx": {
-    "mtime": 1794166852.4883292,
-    "seen": 1794167532.6318865,
+    "mtime": 1794168473.5328064,
+    "seen": 1794168550.9561365,
     "ast_hash": "7a73c29d6c43e96ccc9c6e691cd7bdad",
     "semantic_hash": "7a73c29d6c43e96ccc9c6e691cd7bdad"
   },
   "web/src/components/JalaliDateField.tsx": {
-    "mtime": 1794166852.4893267,
-    "seen": 1794167532.6318865,
+    "mtime": 1794168473.5328064,
+    "seen": 1794168550.9561365,
     "ast_hash": "8f703c7a92170867029c1f8cfe21be89",
     "semantic_hash": "8f703c7a92170867029c1f8cfe21be89"
   },
   "web/src/components/MissionForm.tsx": {
-    "mtime": 1794166852.4893267,
-    "seen": 1794167532.6328852,
+    "mtime": 1794168473.5338063,
+    "seen": 1794168550.9561365,
     "ast_hash": "60ec97b08663dd12a885cbed360029b0",
     "semantic_hash": "60ec97b08663dd12a885cbed360029b0"
   },
   "web/src/components/ui.tsx": {
-    "mtime": 1794166852.4893267,
-    "seen": 1794167532.6328852,
+    "mtime": 1794168473.5338063,
+    "seen": 1794168550.9561365,
     "ast_hash": "950bde480972e7e9f182298239e56088",
     "semantic_hash": "950bde480972e7e9f182298239e56088"
   },
   "web/src/layout/AppLayout.tsx": {
-    "mtime": 1794166852.4913278,
-    "seen": 1794167532.6328852,
+    "mtime": 1794168473.5348055,
+    "seen": 1794168550.9561365,
     "ast_hash": "e956cbf0adfee8109a3615aaf51230cd",
     "semantic_hash": "e956cbf0adfee8109a3615aaf51230cd"
   },
   "web/src/lib/api.ts": {
-    "mtime": 1794166852.4913278,
-    "seen": 1794167532.6328852,
+    "mtime": 1794168473.5358047,
+    "seen": 1794168550.9561365,
     "ast_hash": "0785c3dcdab44dbc34cfce21be685fa3",
     "semantic_hash": "0785c3dcdab44dbc34cfce21be685fa3"
   },
   "web/src/lib/date.ts": {
-    "mtime": 1794166852.4923277,
-    "seen": 1794167532.6328852,
+    "mtime": 1794168473.5358047,
+    "seen": 1794168550.9561365,
     "ast_hash": "8146263179151fb7c03b281755e7a1c6",
     "semantic_hash": "8146263179151fb7c03b281755e7a1c6"
   },
   "web/src/lib/labels.ts": {
-    "mtime": 1794166852.4923277,
-    "seen": 1794167532.6338854,
+    "mtime": 1794168473.5358047,
+    "seen": 1794168550.9561365,
     "ast_hash": "f2d9a0b435dfa26ebb594fe11c9c1a1a",
     "semantic_hash": "f2d9a0b435dfa26ebb594fe11c9c1a1a"
   },
   "web/src/lib/types.ts": {
-    "mtime": 1794166852.4933283,
-    "seen": 1794167532.6338854,
+    "mtime": 1794168473.536805,
+    "seen": 1794168550.9561365,
     "ast_hash": "86dae736725ccfae4fc7068e1c56cac3",
     "semantic_hash": "86dae736725ccfae4fc7068e1c56cac3"
   },
   "web/src/main.tsx": {
-    "mtime": 1794166852.4933283,
-    "seen": 1794167532.6338854,
+    "mtime": 1794168473.536805,
+    "seen": 1794168550.9561365,
     "ast_hash": "177d8de144804ae53d667300754bf133",
     "semantic_hash": "177d8de144804ae53d667300754bf133"
   },
   "web/src/pages/DashboardPage.tsx": {
-    "mtime": 1794166852.494328,
-    "seen": 1794167532.6348848,
+    "mtime": 1794168473.5378048,
+    "seen": 1794168550.9561365,
     "ast_hash": "c466eaf166188e485aa35ecb7163a151",
     "semantic_hash": "c466eaf166188e485aa35ecb7163a151"
   },
   "web/src/pages/DriversPage.tsx": {
-    "mtime": 1794166852.494328,
-    "seen": 1794167532.6348848,
+    "mtime": 1794168473.5378048,
+    "seen": 1794168550.9561365,
     "ast_hash": "8f0022d655647ef6e09f1ac63409aa67",
     "semantic_hash": "8f0022d655647ef6e09f1ac63409aa67"
   },
   "web/src/pages/LoginPage.tsx": {
-    "mtime": 1794166852.4953268,
-    "seen": 1794167532.6348848,
+    "mtime": 1794168473.5378048,
+    "seen": 1794168550.9561365,
     "ast_hash": "26a5d0ecd9da4f9b5bfeea92aebc65c4",
     "semantic_hash": "26a5d0ecd9da4f9b5bfeea92aebc65c4"
   },
   "web/src/pages/MissionDetailsPage.tsx": {
-    "mtime": 1794166852.4963312,
-    "seen": 1794167532.6348848,
+    "mtime": 1794168473.538805,
+    "seen": 1794168550.9561365,
     "ast_hash": "f1900071e618f867de7157a47b9cc012",
     "semantic_hash": "f1900071e618f867de7157a47b9cc012"
   },
   "web/src/pages/MissionsPage.tsx": {
-    "mtime": 1794166852.4963312,
-    "seen": 1794167532.6348848,
+    "mtime": 1794168473.538805,
+    "seen": 1794168550.9561365,
     "ast_hash": "57aaeb38a64db761b075380589a361ad",
     "semantic_hash": "57aaeb38a64db761b075380589a361ad"
   },
   "web/src/pages/ReportsPage.tsx": {
-    "mtime": 1794166852.4973276,
-    "seen": 1794167532.6358874,
+    "mtime": 1794168473.5398045,
+    "seen": 1794168550.9561365,
     "ast_hash": "78395ce24346dc0dcc894041b8b67f56",
     "semantic_hash": "78395ce24346dc0dcc894041b8b67f56"
   },
   "web/src/pages/SecurityPage.tsx": {
-    "mtime": 1794166852.4973276,
-    "seen": 1794167532.6358874,
+    "mtime": 1794168473.5408041,
+    "seen": 1794168550.9561365,
     "ast_hash": "dfd93963b659ae07f31306273b7b8b16",
     "semantic_hash": "dfd93963b659ae07f31306273b7b8b16"
   },
   "web/src/pages/SettingsPage.tsx": {
-    "mtime": 1794166852.4983273,
-    "seen": 1794167532.6358874,
+    "mtime": 1794168473.5408041,
+    "seen": 1794168550.9561365,
     "ast_hash": "842560c5e8155315c513d6433750ee25",
     "semantic_hash": "842560c5e8155315c513d6433750ee25"
   },
   "web/src/pages/SetupPage.tsx": {
-    "mtime": 1794166852.4983273,
-    "seen": 1794167532.6358874,
+    "mtime": 1794168473.5408041,
+    "seen": 1794168550.9561365,
     "ast_hash": "847131ded77c2c882fff0672399c7558",
     "semantic_hash": "847131ded77c2c882fff0672399c7558"
   },
   "web/src/pages/SmsPage.tsx": {
-    "mtime": 1794166852.4993267,
-    "seen": 1794167532.636885,
+    "mtime": 1794168473.541804,
+    "seen": 1794168550.9561365,
     "ast_hash": "0c6c8ff409e9d83be8034b6f4dd726d5",
     "semantic_hash": "0c6c8ff409e9d83be8034b6f4dd726d5"
   },
   "web/src/pages/TimelinePage.tsx": {
-    "mtime": 1794166852.5003269,
-    "seen": 1794167532.636885,
+    "mtime": 1794168473.5428042,
+    "seen": 1794168550.9561365,
     "ast_hash": "47fa0c45fc94a36a729f07f2a03216ad",
     "semantic_hash": "47fa0c45fc94a36a729f07f2a03216ad"
   },
   "web/src/pages/VehiclesPage.tsx": {
-    "mtime": 1794166852.5003269,
-    "seen": 1794167532.636885,
+    "mtime": 1794168473.5428042,
+    "seen": 1794168550.9561365,
     "ast_hash": "79e96e61e50a8b1d1d4c927d35ce4831",
     "semantic_hash": "79e96e61e50a8b1d1d4c927d35ce4831"
   },
   "web/tsconfig.app.json": {
-    "mtime": 1794166852.5013268,
-    "seen": 1794167532.6378562,
+    "mtime": 1794168473.5428042,
+    "seen": 1794168550.9561365,
     "ast_hash": "e4f83bdfdf660f5e5364945e14291d70",
     "semantic_hash": "e4f83bdfdf660f5e5364945e14291d70"
   },
   "web/tsconfig.json": {
-    "mtime": 1794166852.5013268,
-    "seen": 1794167532.6378562,
+    "mtime": 1794168473.5428042,
+    "seen": 1794168550.9561365,
     "ast_hash": "852c3a5df14a4b43ac28e9554ebedf4a",
     "semantic_hash": "852c3a5df14a4b43ac28e9554ebedf4a"
   },
   "web/tsconfig.node.json": {
-    "mtime": 1794166852.5013268,
-    "seen": 1794167532.6378562,
+    "mtime": 1794168473.543805,
+    "seen": 1794168550.9561365,
     "ast_hash": "74cde0261ad0a13045ca0a05ab1542ae",
     "semantic_hash": "74cde0261ad0a13045ca0a05ab1542ae"
   },
   "web/vite.config.ts": {
-    "mtime": 1794166852.5023274,
-    "seen": 1794167532.6378562,
+    "mtime": 1794168473.543805,
+    "seen": 1794168550.9561365,
     "ast_hash": "f23e8f469316a4d87f4d8c05d3676586",
     "semantic_hash": "f23e8f469316a4d87f4d8c05d3676586"
+  },
+  "README.md": {
+    "mtime": 1794168473.2041724,
+    "seen": 1794168550.9561365,
+    "ast_hash": "66d5033269597ac47bd5026fbed30a8e",
+    "semantic_hash": ""
+  },
+  "web/README.md": {
+    "mtime": 1794168473.5258043,
+    "seen": 1794168550.9561365,
+    "ast_hash": "3a8e2f41658852c43fdce93a22bc2f90",
+    "semantic_hash": ""
+  },
+  "web/index.html": {
+    "mtime": 1794168473.5258043,
+    "seen": 1794168550.9561365,
+    "ast_hash": "2289c7ee564ff8847d624059737a943c",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/01-login.png": {
+    "mtime": 1794168473.2061718,
+    "seen": 1794168550.9561365,
+    "ast_hash": "35e4655f593a9c57ebec0ddcd6f0ab0b",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/02-dashboard.png": {
+    "mtime": 1794168473.2091715,
+    "seen": 1794168550.9561365,
+    "ast_hash": "2fac4452ccfc25fc7f24d2090fb8489c",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/03-missions-list.png": {
+    "mtime": 1794168473.2131712,
+    "seen": 1794168550.9561365,
+    "ast_hash": "6bc39d676d2819ed5387f1161f877d6a",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/03b-mission-create-form.png": {
+    "mtime": 1794168473.2161703,
+    "seen": 1794168550.9561365,
+    "ast_hash": "0bc4e9c7f8a6a053ee2a4a74e144f369",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/04-mission-details.png": {
+    "mtime": 1794168473.2182,
+    "seen": 1794168550.9561365,
+    "ast_hash": "c6ba7a3925bc4c7104f5f38ee5ea6358",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/05-timeline-default.png": {
+    "mtime": 1794168473.2221687,
+    "seen": 1794168550.9561365,
+    "ast_hash": "e5436c065257bf762a5d9a48dde621fd",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/06-timeline-hour.png": {
+    "mtime": 1794168473.2241695,
+    "seen": 1794168550.9561365,
+    "ast_hash": "8698b5a5f7d5b4db2f5bbb745f23fcb3",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/07-timeline-day.png": {
+    "mtime": 1794168473.2281718,
+    "seen": 1794168550.9561365,
+    "ast_hash": "e62e45f9417363016075edd3be49ea70",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/08-timeline-month.png": {
+    "mtime": 1794168473.2311695,
+    "seen": 1794168550.9561365,
+    "ast_hash": "08e1c9b87b0f563ba085b9c4375a08ea",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/09-timeline-quarter.png": {
+    "mtime": 1794168473.2341702,
+    "seen": 1794168550.9561365,
+    "ast_hash": "d06800ec113c0e657acffa7554ff2b51",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/10-timeline-quickview.png": {
+    "mtime": 1794168473.2402797,
+    "seen": 1794168550.9561365,
+    "ast_hash": "64660f9962cbac9c7ca0a01e3a051305",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/11-drivers.png": {
+    "mtime": 1794168473.2421696,
+    "seen": 1794168550.9561365,
+    "ast_hash": "cf377f3fdb2381338f9c388a56f0f6fe",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/12-vehicles.png": {
+    "mtime": 1794168473.2451694,
+    "seen": 1794168550.9561365,
+    "ast_hash": "9293e98e5554d9a441223cf51ecb45f0",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/13-reports-index.png": {
+    "mtime": 1794168473.2471697,
+    "seen": 1794168550.9561365,
+    "ast_hash": "c5bbe3a7c6c1f07778085fc9192857ab",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/14-report-missions.png": {
+    "mtime": 1794168473.2521696,
+    "seen": 1794168550.9561365,
+    "ast_hash": "c1d397e67256b50640ec0b53669cf360",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/15-report-vehicle-usage.png": {
+    "mtime": 1794168473.254169,
+    "seen": 1794168550.9561365,
+    "ast_hash": "488ee407b13f67d55103bacba02a2756",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/16-sms.png": {
+    "mtime": 1794168473.2581687,
+    "seen": 1794168550.9561365,
+    "ast_hash": "4da0a9d4e30a06dc1ae3a3c00412f6d5",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/17-security-users.png": {
+    "mtime": 1794168473.2622619,
+    "seen": 1794168550.9561365,
+    "ast_hash": "1db9528df9e270497fde6b1b29bfebd6",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/18-security-roles.png": {
+    "mtime": 1794168473.2641704,
+    "seen": 1794168550.9561365,
+    "ast_hash": "28398123f069bc3edf2d23587d03819d",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/19-security-sessions.png": {
+    "mtime": 1794168473.266168,
+    "seen": 1794168550.9561365,
+    "ast_hash": "5618c74f4ef821ce5b35cbe62e34b4e5",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/20-security-audit.png": {
+    "mtime": 1794168473.2691689,
+    "seen": 1794168550.9561365,
+    "ast_hash": "1b4908a7f2a278db8de5460af3d399f6",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/21-settings-organization.png": {
+    "mtime": 1794168473.2701707,
+    "seen": 1794168550.9561365,
+    "ast_hash": "d765cc452175772f24be88e9a2092cf7",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/22-settings-mission-rules.png": {
+    "mtime": 1794168473.27117,
+    "seen": 1794168550.9561365,
+    "ast_hash": "a4b45b0de2c504dafd8f86e0c0a46900",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/23-settings-order-template.png": {
+    "mtime": 1794168473.2731695,
+    "seen": 1794168550.9561365,
+    "ast_hash": "bb985fd1350c3dfc9ed7c34a5643300c",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/24-settings-org-units.png": {
+    "mtime": 1794168473.2751694,
+    "seen": 1794168550.9561365,
+    "ast_hash": "492accf795ebc413ec07c754da6640cb",
+    "semantic_hash": ""
+  },
+  "docs/screenshots/25-settings-locations.png": {
+    "mtime": 1794168473.2771711,
+    "seen": 1794168550.9561365,
+    "ast_hash": "f5921c81c196cc92017c18ad8cf84ea3",
+    "semantic_hash": ""
+  },
+  "web/public/favicon.svg": {
+    "mtime": 1794168473.5298052,
+    "seen": 1794168550.9561365,
+    "ast_hash": "974d6c6a2e09814e71f56c541ab9e7a8",
+    "semantic_hash": ""
+  },
+  "web/public/icons.svg": {
+    "mtime": 1794168473.5298052,
+    "seen": 1794168550.9561365,
+    "ast_hash": "21c7473c592c67dc87223d49892c8f0a",
+    "semantic_hash": ""
+  },
+  "web/src/assets/hero.png": {
+    "mtime": 1794168473.5318058,
+    "seen": 1794168550.9561365,
+    "ast_hash": "aead493361b27e7510691c5d7072dfc1",
+    "semantic_hash": ""
+  },
+  "web/src/assets/react.svg": {
+    "mtime": 1794168473.5318058,
+    "seen": 1794168550.9561365,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": ""
+  },
+  "web/src/assets/vite.svg": {
+    "mtime": 1794168473.5318058,
+    "seen": 1794168550.9561365,
+    "ast_hash": "6d5180a782d64c8cf51ba01c2a2184d8",
+    "semantic_hash": ""
+  },
+  "web/package-lock.json": {
+    "mtime": 1794168473.5268035,
+    "seen": 1794168550.9561365,
+    "ast_hash": "075980063ca288130a992a3b75d1481b",
+    "semantic_hash": ""
   }
 }
