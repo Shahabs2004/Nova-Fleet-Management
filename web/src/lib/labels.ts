@@ -1,12 +1,12 @@
-export const MISSION_STATUS: Record<number, { title: string; badge: string; dot: string }> = {
-  1: { title: 'در انتظار بررسی', badge: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500' },
-  2: { title: 'در حال بررسی', badge: 'bg-sky-50 text-sky-700 ring-sky-200', dot: 'bg-sky-500' },
-  3: { title: 'تأییدشده', badge: 'bg-emerald-50 text-emerald-800 ring-emerald-200', dot: 'bg-emerald-600' },
-  4: { title: 'در حال اجرا', badge: 'bg-indigo-50 text-indigo-700 ring-indigo-200', dot: 'bg-indigo-500' },
-  5: { title: 'تکمیل‌شده', badge: 'bg-slate-100 text-slate-600 ring-slate-200', dot: 'bg-slate-400' },
-  6: { title: 'در انتظار تصمیم انصراف', badge: 'bg-orange-50 text-orange-700 ring-orange-200', dot: 'bg-orange-500' },
-  7: { title: 'لغوشده', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500' },
-  8: { title: 'ردشده', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-400' },
+export const MISSION_STATUS: Record<number, { title: string; badge: string; dot: string; text: string }> = {
+  1: { title: 'در انتظار بررسی', badge: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500', text: 'text-amber-400' },
+  2: { title: 'در حال بررسی', badge: 'bg-sky-50 text-sky-700 ring-sky-200', dot: 'bg-sky-500', text: 'text-sky-400' },
+  3: { title: 'تأییدشده', badge: 'bg-emerald-50 text-emerald-800 ring-emerald-200', dot: 'bg-emerald-600', text: 'text-emerald-400' },
+  4: { title: 'در حال اجرا', badge: 'bg-indigo-50 text-indigo-700 ring-indigo-200', dot: 'bg-indigo-500', text: 'text-indigo-400' },
+  5: { title: 'تکمیل‌شده', badge: 'bg-slate-100 text-slate-600 ring-slate-200', dot: 'bg-slate-400', text: 'text-slate-300' },
+  6: { title: 'در انتظار تصمیم انصراف', badge: 'bg-orange-50 text-orange-700 ring-orange-200', dot: 'bg-orange-500', text: 'text-orange-400' },
+  7: { title: 'لغوشده', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500', text: 'text-rose-400' },
+  8: { title: 'ردشده', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-400', text: 'text-rose-300' },
 }
 
 export const MISSION_TYPE: Record<number, string> = {

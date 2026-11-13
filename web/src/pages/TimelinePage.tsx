@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { JalaliDateField, jalaliValueToUtc, type JalaliDateValue } from '../components/JalaliDateField'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
@@ -106,6 +107,14 @@ export function TimelinePage() {
   const [zoom, setZoom] = useState<Zoom>('week')
   const [onlyBusyDrivers, setOnlyBusyDrivers] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [tip, setTip] = useState<{ mission: TimelineMission; x: number; y: number; below: boolean } | null>(null)
+
+  const showTip = (el: HTMLElement, mission: TimelineMission) => {
+    const r = el.getBoundingClientRect()
+    const below = r.top < 190
+    setTip({ mission, x: r.left + r.width / 2, y: below ? r.bottom : r.top, below })
+  }
+  const hideTip = () => setTip(null)
 
   const fromUtc = jalaliValueToUtc(from, 0)
   const toUtc = jalaliValueToUtc(to, 23)
@@ -532,8 +541,11 @@ export function TimelinePage() {
                         return (
                           <button
                             key={mission.id}
-                            onClick={() => setSelectedId(mission.id)}
-                            title={`${mission.title} · ${MISSION_TYPE[mission.type]} · ${formatFaDateTime(mission.startAtUtc)} تا ${formatFaDateTime(mission.endAtUtc)} · ${mission.vehiclePlate ?? 'بدون خودرو'}`}
+                            onClick={() => { setSelectedId(mission.id); hideTip() }}
+                            onMouseEnter={(e) => showTip(e.currentTarget, mission)}
+                            onMouseLeave={hideTip}
+                            onFocus={(e) => showTip(e.currentTarget, mission)}
+                            onBlur={hideTip}
                             className={`absolute flex items-center overflow-hidden rounded-lg px-2 text-right shadow-sm ring-1 ring-black/5 transition hover:z-20 hover:brightness-110 ${tone}`}
                             style={{
                               right: offset,
@@ -582,6 +594,40 @@ export function TimelinePage() {
           />
         )}
       </Modal>
+
+      {tip &&
+        createPortal(
+          <div
+            dir="rtl"
+            className="pointer-events-none fixed z-50 w-72 rounded-xl bg-slate-900 p-3 text-white shadow-2xl ring-1 ring-white/10"
+            style={{
+              left: Math.min(Math.max(tip.x, 156), window.innerWidth - 156),
+              top: tip.y,
+              transform: tip.below ? 'translate(-50%, 10px)' : 'translate(-50%, calc(-100% - 10px))',
+            }}
+          >
+            <p className="mb-2 border-b border-white/10 pb-2 text-xs font-extrabold">{tip.mission.title}</p>
+            <div className="space-y-1.5 text-[11px]">
+              <TipRow label="نوع" value={MISSION_TYPE[tip.mission.type] ?? '—'} />
+              <TipRow
+                label="وضعیت"
+                value={
+                  <span className={MISSION_STATUS[tip.mission.status]?.text ?? 'text-slate-300'}>
+                    {MISSION_STATUS[tip.mission.status]?.title ?? '—'}
+                  </span>
+                }
+              />
+              <TipRow label="شروع" value={formatFaDateTime(tip.mission.startAtUtc)} />
+              <TipRow label="پایان" value={formatFaDateTime(tip.mission.endAtUtc)} />
+              <TipRow label="راننده" value={tip.mission.driverName ?? 'تخصیص نیافته'} />
+              <TipRow
+                label="خودرو"
+                value={tip.mission.vehiclePlate ? <Plate value={tip.mission.vehiclePlate} size="sm" /> : 'بدون خودرو'}
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
@@ -729,6 +775,15 @@ function Info({ label, value }: { label: string; value: ReactNode }) {
     <div>
       <p className="text-[10px] text-slate-400">{label}</p>
       <p className="mt-0.5 font-bold text-slate-700">{value}</p>
+    </div>
+  )
+}
+
+function TipRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="shrink-0 text-slate-400">{label}</span>
+      <span className="flex min-w-0 items-center truncate font-bold">{value}</span>
     </div>
   )
 }
