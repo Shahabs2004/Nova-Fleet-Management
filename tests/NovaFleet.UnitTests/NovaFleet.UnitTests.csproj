@@ -21,6 +21,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NovaFleet.Domain\NovaFleet.Domain.csproj" />
     <ProjectReference Include="..\..\src\NovaFleet.Application\NovaFleet.Application.csproj" />
+    <ProjectReference Include="..\..\src\NovaFleet.Infrastructure\NovaFleet.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
   </ItemGroup>
 
 </Project>
