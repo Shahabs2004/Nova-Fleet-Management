@@ -701,6 +701,11 @@ public sealed class MissionService(
         currentUser.Require(PermissionCatalog.Missions.Print);
         var mission = await LoadAsync(id, cancellationToken);
         EnsureVisible(mission);
+        if (!mission.ApprovedAtUtc.HasValue)
+        {
+            throw new ValidationAppException("چاپ حکم فقط پس از تأیید مأموریت امکان‌پذیر است.");
+        }
+
         var details = await ToDetailsAsync(mission, cancellationToken);
         var bundle = await settings.GetRuntimeBundleAsync(cancellationToken);
         return MissionOrderPdf.Build(details, bundle, currentUser.DisplayName, clock.UtcNow);

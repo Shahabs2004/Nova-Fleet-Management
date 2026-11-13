@@ -14,6 +14,43 @@ namespace NovaFleet.UnitTests.Missions;
 /// </summary>
 public sealed class MissionLifecycleTests : MissionTestBase
 {
+    [Theory]
+    [InlineData(MissionStatus.Pending)]
+    [InlineData(MissionStatus.UnderReview)]
+    [InlineData(MissionStatus.Rejected)]
+    [InlineData(MissionStatus.Cancelled)]
+    public async Task ExportOrderPdfAsync_RejectsMissionWithoutApproval(MissionStatus status)
+    {
+        var created = await CreatePendingAsync();
+        var service = ServiceFor(MissionAdmin());
+        if (status == MissionStatus.UnderReview)
+        {
+            await service.StartReviewAsync(created.Id);
+        }
+        else if (status == MissionStatus.Rejected)
+        {
+            await service.RejectAsync(created.Id, new MissionRejectionRequest("رد درخواست"));
+        }
+        else if (status == MissionStatus.Cancelled)
+        {
+            await service.CancelAsync(created.Id, new MissionCancelRequest("لغو پیش از تأیید"));
+        }
+
+        Assert.Null(Reload(created.Id).ApprovedAtUtc);
+        var printer = ServiceFor(User(RequesterUsername, PermissionCatalog.Missions.Print));
+        var error = await Assert.ThrowsAsync<ValidationAppException>(() => printer.ExportOrderPdfAsync(created.Id));
+        Assert.Contains("پس از تأیید", error.Message);
+    }
+
+    [Fact]
+    public async Task ExportOrderPdfAsync_RequiresPrintPermissionAfterApproval()
+    {
+        var confirmed = await ConfirmAsync();
+
+        await Assert.ThrowsAsync<ForbiddenAppException>(() =>
+            ServiceFor(User(RequesterUsername)).ExportOrderPdfAsync(confirmed.Id));
+    }
+
     [Fact]
     public async Task CreateAsync_StoresPendingMissionWithJalaliNumber()
     {
