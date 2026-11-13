@@ -488,6 +488,7 @@ function SmsStep({ form, set }: { form: Form; set: Setter }) {
 }
 
 function OrganizationStep({ form, set }: { form: Form; set: Setter }) {
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const pickLogo = (file: File | undefined) => {
     if (!file) return
     if (file.size > 512 * 1024) {
@@ -514,18 +515,20 @@ function OrganizationStep({ form, set }: { form: Form; set: Setter }) {
               <span className="text-[10px] text-slate-400">بدون لوگو</span>
             )}
           </div>
-          <label className="btn-ghost btn-sm cursor-pointer">
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml"
+            className="hidden"
+            onChange={(e) => {
+              pickLogo(e.target.files?.[0])
+              // پاک‌کردن مقدار تا انتخاب دوباره همان فایل هم onChange را روشن کند.
+              e.target.value = ''
+            }}
+          />
+          <button type="button" className="btn-ghost btn-sm" onClick={() => logoInputRef.current?.click()}>
             انتخاب تصویر
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml"
-              className="sr-only pointer-events-none"
-              onChange={(e) => {
-                pickLogo(e.target.files?.[0])
-                e.target.value = ''
-              }}
-            />
-          </label>
+          </button>
           {form.logoDataUrl && (
             <button type="button" className="btn-ghost btn-sm text-rose-600" onClick={() => set('logoDataUrl')(null)}>
               حذف

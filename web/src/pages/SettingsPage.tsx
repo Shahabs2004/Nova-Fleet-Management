@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ConnectionsSettingsTab } from '../components/ConnectionsSettings'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
@@ -69,6 +69,7 @@ function OrganizationTab() {
   const [name, setName] = useState('')
   const [logo, setLogo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (settings.data) {
@@ -111,19 +112,20 @@ function OrganizationTab() {
             <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
               {logo ? <img src={logo} alt="لوگو" className="h-full w-full object-contain" /> : <span className="text-[10px] text-slate-400">بدون لوگو</span>}
             </div>
-            <label className="btn-ghost btn-sm cursor-pointer">
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              className="hidden"
+              onChange={(e) => {
+                pickLogo(e.target.files?.[0])
+                // پاک‌کردن مقدار تا انتخاب دوباره همان فایل هم onChange را روشن کند.
+                e.target.value = ''
+              }}
+            />
+            <button type="button" className="btn-ghost btn-sm" onClick={() => logoInputRef.current?.click()}>
               انتخاب تصویر
-              {/* مقدار پاک می‌شود تا انتخاب دوباره همان فایل هم onChange را روشن کند؛ pointer-events فقط برچسب را فعال می‌کند. */}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml"
-                className="sr-only pointer-events-none"
-                onChange={(e) => {
-                  pickLogo(e.target.files?.[0])
-                  e.target.value = ''
-                }}
-              />
-            </label>
+            </button>
             {logo && (
               <button className="btn-ghost btn-sm text-rose-600" onClick={() => setLogo(null)}>
                 حذف
