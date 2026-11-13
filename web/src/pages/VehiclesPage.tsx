@@ -5,21 +5,7 @@ import { formatFaDate } from '../lib/date'
 import { VEHICLE_STATUS } from '../lib/labels'
 import type { PagedResult, VehicleDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
-
-export function PlateField({ plate }: { plate: { plateFirstTwo: string; plateLetter: string; plateNextThree: string; plateIranCode: string } }) {
-  const { plateFirstTwo, plateLetter, plateNextThree, plateIranCode } = plate
-  return (
-    <span className="num inline-flex items-center gap-1 rounded-lg border-2 border-emerald-900 bg-white px-2 py-1 text-[13px] font-bold text-emerald-950" dir="ltr">
-      <span className="border-r-2 border-emerald-900 px-1">{plateIranCode}</span>
-      <span className="flex items-center gap-1 px-1">
-        <span>{plateFirstTwo}</span>
-        <span className="text-[15px]">{plateLetter}</span>
-        <span>{plateNextThree}</span>
-      </span>
-      <span className="rounded bg-emerald-900 px-1 text-[10px] text-white">IR</span>
-    </span>
-  )
-}
+import { Plate, PLATE_LETTER_GROUPS } from '../components/Plate'
 
 const emptyPlate = { brand: '', model: '', plateFirstTwo: '', plateLetter: '', plateNextThree: '', plateIranCode: '' }
 
@@ -91,7 +77,7 @@ export function VehiclesPage() {
                         <span className="font-semibold text-slate-700">{v.brand} {v.model}</span>
                         {v.isArchived && <span className="badge mr-2 bg-slate-100 text-slate-500">بایگانی</span>}
                       </td>
-                      <td className="px-4 py-3.5"><PlateField plate={v} /></td>
+                      <td className="px-4 py-3.5"><Plate parts={{ firstTwo: v.plateFirstTwo, letter: v.plateLetter, nextThree: v.plateNextThree, iranCode: v.plateIranCode }} size="sm" /></td>
                       <td className="px-4 py-3.5">
                         <select
                           className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs"
@@ -194,14 +180,28 @@ function VehicleEditModal({
           <label className="label">پلاک خودرو</label>
           <div className="flex items-center gap-2" dir="ltr">
             <input className="input num w-16 text-center" value={form.plateFirstTwo} onChange={set('plateFirstTwo')} placeholder="12" maxLength={2} required />
-            <input className="input w-16 text-center" value={form.plateLetter} onChange={set('plateLetter')} placeholder="ب" maxLength={1} required />
+            <select
+              className="input w-24 text-center"
+              value={form.plateLetter}
+              onChange={(e) => setForm((prev) => ({ ...prev, plateLetter: e.target.value }))}
+              required
+            >
+              <option value="" disabled>حرف</option>
+              {PLATE_LETTER_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.letters.map((letter) => (
+                    <option key={letter} value={letter}>{letter}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
             <input className="input num w-20 text-center" value={form.plateNextThree} onChange={set('plateNextThree')} placeholder="345" maxLength={3} required />
             <span className="text-slate-400">─</span>
             <input className="input num w-16 text-center" value={form.plateIranCode} onChange={set('plateIranCode')} placeholder="67" maxLength={2} required />
           </div>
         </div>
         <div className="rounded-xl bg-emerald-50/60 p-3 text-center ring-1 ring-emerald-100">
-          <PlateField plate={form} />
+          <Plate parts={{ firstTwo: form.plateFirstTwo, letter: form.plateLetter, nextThree: form.plateNextThree, iranCode: form.plateIranCode }} size="md" />
         </div>
         {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
         <button type="submit" disabled={busy} className="btn-primary w-full">

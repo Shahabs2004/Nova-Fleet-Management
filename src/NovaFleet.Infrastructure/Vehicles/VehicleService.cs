@@ -99,11 +99,7 @@ public sealed class VehicleService(
     public async Task<VehicleDto> CreateAsync(VehicleCreateRequest request, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Vehicles.Manage);
-        var plate = IranianLicensePlate.Create(
-            request.PlateFirstTwo,
-            request.PlateLetter,
-            request.PlateNextThree,
-            request.PlateIranCode);
+        var plate = BuildPlate(request.PlateFirstTwo, request.PlateLetter, request.PlateNextThree, request.PlateIranCode);
         var vehicle = new Vehicle(request.Brand, request.Model, plate);
         db.Vehicles.Add(vehicle);
         await db.SaveChangesAsync(cancellationToken);
@@ -116,11 +112,7 @@ public sealed class VehicleService(
         currentUser.Require(PermissionCatalog.Vehicles.Manage);
         var vehicle = await LoadAsync(id, cancellationToken);
         db.ApplyRowVersion(vehicle, request.RowVersion);
-        var plate = IranianLicensePlate.Create(
-            request.PlateFirstTwo,
-            request.PlateLetter,
-            request.PlateNextThree,
-            request.PlateIranCode);
+        var plate = BuildPlate(request.PlateFirstTwo, request.PlateLetter, request.PlateNextThree, request.PlateIranCode);
         vehicle.UpdateDetails(request.Brand, request.Model, plate);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateVehicle", "Vehicle", id.ToString(), "Success", After: new { vehicle.DisplayName }), cancellationToken);
@@ -163,6 +155,25 @@ public sealed class VehicleService(
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord(archived ? "ArchiveVehicle" : "ReactivateVehicle", "Vehicle", id.ToString(), "Success"), cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    private static IranianLicensePlate BuildPlate(string firstTwo, string letter, string nextThree, string iranCode)
+    {
+        try
+        {
+            return IranianLicensePlate.Create(firstTwo, letter, nextThree, iranCode);
+        }
+        catch (ArgumentException ex)
+        {
+            var message = ex.Message;
+            var parameterSuffix = message.IndexOf(" (Parameter '", StringComparison.Ordinal);
+            if (parameterSuffix >= 0)
+            {
+                message = message[..parameterSuffix];
+            }
+
+            throw new ValidationAppException(message);
+        }
     }
 
     private async Task<Vehicle> LoadAsync(Guid id, CancellationToken cancellationToken) =>

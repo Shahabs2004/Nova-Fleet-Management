@@ -1,8 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { JalaliDateField, jalaliValueToUtc, type JalaliDateValue } from '../components/JalaliDateField'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
+import { Plate } from '../components/Plate'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import {
@@ -652,7 +653,7 @@ function MissionQuickEdit({
         <Info label="نوع" value={MISSION_TYPE[mission.type] ?? '—'} />
         <Info label="درخواست‌کننده" value={mission.requesterName} />
         <Info label="راننده" value={mission.driverName ?? 'تخصیص نیافته'} />
-        <Info label="خودرو" value={mission.vehicleDisplayName ?? mission.vehiclePlate ?? 'تخصیص نیافته'} />
+        <Info label="خودرو" value={mission.vehiclePlate ? <Plate value={mission.vehiclePlate} size="sm" /> : (mission.vehicleDisplayName ?? 'تخصیص نیافته')} />
         <Info label="واحد سازمانی" value={mission.requesterOrganizationalUnit || '—'} />
         <Info label="شروع برنامه‌ریزی‌شده" value={formatFaDateTime(mission.plannedStartAtUtc)} />
         <Info label="پایان برنامه‌ریزی‌شده" value={formatFaDateTime(mission.plannedEndAtUtc)} />
@@ -723,7 +724,7 @@ function MissionQuickEdit({
   )
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
       <p className="text-[10px] text-slate-400">{label}</p>

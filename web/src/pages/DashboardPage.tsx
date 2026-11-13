@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { faNumber, formatFaDateTime, toFa } from '../lib/date'
 import type { DashboardStats } from '../lib/types'
 import { PageHeader, Spinner, StatCard, StatusBadge } from '../components/ui'
+import { Plate } from '../components/Plate'
 
 const vehicleColors = ['#0F766E', '#6366F1', '#F59E0B', '#94A3B8']
 
@@ -143,7 +144,7 @@ export function DashboardPage() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-slate-700">{m.title}</p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    <span className="num">{toFa(m.missionNumber)}</span> — {m.driverName ?? 'بدون راننده'} — {m.vehiclePlate ?? 'بدون خودرو'}
+                    <span className="num">{toFa(m.missionNumber)}</span> — {m.driverName ?? 'بدون راننده'} — {m.vehiclePlate ? <Plate value={m.vehiclePlate} size="sm" className="inline-block align-middle" /> : 'بدون خودرو'}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">

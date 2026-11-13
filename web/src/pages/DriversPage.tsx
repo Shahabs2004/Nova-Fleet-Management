@@ -5,6 +5,7 @@ import { formatFaDate } from '../lib/date'
 import { DRIVER_STATUS } from '../lib/labels'
 import type { DriverDto, PagedResult } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
+import { Plate } from '../components/Plate'
 
 export function DriversPage() {
   const queryClient = useQueryClient()
@@ -94,7 +95,7 @@ export function DriversPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="num px-4 py-3.5 text-slate-600">{d.defaultVehiclePlate ?? '—'}</td>
+                      <td className="px-4 py-3.5">{d.defaultVehiclePlate ? <Plate value={d.defaultVehiclePlate} size="sm" /> : '—'}</td>
                       <td className="num px-4 py-3.5 text-xs text-slate-400">{formatFaDate(d.createdAtUtc)}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex justify-end gap-1.5">

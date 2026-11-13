@@ -7,6 +7,7 @@ import { faNumber, formatFaDateTime, toFa } from '../lib/date'
 import { MISSION_STATUS, MISSION_TYPE } from '../lib/labels'
 import type { MissionListItem, PagedResult } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner, StatusBadge } from '../components/ui'
+import { Plate } from '../components/Plate'
 import { MissionForm } from '../components/MissionForm'
 
 export function MissionsPage() {
@@ -139,7 +140,7 @@ export function MissionsPage() {
                       </td>
                       <td className="px-4 py-3.5 text-[13px] text-slate-600">
                         {m.driverName ?? '—'}
-                        <span className="num block text-xs text-slate-400">{m.vehiclePlate ?? ''}</span>
+                        <span className="block text-xs text-slate-400">{m.vehiclePlate ? <Plate value={m.vehiclePlate} size="sm" /> : ''}</span>
                       </td>
                       <td className="px-4 py-3.5 text-xs text-slate-500">
                         <span className="num">{formatFaDateTime(m.plannedStartAtUtc)}</span>
