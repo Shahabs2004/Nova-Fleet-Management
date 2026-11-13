@@ -41,3 +41,6 @@ _ref/
 # graphify: keep dated rollback snapshots and queued relabel work local
 graphify-out/2*/
 graphify-out/.graphify_labels.pending.json
+
+# graphify: build state records its own mtime/scan_root, so it churns on every run
+graphify-out/.graphify_build_state.json
