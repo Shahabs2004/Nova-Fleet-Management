@@ -39,9 +39,19 @@ public sealed class SmsGatewayRouter(
             : await simulated.GetDeliveryStatusAsync(providerReference, cancellationToken);
 
     public async Task<SmsBalanceResult> GetBalanceAsync(CancellationToken cancellationToken = default)
-        => await ReadModeAsync(cancellationToken) == SmsGatewayMode.Wsdl
-            ? await payam.GetBalanceAsync(cancellationToken)
-            : await simulated.GetBalanceAsync(cancellationToken);
+    {
+        // در حالتی که درگاهش پیاده نشده، اعتبار شبیه‌سازی برگردانده نمی‌شود:
+        // آزمون اتصال باید صادق باشد، حتی وقتی فقط خواندنی است.
+        switch (await ReadModeAsync(cancellationToken))
+        {
+            case SmsGatewayMode.Simulation:
+                return await simulated.GetBalanceAsync(cancellationToken);
+            case SmsGatewayMode.Wsdl:
+                return await payam.GetBalanceAsync(cancellationToken);
+            default:
+                return SmsBalanceResult.Failure(UnimplementedModeMessage);
+        }
+    }
 
     private SmsSendResult Refuse()
     {

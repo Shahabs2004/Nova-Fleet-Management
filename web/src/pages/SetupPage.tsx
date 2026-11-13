@@ -516,7 +516,15 @@ function OrganizationStep({ form, set }: { form: Form; set: Setter }) {
           </div>
           <label className="btn-ghost btn-sm cursor-pointer">
             انتخاب تصویر
-            <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="sr-only" onChange={(e) => pickLogo(e.target.files?.[0])} />
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              className="sr-only pointer-events-none"
+              onChange={(e) => {
+                pickLogo(e.target.files?.[0])
+                e.target.value = ''
+              }}
+            />
           </label>
           {form.logoDataUrl && (
             <button type="button" className="btn-ghost btn-sm text-rose-600" onClick={() => set('logoDataUrl')(null)}>

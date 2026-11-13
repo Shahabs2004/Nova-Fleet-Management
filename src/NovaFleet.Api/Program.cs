@@ -55,6 +55,7 @@ var bootstrap = new JsonBootstrapConfigurationStore();
 var connectionString = ResolveConnectionString(builder.Configuration, bootstrap);
 builder.Services.AddSingleton<IBootstrapConfigurationStore>(bootstrap);
 builder.Services.AddSingleton<IDatabaseSetupProbe, DatabaseSetupProbe>();
+builder.Services.AddSingleton<IDatabaseHealthProbe, DatabaseHealthProbe>();
 builder.Services.AddDbContext<NovaFleetDbContext>(options => options.UseSqlServer(connectionString));
 
 // حلقه کلید رمزنگاری اسرار تنظیمات؛ پوشه کلیدها کنار فایل بوت‌استرپ و بیرون مخزن می‌ماند.
@@ -116,6 +117,7 @@ builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IAuditQueryService, AuditQueryService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
 builder.Services.AddScoped<IConnectionsSettingsService, ConnectionsSettingsService>();
+builder.Services.AddScoped<IConnectionTestsService, ConnectionTestsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 builder.Services.AddScoped<ISmsService, SmsService>();

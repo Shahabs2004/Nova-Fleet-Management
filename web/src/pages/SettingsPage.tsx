@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { ConnectionsSettingsTab } from '../components/ConnectionsSettings'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
@@ -7,7 +8,7 @@ import { formatFaDateTime } from '../lib/date'
 import { LOCATION_STATUS } from '../lib/labels'
 import type { LocationDto, OrgUnitDto, SettingsBundle } from '../lib/types'
 
-type Tab = 'organization' | 'rules' | 'template' | 'split-reasons' | 'org-units' | 'locations'
+type Tab = 'organization' | 'rules' | 'template' | 'split-reasons' | 'org-units' | 'locations' | 'connections'
 
 export function SettingsPage() {
   const { can } = useAuth()
@@ -18,6 +19,7 @@ export function SettingsPage() {
     { key: 'split-reasons', title: 'دلایل تقسیم', visible: can('settings.mission-split-reasons.manage') || can('settings.system.manage') },
     { key: 'org-units', title: 'واحدهای سازمانی', visible: can('settings.system.manage') },
     { key: 'locations', title: 'مکان‌ها', visible: can('locations.manage') },
+    { key: 'connections', title: 'اتصال سرویس‌ها', visible: can('settings.connections.manage') },
   ]
   const available = tabs.filter((item) => item.visible)
   const [tab, setTab] = useState<Tab>(available[0]?.key ?? 'locations')
@@ -48,6 +50,7 @@ export function SettingsPage() {
       {tab === 'split-reasons' && <SplitReasonsTab />}
       {tab === 'org-units' && <OrgUnitsTab />}
       {tab === 'locations' && <LocationsTab />}
+      {tab === 'connections' && <ConnectionsSettingsTab />}
     </div>
   )
 }
@@ -110,7 +113,16 @@ function OrganizationTab() {
             </div>
             <label className="btn-ghost btn-sm cursor-pointer">
               انتخاب تصویر
-              <input type="file" accept="image/png,image/jpeg,image/svg+xml" className="sr-only" onChange={(e) => pickLogo(e.target.files?.[0])} />
+              {/* مقدار پاک می‌شود تا انتخاب دوباره همان فایل هم onChange را روشن کند؛ pointer-events فقط برچسب را فعال می‌کند. */}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                className="sr-only pointer-events-none"
+                onChange={(e) => {
+                  pickLogo(e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
             </label>
             {logo && (
               <button className="btn-ghost btn-sm text-rose-600" onClick={() => setLogo(null)}>

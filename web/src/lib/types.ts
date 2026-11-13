@@ -279,6 +279,55 @@ export interface SettingsBundle {
   missionOrderTemplate: { headerText: string | null; footerText: string | null; showLogo: boolean }
 }
 
+export interface SettingsSaveResult {
+  restartRequired: boolean
+  hint: string | null
+}
+
+export interface ConnectionTestResult {
+  success: boolean
+  message: string
+  detail: string | null
+}
+
+export interface DirectorySettings {
+  enabled: boolean
+  host: string
+  port: number
+  useSsl: boolean
+  domain: string
+  baseDn: string
+  bindDn: string
+  timeoutSeconds: number
+  searchFilter: string
+  hasBindPassword: boolean
+}
+
+export interface SmsConnectionSettings {
+  enabled: boolean
+  mode: string
+  endpoint: string | null
+  organization: string | null
+  username: string | null
+  senderNumber: string | null
+  timeoutSeconds: number
+  retryMinutes: number
+  maxAttempts: number
+  hasPassword: boolean
+}
+
+export interface OperationsSettings {
+  logLevel: string
+  pdfFontPath: string | null
+  reportPaperSize: string
+}
+
+export interface DatabaseSettings {
+  connectionString: string | null
+  isConfigured: boolean
+  source: string
+}
+
 export interface ReportDefinition {
   key: string
   title: string

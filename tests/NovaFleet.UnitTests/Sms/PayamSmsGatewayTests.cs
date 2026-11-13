@@ -411,15 +411,18 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
     }
 
     [Fact]
-    public async Task Router_ReportsSyntheticCreditInEveryModeExceptWsdl()
+    public async Task Router_ReportsCreditPerModeAndRefusesAnUnimplementedOne()
     {
         handler = new StubHttpMessageHandler(SendResponse("12500"));
         var router = Router();
 
         Assert.Equal(SimulatedSmsGateway.SimulatedCreditRial, (await router.GetBalanceAsync()).RawCredit);
 
+        // اعتبار شبیه‌سازی در حالتی که درگاهش پیاده نشده گزارش نمی‌شود: آزمون اتصال نباید دروغ بگوید.
         await Runtime.SetAsync(SettingKeys.SmsMode, "Api");
-        Assert.Equal(SimulatedSmsGateway.SimulatedCreditRial, (await router.GetBalanceAsync()).RawCredit);
+        var unimplemented = await router.GetBalanceAsync();
+        Assert.False(unimplemented.Success);
+        Assert.Equal(SmsGatewayRouter.UnimplementedModeMessage, unimplemented.Error);
 
         await Runtime.SetAsync(SettingKeys.SmsMode, "Wsdl");
         await ConfigureConnectionAsync();

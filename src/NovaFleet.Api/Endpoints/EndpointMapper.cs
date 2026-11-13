@@ -338,6 +338,13 @@ public static class EndpointMapper
             await service.GetDatabaseAsync(ct));
         group.MapPut("/settings/connections/database", async (DatabaseSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateDatabaseAsync(request, ct)));
+
+        group.MapPost("/settings/connections/database/test", async (IConnectionTestsService service, CancellationToken ct) =>
+            Results.Ok(await service.TestDatabaseAsync(ct)));
+        group.MapPost("/settings/connections/directory/test", async (string? sampleUsername, IConnectionTestsService service, CancellationToken ct) =>
+            Results.Ok(await service.TestDirectoryAsync(sampleUsername, ct)));
+        group.MapPost("/settings/connections/sms/test", async (IConnectionTestsService service, CancellationToken ct) =>
+            Results.Ok(await service.TestSmsBalanceAsync(ct)));
     }
 
     private static void MapSecurityEndpoints(this RouteGroupBuilder group)
