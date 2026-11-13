@@ -109,9 +109,9 @@ export function Plate({
         <rect x="29" y="20.5" width="6" height="6" fill="#da0000" />
         <text x="32" y="60" textAnchor="middle" fontSize="17" fontWeight="700" fill="#ffffff">I.R.</text>
         <text x="32" y="82" textAnchor="middle" fontSize="17" fontWeight="700" fill="#ffffff">IRAN</text>
-        <text x="112" y="72" textAnchor="middle" fontSize="46" fontWeight="700" fill={fg}>{toFa(resolved.firstTwo)}</text>
-        <text x="208" y="70" textAnchor="middle" fontSize="40" fontWeight="700" fill={fg}>{resolved.letter}</text>
-        <text x="304" y="72" textAnchor="middle" fontSize="46" fontWeight="700" fill={fg}>{toFa(resolved.nextThree)}</text>
+        <text x="108" y="84" textAnchor="middle" fontSize="84" fontWeight="700" fill={fg} textLength="70" lengthAdjust="spacingAndGlyphs">{toFa(resolved.firstTwo)}</text>
+        <text x="200" y="82" textAnchor="middle" fontSize="74" fontWeight="700" fill={fg} textLength={resolved.letter === 'الف' ? 78 : 40} lengthAdjust="spacingAndGlyphs">{resolved.letter}</text>
+        <text x="296" y="84" textAnchor="middle" fontSize="84" fontWeight="700" fill={fg} textLength="102" lengthAdjust="spacingAndGlyphs">{toFa(resolved.nextThree)}</text>
         <text x="396" y="34" textAnchor="middle" fontSize="21" fontWeight="700" fill={fg}>ایران</text>
         <text x="396" y="84" textAnchor="middle" fontSize="42" fontWeight="700" fill={fg}>{toFa(resolved.iranCode)}</text>
       </g>
