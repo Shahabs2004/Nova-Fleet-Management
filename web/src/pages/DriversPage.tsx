@@ -121,6 +121,7 @@ export function DriversPage() {
       </div>
 
       <DriverEditModal
+        key={edit === 'new' ? 'new' : edit?.id ?? 'closed'}
         driver={edit}
         onClose={() => setEdit(null)}
         onSave={async (body, rowVersion) => {
@@ -150,12 +151,10 @@ function DriverEditModal({
   const [mobile, setMobile] = useState(existing?.mobilePhone ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const key = isNew ? 'new' : existing?.id ?? 'closed'
 
   return (
     <Modal open={driver !== null} title={isNew ? 'افزودن راننده' : `ویرایش ${existing?.displayName}`} onClose={onClose}>
       <form
-        key={key}
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault()
