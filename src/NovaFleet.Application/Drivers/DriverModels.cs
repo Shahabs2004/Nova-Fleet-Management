@@ -42,6 +42,7 @@ public interface IDriverService
     Task<DriverDto> SetEmploymentStatusAsync(Guid id, DriverEmploymentStatus status, string? rowVersion, CancellationToken cancellationToken = default);
 
     Task<DriverDto> SetDefaultVehicleAsync(Guid id, Guid? vehicleId, string? rowVersion, CancellationToken cancellationToken = default);
+    Task SetVehicleDriverAsync(Guid vehicleId, Guid? driverId, string? rowVersion, CancellationToken cancellationToken = default);
 
     Task<DriverDto> SetArchivedAsync(Guid id, bool archived, CancellationToken cancellationToken = default);
 }

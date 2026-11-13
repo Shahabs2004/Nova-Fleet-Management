@@ -130,12 +130,39 @@ public sealed class DriverService(
             {
                 throw new ValidationAppException("خودروی بایگانی‌شده نمی‌تواند پیش‌فرض باشد.");
             }
+
+            var otherHolders = await db.Drivers
+                .Where(item => item.DefaultVehicleId == vehicleId && item.Id != id)
+                .ToListAsync(cancellationToken);
+            foreach (var holder in otherHolders)
+            {
+                holder.SetDefaultVehicle(null);
+            }
         }
 
         driver.SetDefaultVehicle(vehicleId);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("SetDefaultVehicle", "Driver", id.ToString(), "Success", After: new { vehicleId }), cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    public async Task SetVehicleDriverAsync(Guid vehicleId, Guid? driverId, string? rowVersion, CancellationToken cancellationToken = default)
+    {
+        currentUser.RequireAny(PermissionCatalog.Drivers.DefaultVehicleManage, PermissionCatalog.Drivers.Manage);
+        if (driverId.HasValue)
+        {
+            await SetDefaultVehicleAsync(driverId.Value, vehicleId, rowVersion, cancellationToken);
+            return;
+        }
+
+        var holders = await db.Drivers.Where(item => item.DefaultVehicleId == vehicleId).ToListAsync(cancellationToken);
+        foreach (var holder in holders)
+        {
+            holder.SetDefaultVehicle(null);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("SetVehicleDriver", "Vehicle", vehicleId.ToString(), "Success", After: new { driverId }), cancellationToken);
     }
 
     public async Task<DriverDto> SetArchivedAsync(Guid id, bool archived, CancellationToken cancellationToken = default)

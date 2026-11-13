@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { api } from '../lib/api'
 import { formatFaDate } from '../lib/date'
 import { VEHICLE_STATUS } from '../lib/labels'
-import type { PagedResult, VehicleDto } from '../lib/types'
+import type { DriverDto, PagedResult, VehicleDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
 import { Plate, PLATE_LETTER_GROUPS } from '../components/Plate'
 
@@ -24,6 +24,8 @@ export function VehiclesPage() {
     queryKey: ['vehicles', params.toString()],
     queryFn: () => api.get<PagedResult<VehicleDto>>(`/api/vehicles?${params}`),
   })
+
+  const drivers = useQuery({ queryKey: ['driver-options'], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
 
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: unknown }) => api.post(path, body),
@@ -116,11 +118,16 @@ export function VehiclesPage() {
       </div>
 
       <VehicleEditModal
+        key={edit === 'new' ? 'new' : edit?.id ?? 'closed'}
         vehicle={edit}
+        drivers={drivers.data ?? []}
+        driversLoaded={drivers.data !== undefined}
         onClose={() => setEdit(null)}
         onSaved={async () => {
           setEdit(null)
           await queryClient.invalidateQueries({ queryKey: ['vehicles'] })
+          await queryClient.invalidateQueries({ queryKey: ['drivers'] })
+          await queryClient.invalidateQueries({ queryKey: ['driver-options'] })
         }}
       />
     </div>
@@ -129,10 +136,14 @@ export function VehiclesPage() {
 
 function VehicleEditModal({
   vehicle,
+  drivers,
+  driversLoaded,
   onClose,
   onSaved,
 }: {
   vehicle: VehicleDto | 'new' | null
+  drivers: DriverDto[]
+  driversLoaded: boolean
   onClose: () => void
   onSaved: () => Promise<void>
 }) {
@@ -141,7 +152,9 @@ function VehicleEditModal({
   const [form, setForm] = useState(existing ?? emptyPlate)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const key = isNew ? 'new' : existing?.id ?? 'closed'
+  const holder = drivers.find((d) => d.defaultVehicleId === existing?.id)
+  const [driverOverride, setDriverOverride] = useState<string | undefined>(undefined)
+  const driverId = driverOverride !== undefined ? driverOverride : holder?.id ?? ''
 
   const set = (field: keyof typeof emptyPlate) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -149,15 +162,22 @@ function VehicleEditModal({
   return (
     <Modal open={vehicle !== null} title={isNew ? 'افزودن خودرو' : `ویرایش ${existing?.displayName}`} onClose={onClose}>
       <form
-        key={key}
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault()
           setBusy(true)
           setError(null)
           try {
-            if (isNew) await api.post('/api/vehicles', form)
-            else await api.put(`/api/vehicles/${existing!.id}`, { ...form, rowVersion: existing!.rowVersion })
+            const saved = isNew
+              ? await api.post<VehicleDto>('/api/vehicles', form)
+              : await api.put<VehicleDto>(`/api/vehicles/${existing!.id}`, { ...form, rowVersion: existing!.rowVersion })
+            if (driversLoaded) {
+              const previousId = holder?.id ?? null
+              const targetId = driverId === '' ? null : driverId
+              if (targetId !== previousId) {
+                await api.post(`/api/vehicles/${saved.id}/driver`, { driverId: targetId })
+              }
+            }
             await onSaved()
           } catch (err) {
             setError(err instanceof Error ? err.message : 'ذخیره ناموفق بود.')
@@ -202,6 +222,21 @@ function VehicleEditModal({
         </div>
         <div className="rounded-xl bg-emerald-50/60 p-3 text-center ring-1 ring-emerald-100">
           <Plate parts={{ firstTwo: form.plateFirstTwo, letter: form.plateLetter, nextThree: form.plateNextThree, iranCode: form.plateIranCode }} size="md" />
+        </div>
+        <div>
+          <label className="label">راننده این خودرو</label>
+          <select
+            className="input"
+            value={driverId}
+            disabled={!driversLoaded}
+            onChange={(e) => setDriverOverride(e.target.value)}
+          >
+            <option value="">بدون راننده</option>
+            {drivers.map((d) => (
+              <option key={d.id} value={d.id}>{d.displayName}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-slate-400">با انتخاب راننده، این خودرو به‌عنوان خودروی پیش‌فرض او ثبت می‌شود.</p>
         </div>
         {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
         <button type="submit" disabled={busy} className="btn-primary w-full">

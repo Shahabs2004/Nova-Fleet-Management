@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { api } from '../lib/api'
 import { formatFaDate } from '../lib/date'
 import { DRIVER_STATUS } from '../lib/labels'
-import type { DriverDto, PagedResult } from '../lib/types'
+import type { DriverDto, PagedResult, VehicleDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
 import { Plate } from '../components/Plate'
 
@@ -22,6 +22,8 @@ export function DriversPage() {
     queryKey: ['drivers', params.toString()],
     queryFn: () => api.get<PagedResult<DriverDto>>(`/api/drivers?${params}`),
   })
+
+  const vehicles = useQuery({ queryKey: ['vehicle-options'], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
 
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: unknown }) =>
@@ -123,10 +125,17 @@ export function DriversPage() {
       <DriverEditModal
         key={edit === 'new' ? 'new' : edit?.id ?? 'closed'}
         driver={edit}
+        vehicles={vehicles.data ?? []}
         onClose={() => setEdit(null)}
-        onSave={async (body, rowVersion) => {
-          if (edit === 'new') await api.post('/api/drivers', body)
-          else await api.put(`/api/drivers/${(edit as DriverDto).id}`, { ...(body as object), rowVersion })
+        onSave={async (body, rowVersion, defaultVehicleId) => {
+          const saved =
+            edit === 'new'
+              ? await api.post<DriverDto>('/api/drivers', body)
+              : await api.put<DriverDto>(`/api/drivers/${(edit as DriverDto).id}`, { ...(body as object), rowVersion })
+          const previous = edit === 'new' ? null : (edit as DriverDto).defaultVehicleId
+          if (defaultVehicleId !== previous) {
+            await api.post(`/api/drivers/${saved.id}/default-vehicle`, { vehicleId: defaultVehicleId, rowVersion: saved.rowVersion })
+          }
           setEdit(null)
           await queryClient.invalidateQueries({ queryKey: ['drivers'] })
         }}
@@ -137,18 +146,25 @@ export function DriversPage() {
 
 function DriverEditModal({
   driver,
+  vehicles,
   onClose,
   onSave,
 }: {
   driver: DriverDto | 'new' | null
+  vehicles: VehicleDto[]
   onClose: () => void
-  onSave: (body: { firstName: string; lastName: string; mobilePhone: string }, rowVersion?: string) => Promise<void>
+  onSave: (
+    body: { firstName: string; lastName: string; mobilePhone: string },
+    rowVersion: string | undefined,
+    defaultVehicleId: string | null,
+  ) => Promise<void>
 }) {
   const isNew = driver === 'new'
   const existing = driver !== 'new' ? driver : null
   const [firstName, setFirstName] = useState(existing?.firstName ?? '')
   const [lastName, setLastName] = useState(existing?.lastName ?? '')
   const [mobile, setMobile] = useState(existing?.mobilePhone ?? '')
+  const [defaultVehicleId, setDefaultVehicleId] = useState(existing?.defaultVehicleId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -161,7 +177,11 @@ function DriverEditModal({
           setBusy(true)
           setError(null)
           try {
-            await onSave({ firstName, lastName, mobilePhone: mobile }, existing?.rowVersion)
+            await onSave(
+              { firstName, lastName, mobilePhone: mobile },
+              existing?.rowVersion,
+              defaultVehicleId === '' ? null : defaultVehicleId,
+            )
           } catch (err) {
             setError(err instanceof Error ? err.message : 'ذخیره ناموفق بود.')
           } finally {
@@ -182,6 +202,20 @@ function DriverEditModal({
         <div>
           <label className="label">شماره موبایل</label>
           <input className="input num" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="09xxxxxxxxx" required />
+        </div>
+        <div>
+          <label className="label">خودروی پیش‌فرض</label>
+          <select className="input" value={defaultVehicleId} onChange={(e) => setDefaultVehicleId(e.target.value)}>
+            <option value="">بدون خودرو</option>
+            {existing?.defaultVehicleId && !vehicles.some((v) => v.id === existing.defaultVehicleId) && (
+              <option value={existing.defaultVehicleId}>{existing.defaultVehiclePlate ?? 'خودروی بایگانی‌شده'}</option>
+            )}
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.displayName}
+              </option>
+            ))}
+          </select>
         </div>
         {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
         <button type="submit" disabled={busy} className="btn-primary w-full">

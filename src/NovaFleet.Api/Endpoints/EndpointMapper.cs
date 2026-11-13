@@ -174,6 +174,11 @@ public static class EndpointMapper
             Results.Ok(await service.SetManualStatusAsync(id, body.Status, body.RowVersion, ct)));
         group.MapPost("/vehicles/{id:guid}/archive", async (Guid id, ArchiveBody body, IVehicleService service, CancellationToken ct) =>
             Results.Ok(await service.SetArchivedAsync(id, body.Archived, ct)));
+        group.MapPost("/vehicles/{id:guid}/driver", async (Guid id, VehicleDriverBody body, IDriverService service, CancellationToken ct) =>
+        {
+            await service.SetVehicleDriverAsync(id, body.DriverId, body.RowVersion, ct);
+            return Results.NoContent();
+        });
     }
 
     private static void MapLocationEndpoints(this RouteGroupBuilder group)
@@ -447,6 +452,8 @@ public static class EndpointMapper
     public sealed record EmploymentStatusBody(DriverEmploymentStatus Status, string? RowVersion);
 
     public sealed record DefaultVehicleBody(Guid? VehicleId, string? RowVersion);
+
+    public sealed record VehicleDriverBody(Guid? DriverId, string? RowVersion);
 
     public sealed record ManualStatusBody(ManualVehicleStatus Status, string? RowVersion);
 
