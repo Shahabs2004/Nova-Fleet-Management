@@ -111,7 +111,7 @@ export function TimelinePage() {
 
   const showTip = (el: HTMLElement, mission: TimelineMission) => {
     const r = el.getBoundingClientRect()
-    const below = r.top < 190
+    const below = r.top < 260
     setTip({ mission, x: r.left + r.width / 2, y: below ? r.bottom : r.top, below })
   }
   const hideTip = () => setTip(null)
@@ -617,6 +617,8 @@ export function TimelinePage() {
                   </span>
                 }
               />
+              <TipRow label="مبدأ" value={tip.mission.origin} />
+              <TipRow label="مقصد" value={tip.mission.destination} />
               <TipRow label="شروع" value={formatFaDateTime(tip.mission.startAtUtc)} />
               <TipRow label="پایان" value={formatFaDateTime(tip.mission.endAtUtc)} />
               <TipRow label="راننده" value={tip.mission.driverName ?? 'تخصیص نیافته'} />
