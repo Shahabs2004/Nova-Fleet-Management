@@ -12,6 +12,8 @@ using NovaFleet.Domain.Missions;
 using NovaFleet.Domain.Vehicles;
 using NovaFleet.Infrastructure.Missions;
 using NovaFleet.Infrastructure.Persistence;
+using NovaFleet.Infrastructure.Security;
+using NovaFleet.Infrastructure.Settings;
 
 namespace NovaFleet.UnitTests.Missions;
 
@@ -91,6 +93,7 @@ public abstract class MissionTestBase : IDisposable
         Notifications = new FakeNotificationPublisher();
         Sms = new FakeSmsDispatcher();
         Settings = new FakeSettingsService();
+        Runtime = new RuntimeSettings(Db, Clock, new FakeSecretProtector());
 
         Db.Users.Add(new ApplicationUser(RequesterUsername, "مریم", "رضایی")
             .WithOrganizationalUnit("واحد ترانسفر"));
@@ -116,6 +119,9 @@ public abstract class MissionTestBase : IDisposable
     protected FakeSmsDispatcher Sms { get; }
 
     protected FakeSettingsService Settings { get; }
+
+    /// <summary>تنظیمات runtime واقعی روی همان SQLite؛ محافظ رمز در آزمون قابل‌برگشت است.</summary>
+    protected RuntimeSettings Runtime { get; }
 
     /// <summary>ساعت تهرانِ کامل؛ day شنبه ۱۵ آبان ۱۴۰۵ را به عنوان «امروز» مبنا قرار می‌دهد.</summary>
     protected static DateTimeOffset Hour(int day, int hour)

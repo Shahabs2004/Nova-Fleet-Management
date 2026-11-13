@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Api.Endpoints;
 using NovaFleet.Api.Identity;
@@ -50,14 +51,25 @@ RegisterPersianFont();
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables("NOVAFLEET_");
 
-var connectionString = ResolveConnectionString(builder.Configuration);
+var bootstrap = new JsonBootstrapConfigurationStore();
+var connectionString = ResolveConnectionString(builder.Configuration, bootstrap);
+builder.Services.AddSingleton<IBootstrapConfigurationStore>(bootstrap);
+builder.Services.AddSingleton<IDatabaseSetupProbe, DatabaseSetupProbe>();
 builder.Services.AddDbContext<NovaFleetDbContext>(options => options.UseSqlServer(connectionString));
 
-builder.Services.Configure<DirectoryOptions>(builder.Configuration.GetSection(DirectoryOptions.SectionName));
-builder.Services.Configure<SmsOptions>(builder.Configuration.GetSection(SmsOptions.SectionName));
+// حلقه کلید رمزنگاری اسرار تنظیمات؛ پوشه کلیدها کنار فایل بوت‌استرپ و بیرون مخزن می‌ماند.
+var keyDirectory = new DirectoryInfo(Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".novafleet", "keys"));
+keyDirectory.Create();
+builder.Services.AddDataProtection()
+    .SetApplicationName("NovaFleet")
+    .PersistKeysToFileSystem(keyDirectory);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddOpenApi();
+
+// بیرون از توسعه نشست فقط روی HTTPS زنده می‌ماند؛ پروفایل http://localhost:5192 توسعه نباید قفل شود.
+var requireHttps = !builder.Environment.IsDevelopment();
 
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -66,7 +78,9 @@ builder.Services
         options.Cookie.Name = "nf_session";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SecurePolicy = requireHttps
+            ? CookieSecurePolicy.Always
+            : CookieSecurePolicy.SameAsRequest;
         options.ExpireTimeSpan = TimeSpan.FromHours(12);
         options.SlidingExpiration = false;
         options.EventsType = typeof(SessionCookieEvents);
@@ -78,6 +92,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IRealtimeNotifier, NoopRealtimeNotifier>();
+builder.Services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
+builder.Services.AddScoped<IRuntimeSettings, RuntimeSettings>();
 builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
 builder.Services.AddScoped<IDirectoryAuthenticator, LdapDirectoryAuthenticator>();
 builder.Services.AddScoped<IAuditTrail, AuditTrail>();
@@ -85,15 +101,12 @@ builder.Services.AddScoped<IRequestContext, HttpContextRequestContext>();
 builder.Services.AddScoped<CurrentUserHolder>();
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUserHolder>().User);
 
-// SMS gateway: شبیه‌سازی پیش‌فرض؛ ADP فقط با تنظیم کامل محیط فعال می‌شود.
-builder.Services.AddHttpClient("adp-sms");
-builder.Services.AddScoped<ISmsGateway>(sp =>
-{
-    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SmsOptions>>().Value;
-    return options.IsSimulation
-        ? ActivatorUtilities.CreateInstance<SimulatedSmsGateway>(sp)
-        : ActivatorUtilities.CreateInstance<AdpSmsGateway>(sp);
-});
+// درگاه پیامک: حالت کار از ردیف sms.mode در پایگاه داده خوانده می‌شود، پس هر دو درگاه
+// ساخته می‌شوند و router در هر فراخوانی یکی را انتخاب می‌کند (بدون نیاز به راه‌اندازی مجدد).
+builder.Services.AddHttpClient(PayamSmsGateway.HttpClientName);
+builder.Services.AddScoped<SimulatedSmsGateway>();
+builder.Services.AddScoped<PayamSmsGateway>();
+builder.Services.AddScoped<ISmsGateway, SmsGatewayRouter>();
 
 // Module services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -102,6 +115,7 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IAuditQueryService, AuditQueryService>();
 builder.Services.AddScoped<ISettingsService, SettingsService>();
+builder.Services.AddScoped<IConnectionsSettingsService, ConnectionsSettingsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 builder.Services.AddScoped<ISmsService, SmsService>();
@@ -124,6 +138,14 @@ var app = builder.Build();
 await InitializeDatabaseAsync(app);
 
 app.UseMiddleware<ApiExceptionHandlerMiddleware>();
+
+// اگر پیکره‌بندی TLS جا بیفتد کوکی امنیتی ارسال نمی‌شود و ترافیک روشن به نسخه امن تغییر مسیر می‌خورد.
+if (requireHttps)
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
 app.UseMiddleware<CsrfHeaderMiddleware>();
 app.UseAuthentication();
 app.UseMiddleware<CurrentUserMiddleware>();
@@ -157,12 +179,12 @@ static void RegisterPersianFont()
     }
 }
 
-static string ResolveConnectionString(IConfiguration configuration)
+static string ResolveConnectionString(IConfiguration configuration, IBootstrapConfigurationStore bootstrap)
 {
-    var configured = configuration.GetConnectionString("Default");
-    if (!string.IsNullOrWhiteSpace(configured))
+    var (resolved, _) = ConnectionStringResolver.Resolve(configuration, bootstrap);
+    if (!string.IsNullOrWhiteSpace(resolved))
     {
-        return configured;
+        return resolved;
     }
 
     var host = Environment.GetEnvironmentVariable("SQL_HOST");
@@ -173,7 +195,8 @@ static string ResolveConnectionString(IConfiguration configuration)
         || string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
     {
         throw new InvalidOperationException(
-            "رشته اتصال تنظیم نشده است؛ ConnectionStrings:Default یا متغیرهای SQL_HOST/DB_NAME/APP_LOGIN/APP_PASSWORD لازم است.");
+            "رشته اتصال تنظیم نشده است؛ NOVAFLEET_ConnectionStrings__Default، فایل بوت‌استرپ، "
+            + "ConnectionStrings:Default یا متغیرهای SQL_HOST/DB_NAME/APP_LOGIN/APP_PASSWORD لازم است.");
     }
 
     return $"Server={host};Database={database};User ID={login};Password={password};TrustServerCertificate=True;MultipleActiveResultSets=True";

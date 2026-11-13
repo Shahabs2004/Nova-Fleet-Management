@@ -1,87 +1,108 @@
 using System.DirectoryServices.Protocols;
 using System.Net;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using NovaFleet.Application.Abstractions;
+using NovaFleet.Application.Settings;
 
 namespace NovaFleet.Infrastructure.Directory;
 
-/// <summary>تنظیمات اتصال LDAPS؛ مقادیر واقعی فقط در محیط امن سازمان وارد می‌شوند.</summary>
-public sealed class DirectoryOptions
-{
-    public const string SectionName = "Directory";
-
-    public bool Enabled { get; set; }
-
-    public string Host { get; set; } = string.Empty;
-
-    public int Port { get; set; } = 636;
-
-    public bool UseSsl { get; set; } = true;
-
-    /// <summary>دامنه NetBIOS یا DNS برای ساخت UPN هنگام احراز هویت.</summary>
-    public string Domain { get; set; } = string.Empty;
-
-    public string BaseDn { get; set; } = string.Empty;
-
-    /// <summary>حساب سرویس اختیاری برای جست‌وجوی کاربران در ورود ویندوز؛ رمز آن در تنظیمات محافظت‌شده است.</summary>
-    public string? BindDn { get; set; }
-
-    public string? BindPassword { get; set; }
-}
-
 /// <summary>
 /// احراز هویت Active Directory از طریق LDAPS با اعتبارسنجی کامل گواهی.
+/// تنظیمات از پایگاه داده خوانده می‌شود تا تغییرش بدون restart در نشست بعدی اعمال شود؛
 /// هنگام خطا، پیام یکسان و غیرقابل‌شمارش برگردانده می‌شود و هیچ اطلاعات حساسی لاگ نمی‌شود.
 /// </summary>
 public sealed class LdapDirectoryAuthenticator(
-    IOptions<DirectoryOptions> options,
+    IRuntimeSettings settings,
     ILogger<LdapDirectoryAuthenticator> logger) : IDirectoryAuthenticator
 {
-    private readonly DirectoryOptions _options = options.Value;
+    /// <summary>
+    /// سقف نتایج آزمون اتصال. رسیدن به این عدد یعنی «حداقل این‌قدر کاربر هست» و
+    /// تعداد کل دایرکتوری گزارش نمی‌شود.
+    /// </summary>
+    private const int ProbeSearchSizeLimit = 25;
 
-    public bool IsConfigured =>
-        _options.Enabled
-        && !string.IsNullOrWhiteSpace(_options.Host)
-        && !string.IsNullOrWhiteSpace(_options.Domain)
-        && !string.IsNullOrWhiteSpace(_options.BaseDn);
-
-    public Task<DirectoryAuthResult> AuthenticateAsync(
+    public async Task<DirectoryAuthResult> AuthenticateAsync(
         string username,
         string password,
         CancellationToken cancellationToken = default)
     {
-        if (!IsConfigured)
+        var config = await ReadAsync(cancellationToken);
+        if (!config.IsUsable)
         {
-            return Task.FromResult(DirectoryAuthResult.Failed("ورود دامنه در این نصب فعال نیست."));
+            return DirectoryAuthResult.Failed("ورود دامنه در این نصب فعال نیست.");
         }
 
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
         {
-            return Task.FromResult(DirectoryAuthResult.Failed("نام کاربری یا رمز دامنه معتبر نیست."));
+            return DirectoryAuthResult.Failed("نام کاربری یا رمز دامنه معتبر نیست.");
         }
 
-        return Task.Run(() => AuthenticateCore(username.Trim(), password), cancellationToken);
+        return await Task.Run(() => AuthenticateCore(config, username.Trim(), password), cancellationToken);
     }
 
-    public Task<DirectoryUserInfo?> FindByUsernameAsync(string username, CancellationToken cancellationToken = default)
+    public async Task<DirectoryUserInfo?> FindByUsernameAsync(
+        string username,
+        CancellationToken cancellationToken = default)
     {
-        if (!IsConfigured || string.IsNullOrWhiteSpace(_options.BindDn) || string.IsNullOrEmpty(_options.BindPassword))
+        var config = await ReadAsync(cancellationToken);
+        if (!config.IsUsable
+            || string.IsNullOrWhiteSpace(config.BindDn)
+            || string.IsNullOrEmpty(config.BindPassword)
+            || string.IsNullOrWhiteSpace(username))
         {
-            return Task.FromResult<DirectoryUserInfo?>(null);
+            return null;
         }
 
-        return Task.Run(() => FindCore(username.Trim()), cancellationToken);
+        return await Task.Run(() => FindCore(config, username.Trim()), cancellationToken);
     }
 
-    private DirectoryAuthResult AuthenticateCore(string username, string password)
+    public async Task<DirectoryProbeResult> ProbeAsync(
+        string? sampleUsername,
+        CancellationToken cancellationToken = default)
+    {
+        var config = await ReadAsync(cancellationToken);
+        if (!config.IsUsable)
+        {
+            return DirectoryProbeResult.Failed("ورود دامنه در این نصب فعال نیست.");
+        }
+
+        if (string.IsNullOrWhiteSpace(config.BindDn) || string.IsNullOrEmpty(config.BindPassword))
+        {
+            return DirectoryProbeResult.Failed("حساب Bind یا رمز آن تنظیم نشده است.");
+        }
+
+        return await Task.Run(() => ProbeCore(config, sampleUsername?.Trim()), cancellationToken);
+    }
+
+    private async Task<DirectoryConfig> ReadAsync(CancellationToken cancellationToken)
+    {
+        var values = await settings.ReadAllAsync(cancellationToken);
+        string Text(string key, string fallback = "") =>
+            values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : fallback;
+
+        return new DirectoryConfig(
+            ReadBool(values, SettingKeys.DirectoryEnabled),
+            Text(SettingKeys.DirectoryHost),
+            int.TryParse(Text(SettingKeys.DirectoryPort), out var port) ? port : SettingKeys.DefaultDirectoryPort,
+            ReadBool(values, SettingKeys.DirectoryUseSsl),
+            Text(SettingKeys.DirectoryDomain),
+            Text(SettingKeys.DirectoryBaseDn),
+            Text(SettingKeys.DirectorySearchFilter, SettingKeys.DefaultDirectorySearchFilter),
+            Text(SettingKeys.DirectoryBindDn),
+            await settings.GetSecretAsync(SettingKeys.DirectoryBindPassword, cancellationToken),
+            int.TryParse(Text(SettingKeys.DirectoryTimeoutSeconds), out var timeout)
+                ? timeout
+                : SettingKeys.DefaultDirectoryTimeoutSeconds);
+    }
+
+    private DirectoryAuthResult AuthenticateCore(DirectoryConfig config, string username, string password)
     {
         try
         {
-            using var connection = CreateConnection();
-            connection.Credential = new NetworkCredential(BuildUpn(username), password);
+            using var connection = CreateConnection(config);
+            connection.Credential = new NetworkCredential(BuildUpn(config, username), password);
             connection.Bind();
-            var info = SearchUser(connection, username);
+            var info = SearchUser(connection, config, username);
             return info is null
                 ? DirectoryAuthResult.Failed("حساب کاربری در دایرکتوری پیدا نشد.")
                 : DirectoryAuthResult.Succeeded(info);
@@ -97,14 +118,14 @@ public sealed class LdapDirectoryAuthenticator(
         }
     }
 
-    private DirectoryUserInfo? FindCore(string username)
+    private DirectoryUserInfo? FindCore(DirectoryConfig config, string username)
     {
         try
         {
-            using var connection = CreateConnection();
-            connection.Credential = new NetworkCredential(_options.BindDn, _options.BindPassword);
+            using var connection = CreateConnection(config);
+            connection.Credential = new NetworkCredential(config.BindDn, config.BindPassword);
             connection.Bind();
-            return SearchUser(connection, username);
+            return SearchUser(connection, config, username);
         }
         catch (Exception ex)
         {
@@ -113,23 +134,59 @@ public sealed class LdapDirectoryAuthenticator(
         }
     }
 
-    private LdapConnection CreateConnection()
+    /// <summary>
+    /// آزمون مدیر سامانه: bind با حساب Bind سپس یک جست‌وجوی نمونه با سقف اندازه.
+    /// بدون نام کاربری، فیلتر با * اجرا می‌شود تا صرفاً حق خواندن سنجیده شود.
+    /// </summary>
+    private DirectoryProbeResult ProbeCore(DirectoryConfig config, string? sampleUsername)
     {
-        var connection = new LdapConnection(new LdapDirectoryIdentifier(_options.Host, _options.Port))
+        try
+        {
+            using var connection = CreateConnection(config);
+            connection.Credential = new NetworkCredential(config.BindDn, config.BindPassword);
+            connection.Bind();
+
+            var value = string.IsNullOrWhiteSpace(sampleUsername) ? "*" : EscapeFilter(sampleUsername);
+            var request = new SearchRequest(
+                config.BaseDn,
+                config.SearchFilter.Replace("{0}", value, StringComparison.Ordinal),
+                SearchScope.Subtree,
+                "sAMAccountName")
+            {
+                SizeLimit = ProbeSearchSizeLimit
+            };
+
+            var found = connection.SendRequest(request) is SearchResponse response ? response.Entries.Count : 0;
+            return DirectoryProbeResult.Bound(found, found >= ProbeSearchSizeLimit);
+        }
+        catch (LdapException ex) when (ex.ErrorCode == 49)
+        {
+            return DirectoryProbeResult.Failed("حساب Bind یا رمز آن در دامنه پذیرفته نشد.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "آزمون اتصال LDAPS ناموفق بود.");
+            return DirectoryProbeResult.Failed("ارتباط با سرویس دایرکتوری برقرار نشد.");
+        }
+    }
+
+    private static LdapConnection CreateConnection(DirectoryConfig config)
+    {
+        var connection = new LdapConnection(new LdapDirectoryIdentifier(config.Host, config.Port))
         {
             AuthType = AuthType.Basic
         };
         connection.SessionOptions.ProtocolVersion = 3;
-        connection.SessionOptions.SecureSocketLayer = _options.UseSsl;
-        connection.Timeout = TimeSpan.FromSeconds(15);
+        connection.SessionOptions.SecureSocketLayer = config.UseSsl;
+        connection.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
         return connection;
     }
 
-    private DirectoryUserInfo? SearchUser(LdapConnection connection, string username)
+    private static DirectoryUserInfo? SearchUser(LdapConnection connection, DirectoryConfig config, string username)
     {
-        var filter = $"(&(objectClass=user)(sAMAccountName={EscapeFilter(username)}))";
+        var filter = config.SearchFilter.Replace("{0}", EscapeFilter(username), StringComparison.Ordinal);
         var request = new SearchRequest(
-            _options.BaseDn,
+            config.BaseDn,
             filter,
             SearchScope.Subtree,
             "sAMAccountName",
@@ -161,8 +218,11 @@ public sealed class LdapDirectoryAuthenticator(
             Read(entry, "distinguishedName"));
     }
 
-    private string BuildUpn(string username) =>
-        username.Contains('@') ? username : $"{username}@{_options.Domain}";
+    private static string BuildUpn(DirectoryConfig config, string username) =>
+        username.Contains('@') ? username : $"{username}@{config.Domain}";
+
+    private static bool ReadBool(IReadOnlyDictionary<string, string> values, string key) =>
+        bool.TryParse(values.GetValueOrDefault(key), out var value) && value;
 
     private static string? Read(SearchResultEntry entry, string attribute) =>
         entry.Attributes[attribute] is { Count: > 0 } value
@@ -187,5 +247,23 @@ public sealed class LdapDirectoryAuthenticator(
         }
 
         return builder.ToString();
+    }
+
+    private sealed record DirectoryConfig(
+        bool Enabled,
+        string Host,
+        int Port,
+        bool UseSsl,
+        string Domain,
+        string BaseDn,
+        string SearchFilter,
+        string BindDn,
+        string? BindPassword,
+        int TimeoutSeconds)
+    {
+        public bool IsUsable => Enabled
+            && !string.IsNullOrWhiteSpace(Host)
+            && !string.IsNullOrWhiteSpace(Domain)
+            && !string.IsNullOrWhiteSpace(BaseDn);
     }
 }

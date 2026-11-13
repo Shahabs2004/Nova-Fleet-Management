@@ -59,7 +59,7 @@ export function SmsPage() {
         title="پیامک‌ها"
         subtitle="صف ارسال، وضعیت تحویل و قالب‌های رویدادهای مأموریت"
         actions={
-          can('notifications.sms.templates.manage') && (
+          can('settings.connections.manage') && (
             <button className="btn-primary btn-sm" onClick={() => setTestOpen(true)}>
               پیامک آزمایشی
             </button>

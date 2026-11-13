@@ -109,6 +109,8 @@ public sealed class SystemSettingConfiguration : IEntityTypeConfiguration<System
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Key).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Value).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.IsSecret).HasDefaultValue(false);
+        builder.Property(x => x.ProtectedValue).HasColumnType("nvarchar(max)");
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.Property(x => x.RowVersion).IsRowVersion();
         builder.HasIndex(x => x.Key).IsUnique();

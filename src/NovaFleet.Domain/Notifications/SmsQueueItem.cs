@@ -58,7 +58,8 @@ public sealed class SmsQueueItem : Entity
         string messageBody,
         Guid? missionId = null,
         string? createdBy = null,
-        DateTimeOffset? nowUtc = null)
+        DateTimeOffset? nowUtc = null,
+        int? maxAttempts = null)
     {
         if (!Enum.IsDefined(eventType))
         {
@@ -73,6 +74,7 @@ public sealed class SmsQueueItem : Entity
         RecipientName = (recipientName ?? string.Empty).Trim();
         MessageBody = Required(messageBody, 1000, nameof(messageBody));
         CreatedBy = createdBy?.Trim();
+        MaxAttempts = maxAttempts is > 0 ? maxAttempts.Value : DefaultMaxAttempts;
         UpdatedAtUtc = now;
         NextAttemptAtUtc = now;
     }

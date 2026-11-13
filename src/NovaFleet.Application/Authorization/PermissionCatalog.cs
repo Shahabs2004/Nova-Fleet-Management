@@ -74,6 +74,7 @@ public static class PermissionCatalog
     public static class Administration
     {
         public const string AuthorizationManage = "settings.authorization";
+        public const string ConnectionsManage = "settings.connections.manage";
         public const string SessionsManage = "settings.sessions";
         public const string SystemManage = "settings.system.manage";
         public const string UsersManage = "users.manage";
@@ -122,6 +123,7 @@ public static class PermissionCatalog
             new(Security.AuditView, "مشاهده گزارش ممیزی", "مشاهده سوابق ممیزی با مجوز مستقل."),
             new(Security.SessionsView, "مشاهده سوابق نشست", "مشاهده سوابق ورود و نشست کاربران."),
             new(Administration.AuthorizationManage, "مدیریت نقش‌ها و مجوزها", "مدیریت نقش‌ها، نگاشت AD و مجوزهای مستقیم."),
+            new(Administration.ConnectionsManage, "مدیریت اتصال سرویس‌ها", "تغییر و تست اتصال دیتابیس، اکتیو دایرکتوری و سامانه پیامک."),
             new(Administration.SessionsManage, "مدیریت تنظیمات نشست", "تغییر عمر نشست و زمان عدم فعالیت."),
             new(Administration.SystemManage, "مدیریت تنظیمات سامانه", "مدیریت تنظیمات سازمانی، AD و قواعد سامانه."),
             new(Administration.UsersManage, "مدیریت کاربران", "فعال‌سازی، غیرفعال‌سازی و مدیریت پروفایل کاربران."),

@@ -191,6 +191,23 @@ export interface SetupStatus {
   organizationName: string | null
 }
 
+export interface SetupDatabaseState {
+  isConfigured: boolean
+  source: string
+  serverName: string | null
+  databaseName: string | null
+  useWindowsAuthentication: boolean
+  userName: string | null
+  hasPassword: boolean
+}
+
+export interface SetupDatabaseResult {
+  restartRequired: boolean
+  createdDatabase: boolean
+  sameAsActive: boolean
+  hint: string
+}
+
 export interface UserListItem {
   id: string
   username: string

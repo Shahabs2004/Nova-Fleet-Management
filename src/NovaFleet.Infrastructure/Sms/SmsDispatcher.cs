@@ -62,6 +62,7 @@ public sealed class SmsDispatcher(
 
         var now = clock.UtcNow;
         var reminderMinutes = await ReadIntAsync(SettingKeys.SmsReminderMinutes, SettingKeys.DefaultSmsReminderMinutes, cancellationToken);
+        var maxAttempts = await ReadIntAsync(SettingKeys.SmsMaxAttempts, SettingKeys.DefaultSmsMaxAttempts, cancellationToken);
 
         foreach (var recipient in recipients)
         {
@@ -79,7 +80,7 @@ public sealed class SmsDispatcher(
 
             try
             {
-                var item = new SmsQueueItem(eventType, mobile, name, body, mission.Id, "system", now);
+                var item = new SmsQueueItem(eventType, mobile, name, body, mission.Id, "system", now, maxAttempts);
                 if (eventType == SmsEventType.MissionStartReminder)
                 {
                     var scheduledAt = mission.PlannedStartAtUtc.AddMinutes(-reminderMinutes);
@@ -124,6 +125,12 @@ public sealed class SmsDispatcher(
 
     public async Task<int> ProcessQueueAsync(int batchSize, CancellationToken cancellationToken = default)
     {
+        if (!await IsSendingEnabledAsync(cancellationToken))
+        {
+            logger.LogDebug("ارسال پیامک در سامانه غیرفعال است؛ صف دست‌نخورده می‌ماند.");
+            return 0;
+        }
+
         var now = clock.UtcNow;
         var items = await db.SmsQueueItems
             .Where(item => (item.Status == SmsQueueStatus.Queued || item.Status == SmsQueueStatus.RetryScheduled)
@@ -184,6 +191,11 @@ public sealed class SmsDispatcher(
 
     public async Task<int> PollDeliveryAsync(int batchSize, CancellationToken cancellationToken = default)
     {
+        if (!await IsSendingEnabledAsync(cancellationToken))
+        {
+            return 0;
+        }
+
         var now = clock.UtcNow;
         var pollingMinutes = await ReadIntAsync(SettingKeys.SmsPollingMinutes, SettingKeys.DefaultSmsPollingMinutes, cancellationToken);
         var maxPolls = await ReadIntAsync(SettingKeys.SmsMaxPollingAttempts, SettingKeys.DefaultSmsMaxPollingAttempts, cancellationToken);
@@ -227,6 +239,10 @@ public sealed class SmsDispatcher(
 
         return items.Count;
     }
+
+    private async Task<bool> IsSendingEnabledAsync(CancellationToken cancellationToken) =>
+        bool.TryParse(await settings.GetValueAsync(SettingKeys.SmsEnabled, cancellationToken), out var enabled)
+        && enabled;
 
     private async Task<int> ReadIntAsync(string key, int fallback, CancellationToken cancellationToken)
     {

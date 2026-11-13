@@ -26,6 +26,12 @@ public interface ISettingsService
 {
     Task<SettingsBundleDto> GetBundleAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// خواندن بسته تنظیمات برای مسیرهای داخلی (مانند چاپ حکم) که مجوز خودشان در سرویس
+    /// مربوطه سنجیده می‌شود و کاربر لزوماً مجوز مدیریت تنظیمات ندارد.
+    /// </summary>
+    Task<SettingsBundleDto> GetRuntimeBundleAsync(CancellationToken cancellationToken = default);
+
     Task<OrganizationProfileDto> UpdateOrganizationAsync(OrganizationProfileDto profile, CancellationToken cancellationToken = default);
 
     Task<MissionRulesDto> UpdateMissionRulesAsync(MissionRulesDto rules, CancellationToken cancellationToken = default);

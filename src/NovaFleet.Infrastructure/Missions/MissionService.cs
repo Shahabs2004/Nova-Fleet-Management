@@ -702,7 +702,7 @@ public sealed class MissionService(
         var mission = await LoadAsync(id, cancellationToken);
         EnsureVisible(mission);
         var details = await ToDetailsAsync(mission, cancellationToken);
-        var bundle = await settings.GetBundleAsync(cancellationToken);
+        var bundle = await settings.GetRuntimeBundleAsync(cancellationToken);
         return MissionOrderPdf.Build(details, bundle, currentUser.DisplayName, clock.UtcNow);
     }
 

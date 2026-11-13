@@ -23,6 +23,7 @@ public sealed class UserService(
         bool includeDisabled,
         CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var source = db.Users.AsNoTracking();
         if (!includeDisabled)
         {
@@ -55,6 +56,7 @@ public sealed class UserService(
 
     public async Task<UserDetailsDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var user = await LoadAsync(id, cancellationToken);
         var roleIds = await db.UserRoles.AsNoTracking()
             .Where(item => item.UserId == id)
@@ -73,6 +75,7 @@ public sealed class UserService(
         CreateLocalUserRequest request,
         CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var username = request.Username?.Trim() ?? string.Empty;
         if (!UsernamePattern.IsMatch(username))
         {
@@ -105,6 +108,7 @@ public sealed class UserService(
         UpdateUserRequest request,
         CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var user = await LoadAsync(id, cancellationToken);
         user.UpdateProfile(request.FirstName, request.LastName, request.MobilePhone, request.Email, request.OrganizationalUnit);
         await ReplaceRolesAsync(id, request.RoleIds, cancellationToken);
@@ -116,6 +120,7 @@ public sealed class UserService(
 
     public async Task<UserDetailsDto> SetDisabledAsync(Guid id, bool disabled, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var user = await LoadAsync(id, cancellationToken);
         if (disabled && string.Equals(user.Username, currentUser.Username, StringComparison.OrdinalIgnoreCase))
         {
@@ -138,6 +143,7 @@ public sealed class UserService(
 
     public async Task ResetPasswordAsync(Guid id, ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var user = await LoadAsync(id, cancellationToken);
         if (user.IsDirectoryUser)
         {
@@ -156,6 +162,7 @@ public sealed class UserService(
 
     public async Task SetPermissionsAsync(Guid id, SetPermissionsRequest request, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var user = await LoadAsync(id, cancellationToken);
         var assignments = ValidateAssignments(request.Permissions, allowAll: false);
 

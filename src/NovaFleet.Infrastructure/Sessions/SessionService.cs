@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
+using NovaFleet.Application.Authorization;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Sessions;
 using NovaFleet.Domain.Sessions;
@@ -8,12 +9,16 @@ using NovaFleet.Infrastructure.Persistence;
 namespace NovaFleet.Infrastructure.Sessions;
 
 /// <summary>سوابق ورود/خروج و اعتبارسنجی نشست فعال با سیاست عمر مطلق و عدم فعالیت.</summary>
-public sealed class SessionService(NovaFleetDbContext db, IClock clock) : ISessionService
+public sealed class SessionService(
+    NovaFleetDbContext db,
+    ICurrentUser currentUser,
+    IClock clock) : ISessionService
 {
     public async Task<PagedResult<UserSessionDto>> ListAsync(
         SessionQuery query,
         CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Security.SessionsView);
         var (page, pageSize) = Paging.Normalize(query.Page, query.PageSize);
         var source =
             from session in db.UserSessions.AsNoTracking()
@@ -106,6 +111,7 @@ public sealed class SessionService(NovaFleetDbContext db, IClock clock) : ISessi
 
     public async Task ForceEndAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Security.SessionsView);
         var session = await db.UserSessions.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundAppException("نشست پیدا نشد.");
 

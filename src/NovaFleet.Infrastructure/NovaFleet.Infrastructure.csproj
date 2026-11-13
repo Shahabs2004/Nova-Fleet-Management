@@ -6,14 +6,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Data Protection برای رمزنگاری اسرار تنظیمات؛ از فریم‌ورک مشترک ASP.NET Core بدون دانلود پکیج. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.14" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.14" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.14" />
     <PackageReference Include="QuestPDF" Version="2026.9.1" />
     <PackageReference Include="System.DirectoryServices.Protocols" Version="10.0.14" />
     <!-- ارجاع مستقیم، نسخه آسیب‌پذیر 9.0.11 را که Microsoft.Data.SqlClient می‌آورد بالا می‌برد. -->

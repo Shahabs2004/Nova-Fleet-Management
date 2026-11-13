@@ -4,7 +4,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { formatFaTime } from '../lib/date'
-import type { NotificationDto } from '../lib/types'
+import type { NotificationDto, SettingsBundle } from '../lib/types'
 import { toFa } from '../lib/date'
 
 interface NavItem {
@@ -19,6 +19,8 @@ const icon = (d: string) => (
     <path d={d} />
   </svg>
 )
+
+const DEFAULT_ORGANIZATION_NAME = 'ناوگان نوین'
 
 const ROLE_TITLES: Record<string, string> = {
   Administrator: 'مدیر سامانه',
@@ -115,6 +117,12 @@ export function AppLayout() {
   const { user, logout, can } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get<SettingsBundle>('/api/settings'),
+  })
+  const organizationName = settings?.organization.name?.trim() || DEFAULT_ORGANIZATION_NAME
+  const organizationLogo = settings?.organization.logoDataUrl ?? null
 
   return (
     <div className="flex min-h-screen">
@@ -125,16 +133,20 @@ export function AppLayout() {
         }`}
       >
         <div className="flex items-center gap-3 px-5 py-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-900/60 ring-1 ring-gold-500/40">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C8A44A" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M3 15h4l2-5h6l2 5h4" />
-              <circle cx="7" cy="17" r="2" stroke="#2DD4BF" />
-              <circle cx="17" cy="17" r="2" stroke="#2DD4BF" />
-              <path d="M10 7h5" stroke="#2DD4BF" />
-            </svg>
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-emerald-900/60 ring-1 ring-gold-500/40">
+            {organizationLogo ? (
+              <img src={organizationLogo} alt={organizationName} className="h-full w-full object-contain" />
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C8A44A" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M3 15h4l2-5h6l2 5h4" />
+                <circle cx="7" cy="17" r="2" stroke="#2DD4BF" />
+                <circle cx="17" cy="17" r="2" stroke="#2DD4BF" />
+                <path d="M10 7h5" stroke="#2DD4BF" />
+              </svg>
+            )}
           </div>
           <div>
-            <p className="text-sm font-extrabold text-white">ناوگان نوین</p>
+            <p className="text-sm font-extrabold text-white">{organizationName}</p>
             <p className="text-[10px] text-emerald-400">سامانه مدیریت ناوگان</p>
           </div>
         </div>
@@ -179,7 +191,7 @@ export function AppLayout() {
             <button className="rounded-xl p-2 text-slate-500 hover:bg-emerald-50 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="منو">
               {icon('M4 6h16M4 12h16M4 18h16')}
             </button>
-            <p className="hidden text-sm text-slate-400 lg:block">به سامانه ناوگان نوین خوش آمدید</p>
+            <p className="hidden text-sm text-slate-400 lg:block">به سامانه {organizationName} خوش آمدید</p>
             <div className="flex items-center gap-2">
               <NotificationBell />
               <div className="mr-1 text-left">

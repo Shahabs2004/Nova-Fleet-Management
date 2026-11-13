@@ -12,6 +12,7 @@ namespace NovaFleet.Infrastructure.Identity;
 /// <summary>مدیریت نقش‌های پایه و سفارشی، مجوزهای آن‌ها و نگاشت گروه‌های Active Directory.</summary>
 public sealed class RoleService(
     NovaFleetDbContext db,
+    ICurrentUser currentUser,
     IAuditTrail audit) : IRoleService
 {
     private const string SystemAdministrator = "SystemAdministrator";
@@ -19,6 +20,7 @@ public sealed class RoleService(
 
     public async Task<IReadOnlyList<RoleDto>> ListAsync(CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var roles = await db.Roles.AsNoTracking().OrderBy(item => item.Title).ToListAsync(cancellationToken);
         var permissions = await db.RolePermissions.AsNoTracking().ToListAsync(cancellationToken);
         var counts = await db.UserRoles.AsNoTracking()
@@ -41,6 +43,7 @@ public sealed class RoleService(
 
     public async Task<RoleDto> CreateAsync(SaveRoleRequest request, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var name = request.Name?.Trim() ?? string.Empty;
         if (!RoleNamePattern.IsMatch(name))
         {
@@ -62,6 +65,7 @@ public sealed class RoleService(
 
     public async Task<RoleDto> UpdateAsync(Guid id, SaveRoleRequest request, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var role = await LoadAsync(id, cancellationToken);
         role.Update(request.Title, request.Description);
         await db.SaveChangesAsync(cancellationToken);
@@ -71,6 +75,7 @@ public sealed class RoleService(
 
     public async Task<RoleDto> SetActiveAsync(Guid id, bool active, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var role = await LoadAsync(id, cancellationToken);
         if (role.IsSystem && !active)
         {
@@ -93,6 +98,7 @@ public sealed class RoleService(
 
     public async Task SetPermissionsAsync(Guid id, SetPermissionsRequest request, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var role = await LoadAsync(id, cancellationToken);
         var normalized = new List<PermissionAssignmentDto>();
 
@@ -123,6 +129,7 @@ public sealed class RoleService(
 
     public async Task<IReadOnlyList<DirectoryMappingDto>> ListDirectoryMappingsAsync(CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var rows = await (
                 from mapping in db.DirectoryGroupRoleMappings.AsNoTracking()
                 join role in db.Roles.AsNoTracking() on mapping.RoleId equals role.Id
@@ -137,6 +144,7 @@ public sealed class RoleService(
         SaveDirectoryMappingRequest request,
         CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.GroupName, nameof(request.GroupName));
         var groupName = request.GroupName.Trim();
         var role = await LoadAsync(request.RoleId, cancellationToken);
@@ -164,6 +172,7 @@ public sealed class RoleService(
 
     public async Task RemoveDirectoryMappingAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var mapping = await db.DirectoryGroupRoleMappings.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundAppException("نگاشت گروه پیدا نشد.");
 

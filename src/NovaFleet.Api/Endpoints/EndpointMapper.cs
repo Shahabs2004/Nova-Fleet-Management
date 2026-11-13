@@ -32,9 +32,12 @@ public static class EndpointMapper
 {
     public static void MapApiEndpoints(this WebApplication app)
     {
-        var api = app.MapGroup("/api");
-        api.MapSetupEndpoints();
-        api.MapAuthEndpoints();
+        // Only the bootstrap paths stay anonymous: the status probe must answer before any account exists.
+        var bootstrap = app.MapGroup("/api");
+        bootstrap.MapSetupEndpoints();
+        bootstrap.MapAuthEndpoints();
+
+        var api = app.MapGroup("/api").RequireAuthorization();
         api.MapDashboardEndpoints();
         api.MapDriverEndpoints();
         api.MapVehicleEndpoints();
@@ -52,6 +55,13 @@ public static class EndpointMapper
     private static void MapSetupEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/setup/status", async (ISetupService service, CancellationToken ct) => await service.GetStatusAsync(ct));
+
+        // گام دیتابیس بی‌نیاز از هر کاربری است؛ پیش از آن هیچ دیتابیسی برای احراز هویت وجود ندارد.
+        group.MapGet("/setup/database", async (ISetupService service, CancellationToken ct) =>
+            Results.Ok(await service.GetDatabaseStateAsync(ct)));
+        group.MapPost("/setup/database", async (SetupDatabaseRequest request, ISetupService service, CancellationToken ct) =>
+            Results.Ok(await service.ConfigureDatabaseAsync(request, ct)));
+
         group.MapPost("/setup/initialize", async (SetupRequest request, ISetupService service, CancellationToken ct) =>
             Results.Ok(await service.InitializeAsync(request, ct)));
     }
@@ -311,6 +321,23 @@ public static class EndpointMapper
         group.MapPut("/settings/split-reasons/{id:guid}", async (Guid id, UpdateSplitReasonRequest request, ISettingsService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateSplitReasonAsync(id, request, ct)));
         group.MapGet("/permissions", () => Results.Ok(PermissionCatalog.Definitions));
+
+        group.MapGet("/settings/connections/directory", async (IConnectionsSettingsService service, CancellationToken ct) =>
+            await service.GetDirectoryAsync(ct));
+        group.MapPut("/settings/connections/directory", async (UpdateDirectorySettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateDirectoryAsync(request, ct)));
+        group.MapGet("/settings/connections/sms", async (IConnectionsSettingsService service, CancellationToken ct) =>
+            await service.GetSmsAsync(ct));
+        group.MapPut("/settings/connections/sms", async (UpdateSmsConnectionSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateSmsAsync(request, ct)));
+        group.MapGet("/settings/connections/operations", async (IConnectionsSettingsService service, CancellationToken ct) =>
+            await service.GetOperationsAsync(ct));
+        group.MapPut("/settings/connections/operations", async (UpdateOperationsSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateOperationsAsync(request, ct)));
+        group.MapGet("/settings/connections/database", async (IConnectionsSettingsService service, CancellationToken ct) =>
+            await service.GetDatabaseAsync(ct));
+        group.MapPut("/settings/connections/database", async (DatabaseSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateDatabaseAsync(request, ct)));
     }
 
     private static void MapSecurityEndpoints(this RouteGroupBuilder group)

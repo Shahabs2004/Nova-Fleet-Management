@@ -4,6 +4,8 @@ using NovaFleet.Application.Notifications;
 using NovaFleet.Application.Settings;
 using NovaFleet.Domain.Identity;
 using NovaFleet.Domain.Notifications;
+using NovaFleet.Infrastructure.Security;
+using System.Text;
 
 namespace NovaFleet.UnitTests.Missions;
 
@@ -145,6 +147,9 @@ public sealed class FakeSettingsService : ISettingsService
         => Task.FromResult(Values.TryGetValue(key, out var value) ? value : null);
 
     public Task<SettingsBundleDto> GetBundleAsync(CancellationToken cancellationToken = default)
+        => GetRuntimeBundleAsync(cancellationToken);
+
+    public Task<SettingsBundleDto> GetRuntimeBundleAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(new SettingsBundleDto(
             new OrganizationProfileDto("ناوگان نوین", null),
             new MissionRulesDto(
@@ -187,4 +192,30 @@ public sealed class FakeSettingsService : ISettingsService
 
     private int Parse(string key, int fallback) =>
         int.TryParse(Values.GetValueOrDefault(key), out var value) ? value : fallback;
+}
+
+/// <summary>
+/// محافظ رمزنگاری ساختگی؛ همان قرارداد «متن base64 در ستون مقدار» را رعایت می‌کند
+/// تا آزمون‌ها مسیر واقعی ذخیره/خواندن سرّی را بدون حلقه کلید Data Protection بسنجند.
+/// </summary>
+public sealed class FakeSecretProtector : ISecretProtector
+{
+    public string Protect(string plaintext) => Convert.ToBase64String(Encoding.UTF8.GetBytes(plaintext));
+
+    public string? Unprotect(string? protectedValue)
+    {
+        if (string.IsNullOrWhiteSpace(protectedValue))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Encoding.UTF8.GetString(Convert.FromBase64String(protectedValue));
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
 }

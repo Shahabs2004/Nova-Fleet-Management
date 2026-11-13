@@ -1,17 +1,30 @@
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
+using NovaFleet.Application.Authorization;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Settings;
-using NovaFleet.Domain.Configuration;
 using NovaFleet.Domain.Missions;
 using NovaFleet.Infrastructure.Persistence;
 
 namespace NovaFleet.Infrastructure.Settings;
 
 /// <summary>خواندن/نوشتن تنظیمات عملیاتی و مدیریت دلایل تقسیم؛ مقادیر حساس در این جدول نگهداری نمی‌شوند.</summary>
-public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISettingsService
+public sealed class SettingsService(
+    NovaFleetDbContext db,
+    ICurrentUser currentUser,
+    IAuditTrail audit,
+    IRuntimeSettings runtime) : ISettingsService
 {
     public async Task<SettingsBundleDto> GetBundleAsync(CancellationToken cancellationToken = default)
+    {
+        RequireAnySettingsManager();
+        return await ReadBundleAsync(cancellationToken);
+    }
+
+    public Task<SettingsBundleDto> GetRuntimeBundleAsync(CancellationToken cancellationToken = default)
+        => ReadBundleAsync(cancellationToken);
+
+    private async Task<SettingsBundleDto> ReadBundleAsync(CancellationToken cancellationToken)
     {
         var settings = await db.SystemSettings.AsNoTracking().ToListAsync(cancellationToken);
         string? Read(string key) => settings.FirstOrDefault(item => item.Key == key)?.Value;
@@ -38,9 +51,10 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         OrganizationProfileDto profile,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(profile.Name, nameof(profile.Name));
-        await SetAsync(SettingKeys.OrganizationName, profile.Name.Trim(), cancellationToken);
-        await SetAsync(SettingKeys.OrganizationLogo, profile.LogoDataUrl ?? string.Empty, cancellationToken);
+        currentUser.Require(PermissionCatalog.Administration.SystemManage);
+        await SettingsWriters.WriteOrganizationAsync(runtime, profile, cancellationToken);
+        await RecordAsync("UpdateOrganizationProfile", "SystemSetting", SettingKeys.OrganizationName,
+            new { profile.Name }, cancellationToken);
         return profile;
     }
 
@@ -48,30 +62,9 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         MissionRulesDto rules,
         CancellationToken cancellationToken = default)
     {
-        if (rules.MinimumGapMinutes is < 0 or > 240)
-        {
-            throw new ValidationAppException("فاصله اجباری باید بین ۰ تا ۲۴۰ دقیقه باشد.");
-        }
-
-        if (rules.FutureRequestDays is < 1 or > 365)
-        {
-            throw new ValidationAppException("حداکثر بازه آینده درخواست باید بین ۱ تا ۳۶۵ روز باشد.");
-        }
-
-        if (rules.WithdrawalAutoCloseHours is < 1 or > 168)
-        {
-            throw new ValidationAppException("مهلت بسته‌شدن خودکار انصراف باید بین ۱ تا ۱۶۸ ساعت باشد.");
-        }
-
-        if (rules.StartReminderMinutes is < 0 or > 1440)
-        {
-            throw new ValidationAppException("زمان یادآوری پیامک باید بین ۰ تا ۱۴۴۰ دقیقه باشد.");
-        }
-
-        await SetAsync(SettingKeys.MinimumGapMinutes, rules.MinimumGapMinutes.ToString(), cancellationToken);
-        await SetAsync(SettingKeys.FutureRequestDays, rules.FutureRequestDays.ToString(), cancellationToken);
-        await SetAsync(SettingKeys.WithdrawalAutoCloseHours, rules.WithdrawalAutoCloseHours.ToString(), cancellationToken);
-        await SetAsync(SettingKeys.SmsReminderMinutes, rules.StartReminderMinutes.ToString(), cancellationToken);
+        currentUser.Require(PermissionCatalog.Administration.SystemManage);
+        await SettingsWriters.WriteMissionRulesAsync(runtime, rules, cancellationToken);
+        await RecordAsync("UpdateMissionRules", "SystemSetting", null, rules, cancellationToken);
         return rules;
     }
 
@@ -79,13 +72,9 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         SessionPolicyDto policy,
         CancellationToken cancellationToken = default)
     {
-        if (policy.AbsoluteMinutes is < 15 or > 4320 || policy.IdleMinutes is < 5 or > 1440)
-        {
-            throw new ValidationAppException("بازه عمر یا عدم فعالیت نشست معتبر نیست.");
-        }
-
-        await SetAsync(SettingKeys.SessionAbsoluteMinutes, policy.AbsoluteMinutes.ToString(), cancellationToken);
-        await SetAsync(SettingKeys.SessionIdleMinutes, policy.IdleMinutes.ToString(), cancellationToken);
+        currentUser.Require(PermissionCatalog.Administration.SessionsManage);
+        await SettingsWriters.WriteSessionPolicyAsync(runtime, policy, cancellationToken);
+        await RecordAsync("UpdateSessionPolicy", "SystemSetting", null, policy, cancellationToken);
         return policy;
     }
 
@@ -93,9 +82,9 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         MissionOrderTemplateDto template,
         CancellationToken cancellationToken = default)
     {
-        await SetAsync(SettingKeys.MissionOrderHeader, template.HeaderText ?? string.Empty, cancellationToken);
-        await SetAsync(SettingKeys.MissionOrderFooter, template.FooterText ?? string.Empty, cancellationToken);
-        await SetAsync(SettingKeys.MissionOrderShowLogo, template.ShowLogo.ToString(), cancellationToken);
+        currentUser.Require(PermissionCatalog.Administration.MissionTemplateManage);
+        await SettingsWriters.WriteOrderTemplateAsync(runtime, template, cancellationToken);
+        await RecordAsync("UpdateMissionOrderTemplate", "SystemSetting", null, template, cancellationToken);
         return template;
     }
 
@@ -103,6 +92,7 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         bool includeInactive,
         CancellationToken cancellationToken = default)
     {
+        RequireAnySettingsManager();
         var query = db.MissionSplitReasons.AsNoTracking();
         if (!includeInactive)
         {
@@ -118,7 +108,12 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
 
     public async Task<SplitReasonDto> CreateSplitReasonAsync(string title, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title, nameof(title));
+        currentUser.Require(PermissionCatalog.Administration.MissionSplitReasonsManage);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new ValidationAppException("عنوان دلیل تقسیم الزامی است.");
+        }
+
         var normalized = title.Trim();
         if (await db.MissionSplitReasons.AnyAsync(item => item.Title == normalized, cancellationToken))
         {
@@ -129,7 +124,9 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         var reason = new MissionSplitReason(normalized, nextOrder + 1);
         db.MissionSplitReasons.Add(reason);
         await db.SaveChangesAsync(cancellationToken);
-        return new SplitReasonDto(reason.Id, reason.Title, reason.SortOrder, reason.IsActive);
+        var created = new SplitReasonDto(reason.Id, reason.Title, reason.SortOrder, reason.IsActive);
+        await RecordAsync("CreateSplitReason", "MissionSplitReason", created.Id.ToString(), created, cancellationToken);
+        return created;
     }
 
     public async Task<SplitReasonDto> UpdateSplitReasonAsync(
@@ -137,16 +134,22 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         UpdateSplitReasonRequest request,
         CancellationToken cancellationToken = default)
     {
+        currentUser.Require(PermissionCatalog.Administration.MissionSplitReasonsManage);
         var reason = await db.MissionSplitReasons.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundAppException("دلیل تقسیم پیدا نشد.");
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Title, nameof(request.Title));
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw new ValidationAppException("عنوان دلیل تقسیم الزامی است.");
+        }
+
         var normalized = request.Title.Trim();
         if (await db.MissionSplitReasons.AnyAsync(item => item.Title == normalized && item.Id != id, cancellationToken))
         {
             throw new ConflictAppException("این دلیل تقسیم قبلاً ثبت شده است.");
         }
 
+        var before = new { reason.Title, reason.SortOrder, reason.IsActive };
         reason.Rename(normalized);
         reason.SetSortOrder(request.SortOrder);
         if (request.IsActive)
@@ -159,29 +162,32 @@ public sealed class SettingsService(NovaFleetDbContext db, IClock clock) : ISett
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return new SplitReasonDto(reason.Id, reason.Title, reason.SortOrder, reason.IsActive);
+        var updated = new SplitReasonDto(reason.Id, reason.Title, reason.SortOrder, reason.IsActive);
+        await RecordAsync("UpdateSplitReason", "MissionSplitReason", updated.Id.ToString(),
+            updated, cancellationToken, before);
+        return updated;
     }
 
     public async Task<string?> GetValueAsync(string key, CancellationToken cancellationToken = default)
         => await db.SystemSettings.AsNoTracking()
-            .Where(item => item.Key == key)
+            .Where(item => item.Key == key && !item.IsSecret)
             .Select(item => item.Value)
             .FirstOrDefaultAsync(cancellationToken);
 
-    private async Task SetAsync(string key, string value, CancellationToken cancellationToken)
-    {
-        var setting = await db.SystemSettings.FirstOrDefaultAsync(item => item.Key == key, cancellationToken);
-        if (setting is null)
-        {
-            db.SystemSettings.Add(new SystemSetting(key, value));
-        }
-        else
-        {
-            setting.SetValue(value, clock.UtcNow);
-        }
+    private void RequireAnySettingsManager() => currentUser.RequireAny(
+        PermissionCatalog.Administration.SystemManage,
+        PermissionCatalog.Administration.SessionsManage,
+        PermissionCatalog.Administration.MissionTemplateManage,
+        PermissionCatalog.Administration.MissionSplitReasonsManage);
 
-        await db.SaveChangesAsync(cancellationToken);
-    }
+    private Task RecordAsync(
+        string action,
+        string entityType,
+        string? entityId,
+        object? after,
+        CancellationToken cancellationToken,
+        object? before = null) =>
+        audit.WriteAsync(new AuditRecord(action, entityType, entityId, "Success", Before: before, After: after), cancellationToken);
 
     private static int ReadInt(string? value, int fallback) =>
         int.TryParse(value, out var parsed) ? parsed : fallback;
