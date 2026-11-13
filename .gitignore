@@ -37,3 +37,7 @@ Thumbs.db
 
 # Local reference material (SPEC docs of the legacy system) — not for publication
 _ref/
+
+# graphify: keep dated rollback snapshots and queued relabel work local
+graphify-out/2*/
+graphify-out/.graphify_labels.pending.json

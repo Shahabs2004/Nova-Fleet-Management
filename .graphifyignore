@@ -1,0 +1,6 @@
+# graphify's own outputs — keeps rebuild artifacts out of the corpus.
+# graphify already skips graphify-out/ automatically; this makes it explicit.
+graphify-out/
+
+# Local-only reference material (legacy SPEC docs), already excluded via .gitignore
+_ref/
