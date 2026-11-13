@@ -130,14 +130,14 @@ export function MissionDetailsPage() {
       </button>,
     )
   }
-  if (can('missions.print')) {
+  if (can('missions.print') && m.status !== 6) {
     actions.push(
-      m.approvedAtUtc ? (
+      m.approvedAtUtc && [3, 4, 5].includes(m.status) ? (
         <a key="print" className="btn-ghost" href={`/api/missions/${id}/order.pdf`} target="_blank" rel="noreferrer">
           چاپ حکم
         </a>
       ) : (
-        <button key="print" type="button" className="btn-ghost" disabled title="چاپ حکم پس از تأیید مأموریت فعال می‌شود.">
+        <button key="print" type="button" className="btn-ghost" disabled title="چاپ حکم فقط برای مأموریت تأییدشده، در حال اجرا یا تکمیل‌شده فعال است.">
           چاپ حکم
         </button>
       ),

@@ -701,9 +701,10 @@ public sealed class MissionService(
         currentUser.Require(PermissionCatalog.Missions.Print);
         var mission = await LoadAsync(id, cancellationToken);
         EnsureVisible(mission);
-        if (!mission.ApprovedAtUtc.HasValue)
+        if (!mission.ApprovedAtUtc.HasValue
+            || mission.Status is not (MissionStatus.Confirmed or MissionStatus.Running or MissionStatus.Completed))
         {
-            throw new ValidationAppException("چاپ حکم فقط پس از تأیید مأموریت امکان‌پذیر است.");
+            throw new ValidationAppException("چاپ حکم فقط پس از تأیید و در وضعیت تأییدشده، در حال اجرا یا تکمیل‌شده امکان‌پذیر است.");
         }
 
         var details = await ToDetailsAsync(mission, cancellationToken);

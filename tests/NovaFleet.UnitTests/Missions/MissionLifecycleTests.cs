@@ -42,6 +42,33 @@ public sealed class MissionLifecycleTests : MissionTestBase
         Assert.Contains("پس از تأیید", error.Message);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ExportOrderPdfAsync_RejectsWithdrawalPendingOrCancelledAfterApproval(bool running, bool cancel)
+    {
+        var confirmed = await ConfirmAsync();
+        if (running)
+        {
+            await MarkRunningAsync(confirmed.Id, Hour(0, 10));
+        }
+
+        var service = ServiceFor(MissionAdmin());
+        await service.RequestWithdrawalAsync(confirmed.Id, new MissionWithdrawalRequest("انصراف"));
+        if (cancel)
+        {
+            await service.DecideWithdrawalAsync(confirmed.Id, true, new MissionWithdrawalDecision("تأیید انصراف"));
+        }
+
+        var mission = Reload(confirmed.Id);
+        Assert.NotNull(mission.ApprovedAtUtc);
+        Assert.Equal(cancel ? MissionStatus.Cancelled : MissionStatus.WithdrawalPending, mission.Status);
+        var printer = ServiceFor(User(RequesterUsername, PermissionCatalog.Missions.Print));
+        await Assert.ThrowsAsync<ValidationAppException>(() => printer.ExportOrderPdfAsync(confirmed.Id));
+    }
+
     [Fact]
     public async Task ExportOrderPdfAsync_RequiresPrintPermissionAfterApproval()
     {
