@@ -23,6 +23,7 @@ public sealed class ApiExceptionHandlerMiddleware(RequestDelegate next, ILogger<
                 NotFoundAppException notFound => (StatusCodes.Status404NotFound, notFound.Message),
                 ConflictAppException conflict => (StatusCodes.Status409Conflict, conflict.Message),
                 BadHttpRequestException badRequest => (StatusCodes.Status400BadRequest, "بدنه درخواست معتبر نیست."),
+                ArgumentException argument => (StatusCodes.Status400BadRequest, WithoutParameterSuffix(argument.Message)),
                 Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "این رکورد هم‌زمان توسط کاربر دیگری تغییر کرده است؛ صفحه را تازه‌سازی کنید."),
                 OperationCanceledException => (StatusCodes.Status499ClientClosedRequest, "درخواست لغو شد."),
                 _ => (StatusCodes.Status500InternalServerError, "خطای غیرمنتظره‌ای رخ داد. اگر مشکل تکرار شد با پشتیبان سامانه تماس بگیرید.")
@@ -43,6 +44,13 @@ public sealed class ApiExceptionHandlerMiddleware(RequestDelegate next, ILogger<
             context.Response.ContentType = "application/json; charset=utf-8";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new { message, status }));
         }
+    }
+
+    /// <summary>پیام‌های اعتبارسنجی دامنه فارسی و خطاب به کاربرند؛ پسوند نام پارامتر فقط نویز است.</summary>
+    private static string WithoutParameterSuffix(string message)
+    {
+        var index = message.IndexOf(" (Parameter '", StringComparison.Ordinal);
+        return index > 0 ? message[..index] : message;
     }
 }
 

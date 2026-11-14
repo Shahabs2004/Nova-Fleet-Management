@@ -19,8 +19,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\NovaFleet.Infrastructure\NovaFleet.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\NovaFleet.Application\NovaFleet.Application.csproj" />
+    <ProjectReference Include="..\..\src\NovaFleet.Api\NovaFleet.Api.csproj" />
   </ItemGroup>
 
 </Project>

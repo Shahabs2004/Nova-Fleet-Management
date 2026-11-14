@@ -8,6 +8,11 @@ namespace NovaFleet.Domain.Drivers;
 /// </summary>
 public sealed class Driver : Entity
 {
+    private const char PersianZero = (char)0x06F0;
+    private const char PersianNine = (char)0x06F9;
+    private const char ArabicZero = (char)0x0660;
+    private const char ArabicNine = (char)0x0669;
+
     private Driver()
     {
     }
@@ -99,7 +104,24 @@ public sealed class Driver : Entity
     private static string NormalizeMobile(string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
-        var normalized = new string(value.Trim().Where(char.IsDigit).ToArray());
+        var builder = new System.Text.StringBuilder(value.Length);
+        foreach (var character in value.Trim())
+        {
+            if (character is >= '0' and <= '9')
+            {
+                builder.Append(character);
+            }
+            else if (character is >= PersianZero and <= PersianNine)
+            {
+                builder.Append((char)('0' + (character - PersianZero)));
+            }
+            else if (character is >= ArabicZero and <= ArabicNine)
+            {
+                builder.Append((char)('0' + (character - ArabicZero)));
+            }
+        }
+
+        var normalized = builder.ToString();
         if (normalized.StartsWith("0098", StringComparison.Ordinal))
         {
             normalized = "0" + normalized[4..];
