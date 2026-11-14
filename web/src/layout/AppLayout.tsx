@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { Avatar } from '../components/Avatar'
 import { api } from '../lib/api'
 import { formatFaTime } from '../lib/date'
 import type { NotificationDto, SettingsBundle } from '../lib/types'
@@ -194,13 +195,14 @@ export function AppLayout() {
             <p className="hidden text-sm text-slate-400 lg:block">به سامانه {organizationName} خوش آمدید</p>
             <div className="flex items-center gap-2">
               <NotificationBell />
-              <div className="mr-1 text-left">
-                <p className="text-[13px] font-bold text-emerald-950">{user?.displayName}</p>
-                <p className="text-[10px] text-slate-400">{ROLE_TITLES[user?.roles?.[0] ?? ''] ?? user?.roles?.[0] ?? ''}</p>
-              </div>
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-900 text-xs font-bold text-gold-400">
-                {user?.displayName?.trim()?.[0] ?? '؟'}
-              </div>
+              <NavLink to="/profile" aria-label="مشاهده پروفایل من و تغییر تصویر" title="پروفایل من"
+                className="avatar-link p-1 transition-colors hover:bg-emerald-50">
+                <div className="mr-1 text-left">
+                  <p className="text-[13px] font-bold text-emerald-950">{user?.displayName}</p>
+                  <p className="text-[10px] text-slate-400">{ROLE_TITLES[user?.roles?.[0] ?? ''] ?? user?.roles?.[0] ?? ''}</p>
+                </div>
+                <Avatar name={user?.displayName ?? ''} src={user?.avatarDataUrl} size="sm" />
+              </NavLink>
               <button
                 onClick={async () => {
                   await logout()

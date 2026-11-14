@@ -18,6 +18,10 @@ public sealed class Driver : Entity
 
     public string MobilePhone { get; private set; } = string.Empty;
 
+    public string? AvatarDataUrl { get; private set; }
+
+    public void SetAvatar(string? avatarDataUrl) => AvatarDataUrl = avatarDataUrl;
+
     public DriverEmploymentStatus EmploymentStatus { get; private set; } = DriverEmploymentStatus.Active;
 
     public Guid? DefaultVehicleId { get; private set; }

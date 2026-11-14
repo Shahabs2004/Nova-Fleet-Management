@@ -39,6 +39,10 @@ public static class EndpointMapper
 
         var api = app.MapGroup("/api").RequireAuthorization();
         api.MapDashboardEndpoints();
+        api.MapGet("/profile", async (IUserService service, CancellationToken ct) =>
+            await service.GetProfileAsync(ct));
+        api.MapPut("/profile", async (UpdateProfilePhotoRequest request, IUserService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateProfilePhotoAsync(request, ct)));
         api.MapDriverEndpoints();
         api.MapVehicleEndpoints();
         api.MapLocationEndpoints();
@@ -95,7 +99,8 @@ public static class EndpointMapper
                     snapshot.OrganizationalUnit,
                     snapshot.IsLocalAdmin,
                     snapshot.Roles,
-                    Permissions = snapshot.EffectiveCodes
+                    Permissions = snapshot.EffectiveCodes,
+                    snapshot.AvatarDataUrl
                 });
             }
 

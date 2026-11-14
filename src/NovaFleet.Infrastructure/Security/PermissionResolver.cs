@@ -119,7 +119,8 @@ public sealed class PermissionResolver(NovaFleetDbContext db) : IPermissionResol
             user.IsLocalAdmin,
             user.IsDisabled,
             roles.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
-            EffectivePermissionSet.Build(assignments));
+            EffectivePermissionSet.Build(assignments),
+            user.AvatarDataUrl);
     }
 
     private static List<string> ReadGroups(string? json)

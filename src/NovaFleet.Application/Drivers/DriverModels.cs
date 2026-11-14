@@ -14,13 +14,14 @@ public sealed record DriverDto(
     string? DefaultVehiclePlate,
     bool IsArchived,
     DateTimeOffset CreatedAtUtc,
-    string RowVersion);
+    string RowVersion,
+    string? AvatarDataUrl = null);
 
-public sealed record DriverOptionDto(Guid Id, string DisplayName, string MobilePhone, Guid? DefaultVehicleId);
+public sealed record DriverOptionDto(Guid Id, string DisplayName, string MobilePhone, Guid? DefaultVehicleId, string? AvatarDataUrl = null);
 
-public sealed record DriverCreateRequest(string FirstName, string LastName, string MobilePhone);
+public sealed record DriverCreateRequest(string FirstName, string LastName, string MobilePhone, string? AvatarDataUrl = null);
 
-public sealed record DriverUpdateRequest(string FirstName, string LastName, string MobilePhone, string? RowVersion);
+public sealed record DriverUpdateRequest(string FirstName, string LastName, string MobilePhone, string? RowVersion, string? AvatarDataUrl = null);
 
 public interface IDriverService
 {

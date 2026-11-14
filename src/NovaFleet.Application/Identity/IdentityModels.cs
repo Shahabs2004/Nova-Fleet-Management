@@ -14,7 +14,8 @@ public sealed record CurrentUserDto(
     string? OrganizationalUnit,
     bool IsLocalAdmin,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Permissions);
+    IReadOnlyList<string> Permissions,
+    string? AvatarDataUrl = null);
 
 /// <summary>ورود، خروج، تغییر رمز و بازیابی هویت جاری.</summary>
 public interface IAuthService
@@ -41,7 +42,8 @@ public sealed record UserListItemDto(
     bool IsDisabled,
     bool IsDirectoryUser,
     bool IsLocalAdmin,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    string? AvatarDataUrl = null);
 
 public sealed record PermissionAssignmentDto(string Permission, PermissionEffect Effect);
 
@@ -60,7 +62,8 @@ public sealed record UserDetailsDto(
     DateTimeOffset? LastDirectorySyncAtUtc,
     IReadOnlyList<Guid> RoleIds,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<PermissionAssignmentDto> DirectPermissions);
+    IReadOnlyList<PermissionAssignmentDto> DirectPermissions,
+    string? AvatarDataUrl = null);
 
 public sealed record CreateLocalUserRequest(
     string Username,
@@ -71,7 +74,8 @@ public sealed record CreateLocalUserRequest(
     string? Email,
     string? OrganizationalUnit,
     bool IsLocalAdmin,
-    IReadOnlyList<Guid> RoleIds);
+    IReadOnlyList<Guid> RoleIds,
+    string? AvatarDataUrl = null);
 
 public sealed record UpdateUserRequest(
     string FirstName,
@@ -79,14 +83,32 @@ public sealed record UpdateUserRequest(
     string? MobilePhone,
     string? Email,
     string? OrganizationalUnit,
-    IReadOnlyList<Guid> RoleIds);
+    IReadOnlyList<Guid> RoleIds,
+    string? AvatarDataUrl = null);
 
 public sealed record ResetPasswordRequest(string NewPassword);
 
 public sealed record SetPermissionsRequest(IReadOnlyList<PermissionAssignmentDto> Permissions);
 
+public sealed record ProfileDto(
+    string Username,
+    string FirstName,
+    string LastName,
+    string? MobilePhone,
+    string? Email,
+    string? OrganizationalUnit,
+    string? AvatarDataUrl = null);
+
+// Reject over-posted identity, role and organizational-unit fields, rather than silently ignoring them.
+[System.Text.Json.Serialization.JsonUnmappedMemberHandling(System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow)]
+public sealed record UpdateProfilePhotoRequest(string? AvatarDataUrl = null);
+
 public interface IUserService
 {
+    Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default);
+
+    Task<ProfileDto> UpdateProfilePhotoAsync(UpdateProfilePhotoRequest request, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<UserListItemDto>> ListAsync(string? search, bool includeDisabled, CancellationToken cancellationToken = default);
 
     Task<UserDetailsDto> GetAsync(Guid id, CancellationToken cancellationToken = default);

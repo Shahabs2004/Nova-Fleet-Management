@@ -15,6 +15,7 @@ import { VehiclesPage } from './pages/VehiclesPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SmsPage } from './pages/SmsPage'
 import { SecurityPage } from './pages/SecurityPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TimelinePage } from './pages/TimelinePage'
 
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
       { path: 'reports', element: <ReportsPage /> },
       { path: 'sms', element: <SmsPage /> },
       { path: 'security', element: <SecurityPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: 'settings', element: <SettingsPage /> },
     ],
   },

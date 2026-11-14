@@ -27,6 +27,14 @@ public sealed class ApplicationUser : Entity
 
     public string? OrganizationalUnit { get; private set; }
 
+    public string? AvatarDataUrl { get; private set; }
+
+    public void SetAvatar(string? avatarDataUrl)
+    {
+        AvatarDataUrl = avatarDataUrl;
+        UpdatedAtUtc = DateTimeOffset.UtcNow;
+    }
+
     public bool IsDisabled { get; private set; }
 
     /// <summary>مدیر محلی اضطراری؛ از چرخه عادی حذف/غیرفعال‌سازی خارج است.</summary>

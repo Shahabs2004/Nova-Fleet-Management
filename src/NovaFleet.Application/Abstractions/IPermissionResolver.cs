@@ -10,7 +10,8 @@ public sealed record UserAccessSnapshot(
     bool IsLocalAdmin,
     bool IsDisabled,
     IReadOnlyList<string> Roles,
-    EffectivePermissionSet Permissions)
+    EffectivePermissionSet Permissions,
+    string? AvatarDataUrl = null)
 {
     /// <summary>فهرست مجوزهای مؤثر و مشخص برای رابط کاربری (بدون wildcard).</summary>
     public IReadOnlyList<string> EffectiveCodes =>

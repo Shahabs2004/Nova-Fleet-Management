@@ -6,6 +6,7 @@ using NovaFleet.Application.Common;
 using NovaFleet.Application.Identity;
 using NovaFleet.Domain.Identity;
 using NovaFleet.Infrastructure.Persistence;
+using NovaFleet.Infrastructure.Security;
 
 namespace NovaFleet.Infrastructure.Identity;
 
@@ -17,6 +18,37 @@ public sealed class UserService(
     IAuditTrail audit) : IUserService
 {
     private static readonly Regex UsernamePattern = new("^[A-Za-z0-9._-]{3,64}$", RegexOptions.Compiled);
+
+    public async Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>
+        ToProfile(await LoadOwnProfileAsync(cancellationToken));
+
+    public async Task<ProfileDto> UpdateProfilePhotoAsync(
+        UpdateProfilePhotoRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await LoadOwnProfileAsync(cancellationToken);
+        var avatar = AvatarImageValidator.ValidateAndNormalize(request.AvatarDataUrl);
+        user.SetAvatar(avatar);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("UpdateProfilePhoto", "User", user.Id.ToString(), "Success"), cancellationToken);
+        return ToProfile(user);
+    }
+
+    private async Task<ApplicationUser> LoadOwnProfileAsync(CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrWhiteSpace(currentUser.Username))
+        {
+            throw new UnauthorizedAppException("برای مشاهده یا تغییر تصویر پروفایل وارد سامانه شوید.");
+        }
+
+        return await db.Users.FirstOrDefaultAsync(
+            item => item.Username == currentUser.Username && !item.IsDisabled, cancellationToken)
+            ?? throw new UnauthorizedAppException("حساب کاربری فعال شما پیدا نشد.");
+    }
+
+    private static ProfileDto ToProfile(ApplicationUser user) => new(
+        user.Username, user.FirstName, user.LastName, user.MobilePhone, user.Email,
+        user.OrganizationalUnit, user.AvatarDataUrl);
 
     public async Task<IReadOnlyList<UserListItemDto>> ListAsync(
         string? search,
@@ -51,7 +83,8 @@ public sealed class UserService(
             user.IsDisabled,
             user.IsDirectoryUser,
             user.IsLocalAdmin,
-            roles.GetValueOrDefault(user.Id, []))).ToList();
+            roles.GetValueOrDefault(user.Id, []),
+            user.AvatarDataUrl)).ToList();
     }
 
     public async Task<UserDetailsDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
@@ -92,7 +125,9 @@ public sealed class UserService(
             throw new ConflictAppException("این نام کاربری قبلاً ثبت شده است.");
         }
 
+        var avatar = AvatarImageValidator.ValidateAndNormalize(request.AvatarDataUrl);
         var user = new ApplicationUser(username, request.FirstName, request.LastName, request.IsLocalAdmin);
+        user.SetAvatar(avatar);
         user.SetPasswordHash(passwordHasher.Hash(request.Password));
         user.UpdateProfile(request.FirstName, request.LastName, request.MobilePhone, request.Email, request.OrganizationalUnit);
         db.Users.Add(user);
@@ -110,7 +145,9 @@ public sealed class UserService(
     {
         currentUser.Require(PermissionCatalog.Administration.UsersManage);
         var user = await LoadAsync(id, cancellationToken);
+        var avatar = AvatarImageValidator.ValidateAndNormalize(request.AvatarDataUrl);
         user.UpdateProfile(request.FirstName, request.LastName, request.MobilePhone, request.Email, request.OrganizationalUnit);
+        user.SetAvatar(avatar);
         await ReplaceRolesAsync(id, request.RoleIds, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateUser", "User", id.ToString(), "Success"), cancellationToken);
@@ -258,5 +295,6 @@ public sealed class UserService(
         user.LastDirectorySyncAtUtc,
         roleIds,
         roles,
-        permissions);
+        permissions,
+        user.AvatarDataUrl);
 }

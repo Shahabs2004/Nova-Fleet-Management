@@ -256,7 +256,8 @@ public sealed class AuthService(
         snapshot.OrganizationalUnit,
         snapshot.IsLocalAdmin,
         snapshot.Roles,
-        snapshot.EffectiveCodes);
+        snapshot.EffectiveCodes,
+        snapshot.AvatarDataUrl);
 
     private static (string First, string Last) SplitDisplayName(string? displayName, string fallback)
     {

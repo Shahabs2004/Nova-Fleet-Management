@@ -17,6 +17,7 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
         builder.Property(x => x.MobilePhone).HasMaxLength(20);
         builder.Property(x => x.Email).HasMaxLength(200);
         builder.Property(x => x.OrganizationalUnit).HasMaxLength(200);
+        builder.Property(x => x.AvatarDataUrl).HasColumnType("nvarchar(max)");
         builder.Property(x => x.DirectoryGroupsJson).HasColumnType("nvarchar(max)");
         builder.Property(x => x.DirectoryDistinguishedName).HasMaxLength(500);
         builder.Ignore(x => x.DisplayName);

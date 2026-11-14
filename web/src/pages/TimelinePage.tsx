@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { JalaliDateField, jalaliValueToUtc, type JalaliDateValue } from '../components/JalaliDateField'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
 import { Plate } from '../components/Plate'
+import { Avatar } from '../components/Avatar'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import {
@@ -504,9 +505,7 @@ export function TimelinePage() {
                       }`}
                       style={{ width: NAME_WIDTH }}
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-900 text-[11px] font-bold text-gold-400">
-                        {row.name.trim()[0] ?? '؟'}
-                      </span>
+                      <Avatar name={row.name} src={drivers.data?.find((driver) => driver.id === row.key)?.avatarDataUrl} size="sm" />
                       <div className="min-w-0">
                         <p className="truncate text-[13px] font-bold text-emerald-950">{row.name}</p>
                         <p className="text-[10px] text-slate-400">{toFa(row.placed.length)} مأموریت</p>

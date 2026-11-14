@@ -5,6 +5,7 @@ using NovaFleet.Application.Common;
 using NovaFleet.Application.Drivers;
 using NovaFleet.Domain.Drivers;
 using NovaFleet.Infrastructure.Persistence;
+using NovaFleet.Infrastructure.Security;
 
 namespace NovaFleet.Infrastructure.Drivers;
 
@@ -62,7 +63,7 @@ public sealed class DriverService(
 
         return await source
             .OrderBy(item => item.LastName).ThenBy(item => item.FirstName)
-            .Select(item => new DriverOptionDto(item.Id, item.FirstName + " " + item.LastName, item.MobilePhone, item.DefaultVehicleId))
+            .Select(item => new DriverOptionDto(item.Id, item.FirstName + " " + item.LastName, item.MobilePhone, item.DefaultVehicleId, item.AvatarDataUrl))
             .ToListAsync(cancellationToken);
     }
 
@@ -79,7 +80,9 @@ public sealed class DriverService(
     public async Task<DriverDto> CreateAsync(DriverCreateRequest request, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Drivers.Manage);
+        var avatar = AvatarImageValidator.ValidateAndNormalize(request.AvatarDataUrl);
         var driver = new Driver(request.FirstName, request.LastName, request.MobilePhone);
+        driver.SetAvatar(avatar);
         db.Drivers.Add(driver);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("CreateDriver", "Driver", driver.Id.ToString(), "Success", After: new { driver.DisplayName, driver.MobilePhone }), cancellationToken);
@@ -90,8 +93,10 @@ public sealed class DriverService(
     {
         currentUser.Require(PermissionCatalog.Drivers.Manage);
         var driver = await LoadAsync(id, cancellationToken);
+        var avatar = AvatarImageValidator.ValidateAndNormalize(request.AvatarDataUrl);
         db.ApplyRowVersion(driver, request.RowVersion);
         driver.UpdateProfile(request.FirstName, request.LastName, request.MobilePhone);
+        driver.SetAvatar(avatar);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateDriver", "Driver", id.ToString(), "Success", After: new { driver.DisplayName, driver.MobilePhone }), cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -198,5 +203,6 @@ public sealed class DriverService(
         plate,
         driver.IsArchived,
         driver.CreatedAtUtc,
-        driver.RowVersion.ToRowVersionString());
+        driver.RowVersion.ToRowVersionString(),
+        driver.AvatarDataUrl);
 }

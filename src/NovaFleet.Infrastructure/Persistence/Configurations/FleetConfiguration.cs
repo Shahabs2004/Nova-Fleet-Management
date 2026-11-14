@@ -16,6 +16,7 @@ public sealed class DriverConfiguration : IEntityTypeConfiguration<Driver>
         builder.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.LastName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.MobilePhone).HasMaxLength(20).IsRequired();
+        builder.Property(x => x.AvatarDataUrl).HasColumnType("nvarchar(max)");
         builder.Property(x => x.EmploymentStatus).HasConversion<int>();
         builder.Property(x => x.RowVersion).IsRowVersion();
         builder.Ignore(x => x.DisplayName);

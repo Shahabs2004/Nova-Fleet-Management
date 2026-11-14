@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { Avatar } from '../components/Avatar'
+import { UserProfileForm } from '../components/UserProfileForm'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
@@ -71,7 +73,10 @@ function UsersTab() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [includeDisabled, setIncludeDisabled] = useState(true)
-  const [createOpen, setCreateOpen] = useState(false)
+  const { user: currentUser, refresh } = useAuth()
+  const [editor, setEditor] = useState<{ id: string | null } | null>(null)
+  const saving = useRef(false)
+  const [notice, setNotice] = useState<string | null>(null)
   const [resetting, setResetting] = useState<UserListItem | null>(null)
 
   const users = useQuery({
@@ -87,10 +92,9 @@ function UsersTab() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
-  const roles = useQuery({ queryKey: ['roles'], queryFn: () => api.get<RoleDto[]>('/api/roles') })
-
   return (
     <div>
+      {notice && <p role="status" className="card mb-4 p-4 text-sm text-emerald-800">{notice}</p>}
       <div className="card mb-4 flex flex-wrap items-end gap-3 p-4">
         <div className="min-w-52 flex-1">
           <label className="label">جستجو</label>
@@ -105,7 +109,7 @@ function UsersTab() {
           />
           نمایش غیرفعال‌ها
         </label>
-        <button className="btn-primary btn-sm" onClick={() => setCreateOpen(true)}>
+        <button className="btn-primary btn-sm" onClick={() => { setNotice(null); setEditor({ id: null }) }}>
           کاربر جدید
         </button>
       </div>
@@ -131,10 +135,13 @@ function UsersTab() {
                 {users.data.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/70">
                     <td>
-                      <p className="text-xs font-bold text-emerald-950">{user.displayName}</p>
-                      <p className="num mt-0.5 text-[11px] text-slate-400" dir="ltr">
-                        {user.username}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <Avatar name={user.displayName} src={user.avatarDataUrl} size="sm" />
+                        <div>
+                          <p className="text-xs font-bold text-emerald-950">{user.displayName}</p>
+                          <p className="num mt-0.5 text-[11px] text-slate-400" dir="ltr">{user.username}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="text-xs text-slate-600">{user.organizationalUnit ?? '—'}</td>
                     <td className="text-xs text-slate-600">{user.roles.length > 0 ? user.roles.join('، ') : '—'}</td>
@@ -150,6 +157,9 @@ function UsersTab() {
                       </span>
                     </td>
                     <td className="space-x-1 space-x-reverse text-left">
+                      <button className="btn-ghost btn-sm" onClick={() => { setNotice(null); setEditor({ id: user.id }) }}>
+                        ویرایش
+                      </button>
                       {!user.isDirectoryUser && (
                         <button className="btn-ghost btn-sm" onClick={() => setResetting(user)}>
                           بازنشانی رمز
@@ -171,14 +181,22 @@ function UsersTab() {
         )}
       </div>
 
-      <Modal open={createOpen} title="ایجاد کاربر محلی" onClose={() => setCreateOpen(false)} wide>
-        <CreateUserForm
-          roles={roles.data ?? []}
-          onDone={async () => {
-            setCreateOpen(false)
-            await queryClient.invalidateQueries({ queryKey: ['users'] })
+      <Modal open={editor !== null} title={editor?.id ? 'ویرایش کاربر' : 'ایجاد کاربر محلی'}
+        onClose={() => { if (!saving.current) setEditor(null) }} wide>
+        {editor && <UserProfileForm
+          key={editor.id ?? 'new'}
+          userId={editor.id}
+          onSavingChange={(value) => { saving.current = value }}
+          onDone={async (username) => {
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['users'] }),
+              queryClient.invalidateQueries({ queryKey: ['profile'] }),
+              ...(editor.id && username === currentUser?.username ? [refresh()] : []),
+            ])
+            setNotice(editor.id ? 'تغییرات کاربر با موفقیت ذخیره شد.' : 'کاربر با موفقیت ایجاد شد.')
+            setEditor(null)
           }}
-        />
+        />}
       </Modal>
 
       <Modal open={Boolean(resetting)} title={resetting ? `بازنشانی رمز: ${resetting.displayName}` : ''} onClose={() => setResetting(null)}>
@@ -192,126 +210,6 @@ function UsersTab() {
           />
         )}
       </Modal>
-    </div>
-  )
-}
-
-function CreateUserForm({ roles, onDone }: { roles: RoleDto[]; onDone: () => Promise<void> }) {
-  const [form, setForm] = useState({
-    username: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    mobilePhone: '',
-    email: '',
-    organizationalUnit: '',
-    isLocalAdmin: false,
-  })
-  const [roleIds, setRoleIds] = useState<string[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((prev) => ({ ...prev, [key]: e.target.value }))
-
-  const submit = async () => {
-    setSubmitting(true)
-    setError(null)
-    try {
-      await api.post('/api/users', {
-        username: form.username.trim(),
-        password: form.password,
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        mobilePhone: form.mobilePhone.trim() || null,
-        email: form.email.trim() || null,
-        organizationalUnit: form.organizationalUnit.trim() || null,
-        isLocalAdmin: form.isLocalAdmin,
-        roleIds,
-      })
-      await onDone()
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const valid = form.username.trim() && form.password.length >= 8 && form.firstName.trim() && form.lastName.trim()
-
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="label">نام کاربری</label>
-          <input className="input num" dir="ltr" value={form.username} onChange={set('username')} />
-        </div>
-        <div>
-          <label className="label">رمز عبور (حداقل ۸ نویسه)</label>
-          <input className="input" dir="ltr" type="password" value={form.password} onChange={set('password')} />
-        </div>
-        <div>
-          <label className="label">نام</label>
-          <input className="input" value={form.firstName} onChange={set('firstName')} />
-        </div>
-        <div>
-          <label className="label">نام خانوادگی</label>
-          <input className="input" value={form.lastName} onChange={set('lastName')} />
-        </div>
-        <div>
-          <label className="label">موبایل</label>
-          <input className="input num" dir="ltr" value={form.mobilePhone} onChange={set('mobilePhone')} />
-        </div>
-        <div>
-          <label className="label">ایمیل</label>
-          <input className="input" dir="ltr" value={form.email} onChange={set('email')} />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="label">واحد سازمانی</label>
-          <input className="input" value={form.organizationalUnit} onChange={set('organizationalUnit')} />
-        </div>
-      </div>
-      <div>
-        <label className="label">نقش‌ها</label>
-        <div className="flex flex-wrap gap-2">
-          {roles.map((role) => {
-            const checked = roleIds.includes(role.id)
-            return (
-              <label
-                key={role.id}
-                className={`cursor-pointer rounded-lg border px-3 py-1.5 text-xs transition-colors ${
-                  checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-600'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={checked}
-                  onChange={() =>
-                    setRoleIds((prev) => (checked ? prev.filter((id) => id !== role.id) : [...prev, role.id]))
-                  }
-                />
-                {role.title}
-              </label>
-            )
-          })}
-        </div>
-      </div>
-      <label className="flex items-center gap-2 text-sm text-slate-600">
-        <input
-          type="checkbox"
-          className="h-4 w-4 accent-emerald-700"
-          checked={form.isLocalAdmin}
-          onChange={(e) => setForm((prev) => ({ ...prev, isLocalAdmin: e.target.checked }))}
-        />
-        این کاربر مدیر محلی باشد (دسترسی کامل)
-      </label>
-      {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
-      <div className="flex justify-end">
-        <button className="btn-primary" disabled={submitting || !valid} onClick={submit}>
-          {submitting ? 'در حال ایجاد…' : 'ایجاد کاربر'}
-        </button>
-      </div>
     </div>
   )
 }

@@ -6,6 +6,8 @@ import { DRIVER_STATUS } from '../lib/labels'
 import type { DriverDto, PagedResult, VehicleDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
 import { Plate } from '../components/Plate'
+import { Avatar } from '../components/Avatar'
+import { AvatarEditor } from '../components/AvatarEditor'
 
 export function DriversPage() {
   const queryClient = useQueryClient()
@@ -82,8 +84,11 @@ export function DriversPage() {
                   {data!.items.map((d) => (
                     <tr key={d.id} className="transition-colors hover:bg-emerald-50/40">
                       <td className="px-4 py-3.5 font-semibold text-slate-700">
-                        {d.displayName}
-                        {d.isArchived && <span className="badge mr-2 bg-slate-100 text-slate-500">بایگانی</span>}
+                        <div className="flex items-center gap-2">
+                          <Avatar name={d.displayName} src={d.avatarDataUrl} />
+                          <span>{d.displayName}</span>
+                          {d.isArchived && <span className="badge mr-2 bg-slate-100 text-slate-500">بایگانی</span>}
+                        </div>
                       </td>
                       <td className="num px-4 py-3.5 text-slate-600" dir="ltr">{d.mobilePhone}</td>
                       <td className="px-4 py-3.5">
@@ -137,7 +142,11 @@ export function DriversPage() {
             await api.post(`/api/drivers/${saved.id}/default-vehicle`, { vehicleId: defaultVehicleId, rowVersion: saved.rowVersion })
           }
           setEdit(null)
-          await queryClient.invalidateQueries({ queryKey: ['drivers'] })
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['drivers'] }),
+            queryClient.invalidateQueries({ queryKey: ['driver-options'] }),
+            queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+          ])
         }}
       />
     </div>
@@ -154,7 +163,7 @@ function DriverEditModal({
   vehicles: VehicleDto[]
   onClose: () => void
   onSave: (
-    body: { firstName: string; lastName: string; mobilePhone: string },
+    body: { firstName: string; lastName: string; mobilePhone: string; avatarDataUrl: string | null },
     rowVersion: string | undefined,
     defaultVehicleId: string | null,
   ) => Promise<void>
@@ -164,6 +173,8 @@ function DriverEditModal({
   const [firstName, setFirstName] = useState(existing?.firstName ?? '')
   const [lastName, setLastName] = useState(existing?.lastName ?? '')
   const [mobile, setMobile] = useState(existing?.mobilePhone ?? '')
+  const [avatarDataUrl, setAvatarDataUrl] = useState(existing?.avatarDataUrl ?? null)
+  const [cropping, setCropping] = useState(false)
   const [defaultVehicleId, setDefaultVehicleId] = useState(existing?.defaultVehicleId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -174,11 +185,12 @@ function DriverEditModal({
         className="space-y-4"
         onSubmit={async (e) => {
           e.preventDefault()
+          if (cropping || busy) return
           setBusy(true)
           setError(null)
           try {
             await onSave(
-              { firstName, lastName, mobilePhone: mobile },
+              { firstName, lastName, mobilePhone: mobile, avatarDataUrl },
               existing?.rowVersion,
               defaultVehicleId === '' ? null : defaultVehicleId,
             )
@@ -189,6 +201,7 @@ function DriverEditModal({
           }
         }}
       >
+        <AvatarEditor name={`${firstName} ${lastName}`} value={avatarDataUrl} onChange={setAvatarDataUrl} onEditingChange={setCropping} disabled={busy} />
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">نام</label>
@@ -218,7 +231,7 @@ function DriverEditModal({
           </select>
         </div>
         {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
-        <button type="submit" disabled={busy} className="btn-primary w-full">
+        <button type="submit" disabled={busy || cropping} className="btn-primary w-full">
           {busy ? 'در حال ذخیره…' : 'ذخیره'}
         </button>
       </form>

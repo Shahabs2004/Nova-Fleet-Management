@@ -47,7 +47,7 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-emerald-950/40 p-4 backdrop-blur-sm sm:items-center">
       <div
-        className={`card my-8 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} animate-[fadeUp_.18s_ease-out]`}
+        className={`card my-auto max-h-[calc(100dvh-2rem)] w-full overflow-y-auto ${wide ? 'max-w-3xl' : 'max-w-lg'} animate-[fadeUp_.18s_ease-out]`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">

@@ -1,4 +1,23 @@
+export interface ProfileDetails {
+  username: string
+  firstName: string
+  lastName: string
+  mobilePhone: string | null
+  email: string | null
+  organizationalUnit: string | null
+  avatarDataUrl: string | null
+}
+
+export interface UserDetails extends ProfileDetails {
+  id: string
+  isDisabled: boolean
+  isDirectoryUser: boolean
+  isLocalAdmin: boolean
+  roleIds: string[]
+}
+
 export interface CurrentUser {
+  avatarDataUrl: string | null
   username: string
   displayName: string
   organizationalUnit: string | null
@@ -93,6 +112,7 @@ export interface TimelineMission {
 }
 
 export interface DriverDto {
+  avatarDataUrl: string | null
   id: string
   firstName: string
   lastName: string
@@ -209,6 +229,7 @@ export interface SetupDatabaseResult {
 }
 
 export interface UserListItem {
+  avatarDataUrl: string | null
   id: string
   username: string
   displayName: string
