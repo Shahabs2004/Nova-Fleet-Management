@@ -370,18 +370,19 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
     public async Task Router_WsdlModeCallsThePayamGateway(string mode) => await RouterCallsPayamAsync(mode);
 
     [Fact]
-    public async Task Router_ApiModeRefusesAndExplainsHowToSendForReal()
+    public async Task Router_ApiModeCallsTheRestGateway()
     {
-        handler = new StubHttpMessageHandler(SendResponse("700123"));
+        handler = new StubHttpMessageHandler(
+            """{"code":200,"message":"send result","data":[{"ID":"700123","Mobile":"989121112233"}]}""");
         await Runtime.SetAsync(SettingKeys.SmsMode, "Api");
         await ConfigureConnectionAsync();
 
         var result = await Router().SendAsync(Message);
 
-        Assert.False(result.Accepted);
-        Assert.True(result.IsPermanentFailure);
-        Assert.Equal(SmsGatewayRouter.UnimplementedModeMessage, result.Error);
-        Assert.Equal(0, handler.CallCount);
+        Assert.True(result.Accepted);
+        Assert.Equal("700123", result.ProviderReference);
+        Assert.Equal(1, handler.CallCount);
+        Assert.Contains("\"method\":\"send\"", handler.Requests.Single().Body!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -411,22 +412,23 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
     }
 
     [Fact]
-    public async Task Router_ReportsCreditPerModeAndRefusesAnUnimplementedOne()
+    public async Task Router_ReportsCreditPerMode()
     {
         handler = new StubHttpMessageHandler(SendResponse("12500"));
         var router = Router();
 
         Assert.Equal(SimulatedSmsGateway.SimulatedCreditRial, (await router.GetBalanceAsync()).RawCredit);
 
-        // اعتبار شبیه‌سازی در حالتی که درگاهش پیاده نشده گزارش نمی‌شود: آزمون اتصال نباید دروغ بگوید.
-        await Runtime.SetAsync(SettingKeys.SmsMode, "Api");
-        var unimplemented = await router.GetBalanceAsync();
-        Assert.False(unimplemented.Success);
-        Assert.Equal(SmsGatewayRouter.UnimplementedModeMessage, unimplemented.Error);
-
         await Runtime.SetAsync(SettingKeys.SmsMode, "Wsdl");
         await ConfigureConnectionAsync();
         Assert.Equal("12500", (await router.GetBalanceAsync()).RawCredit);
+
+        // حالت Api هم اعتبار واقعی را از درگاه REST می‌خواند، نه اعتبار شبیه‌سازی را.
+        handler = new StubHttpMessageHandler("""{"code":200,"message":"send result","data":"77000"}""");
+        await Runtime.SetAsync(SettingKeys.SmsMode, "Api");
+        var api = await Router().GetBalanceAsync();
+        Assert.True(api.Success);
+        Assert.Equal("77000", api.RawCredit);
     }
 
     [Fact]
@@ -484,8 +486,15 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
         return new PayamSmsGateway(factory, Runtime, NullLogger<PayamSmsGateway>.Instance);
     }
 
-    private SmsGatewayRouter Router() =>
-        new(Runtime, new SimulatedSmsGateway(), Gateway(), NullLogger<SmsGatewayRouter>.Instance);
+    private SmsGatewayRouter Router()
+    {
+        var soap = Gateway();
+        return new SmsGatewayRouter(
+            Runtime,
+            new SimulatedSmsGateway(),
+            soap,
+            new PayamSmsRestGateway(factory, Runtime, NullLogger<PayamSmsRestGateway>.Instance));
+    }
 
     private async Task RouterCallsPayamAsync(string mode)
     {

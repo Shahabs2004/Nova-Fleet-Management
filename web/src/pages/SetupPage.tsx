@@ -456,7 +456,12 @@ function SmsStep({ form, set }: { form: Form; set: Setter }) {
           </div>
           {form.smsMode !== 'Simulation' && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="آدرس سرویس" hint="با http یا https شروع شود.">
+              <Field
+                label="آدرس سرویس"
+                hint={form.smsMode === 'Api'
+                  ? 'حالت Api: https://www.payamsms.com/services/rest/index.php'
+                  : 'حالت Wsdl: https://www.payamsms.com/services/v2/index.php'}
+              >
                 <input className="input" dir="ltr" value={form.smsEndpoint} onChange={(e) => set('smsEndpoint')(e.target.value)} />
               </Field>
               <Field label="سازمان/خوشه سرویس‌دهنده">

@@ -425,7 +425,14 @@ function SmsCard() {
         </div>
         {draft.mode !== 'Simulation' && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <Text label="آدرس سرویس" value={draft.endpoint ?? ''} onChange={set('endpoint')} hint="با http یا https شروع شود." />
+            <Text
+              label="آدرس سرویس"
+              value={draft.endpoint ?? ''}
+              onChange={set('endpoint')}
+              hint={draft.mode === 'Api'
+                ? 'حالت Api: https://www.payamsms.com/services/rest/index.php'
+                : 'حالت Wsdl: https://www.payamsms.com/services/v2/index.php'}
+            />
             <Text label="سازمان/خوشه سرویس‌دهنده" value={draft.organization ?? ''} onChange={set('organization')} />
             <Text label="شناسه کاربری" value={draft.username ?? ''} onChange={set('username')} />
             <Text

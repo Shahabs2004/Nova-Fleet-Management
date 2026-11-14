@@ -352,10 +352,11 @@ HTTP بدون fault) «موقت» یا «نامشخص» می‌ماند، نه �
 - [x] شماره‌ها به فرمت کد کشور + حداکثر ۱۲ رقم نرمال‌سازی شوند (`0912…` → `98912…`).
 - [x] جدول ۲۱ کد خطا به یک نگاشت قابل‌مطالعه تبدیل شود؛ خطاهای «تماس مجدد نکن» از «تلاش دوباره» جدا شوند.
 - [x] `sms.max-attempts` واقعاً به retry وصل شود (در ساخت ردیف صف و در سقف تلاش‌های مجدد).
-- [x] یک حالت «API/REST» در کنار «WSDL/SOAP» برای انتخاب کاربر قرار گیرد — با یک تفاوت:
-      قرارداد REST این سرویس‌دهنده در دسترس نیست، پس حالت `Api` هیچ پیامکی ارسال نمی‌کند و با
-      پیام صریح رد می‌کند (`SmsGatewayRouter.UnimplementedModeMessage`). برای فعال‌شدنش، سند یا WSDL
-      بخش REST لازم است؛ بدون آن، حالت `Wsdl` مسیر ارسال واقعی است.
+- [x] یک حالت «API/REST» در کنار «WSDL/SOAP» برای انتخاب کاربر قرار گیرد — قرارداد REST از
+      پروسیجر مرجع `SP_SendSMS` و کاوش زنده استخراج و پیاده شد
+      ([PayamSmsRestGateway.cs](../../src/NovaFleet.Infrastructure/Sms/PayamSmsRestGateway.cs))؛
+      سند کامل در [payam-sms-rest.md](payam-sms-rest.md). تنها محدودیت: درگاه REST متد وضعیت
+      تحویل ندارد، پس در حالت `Api` پیام پذیرفته‌شده باقی می‌ماند.
 
 آزمون‌ها: [tests/NovaFleet.UnitTests/Sms/PayamSmsGatewayTests.cs](file:///D:/Projects/NovaFleet/Nova-Fleet-Management/tests/NovaFleet.UnitTests/Sms/PayamSmsGatewayTests.cs)
 با `HttpMessageHandler` ساختگی، شکل پاکت، `SOAPAction`، ترتیب پارامترها، کدگذاری آرایه‌ها،

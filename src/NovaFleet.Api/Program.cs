@@ -102,11 +102,13 @@ builder.Services.AddScoped<IRequestContext, HttpContextRequestContext>();
 builder.Services.AddScoped<CurrentUserHolder>();
 builder.Services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUserHolder>().User);
 
-// درگاه پیامک: حالت کار از ردیف sms.mode در پایگاه داده خوانده می‌شود، پس هر دو درگاه
+// درگاه پیامک: حالت کار از ردیف sms.mode در پایگاه داده خوانده می‌شود، پس هر سه درگاه
 // ساخته می‌شوند و router در هر فراخوانی یکی را انتخاب می‌کند (بدون نیاز به راه‌اندازی مجدد).
 builder.Services.AddHttpClient(PayamSmsGateway.HttpClientName);
+builder.Services.AddHttpClient(PayamSmsRestGateway.HttpClientName);
 builder.Services.AddScoped<SimulatedSmsGateway>();
 builder.Services.AddScoped<PayamSmsGateway>();
+builder.Services.AddScoped<PayamSmsRestGateway>();
 builder.Services.AddScoped<ISmsGateway, SmsGatewayRouter>();
 
 // Module services
