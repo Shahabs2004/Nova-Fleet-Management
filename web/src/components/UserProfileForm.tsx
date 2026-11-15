@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { AvatarEditor } from './AvatarEditor'
 import { Spinner } from './ui'
 import { api } from '../lib/api'
-import type { RoleDto, UserDetails } from '../lib/types'
+import type { OrgUnitDto, RoleDto, UserDetails } from '../lib/types'
 
 interface Props {
   userId: string | null
@@ -20,20 +20,22 @@ export function UserProfileForm({ userId, onDone, onSavingChange }: Props) {
     refetchOnMount: 'always',
   })
   const roles = useQuery({ queryKey: ['roles'], queryFn: () => api.get<RoleDto[]>('/api/roles') })
+  const orgUnits = useQuery({ queryKey: ['org-units'], queryFn: () => api.get<OrgUnitDto[]>('/api/organization-units') })
   const [detailsLoaded, setDetailsLoaded] = useState(false)
   // Only hydrate from a successful GET on this open, never cached data after a failed refetch.
   if (!detailsLoaded && details.isSuccess && details.isFetchedAfterMount) setDetailsLoaded(true)
-  const error = roles.error ?? details.error
-  const ready = roles.data && (!userId || (details.data && detailsLoaded))
+  const error = roles.error ?? details.error ?? orgUnits.error
+  const ready = roles.data && orgUnits.data && (!userId || (details.data && detailsLoaded))
 
   return (
     <div className="space-y-4">
       {error && (
         <div role="alert" className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">
           <p>دریافت اطلاعات کاربر یا نقش‌ها ناموفق بود: {error.message}</p>
-          <button type="button" className="btn-ghost btn-sm mt-2" disabled={roles.isFetching || details.isFetching} onClick={() => {
+          <button type="button" className="btn-ghost btn-sm mt-2" disabled={roles.isFetching || details.isFetching || orgUnits.isFetching} onClick={() => {
             if (roles.isError) void roles.refetch()
             if (details.isError) void details.refetch()
+            if (orgUnits.isError) void orgUnits.refetch()
           }}>تلاش دوباره</button>
         </div>
       )}
@@ -43,7 +45,8 @@ export function UserProfileForm({ userId, onDone, onSavingChange }: Props) {
           key={userId ?? 'new'}
           initial={userId ? details.data : undefined}
           roles={roles.data ?? []}
-          loading={roles.isFetching || details.isFetching || Boolean(error)}
+          orgUnits={orgUnits.data ?? []}
+          loading={roles.isFetching || details.isFetching || orgUnits.isFetching || Boolean(error)}
           onDone={onDone}
           onSavingChange={onSavingChange}
         />
@@ -52,9 +55,10 @@ export function UserProfileForm({ userId, onDone, onSavingChange }: Props) {
   )
 }
 
-function UserFields({ initial, roles, loading, onDone, onSavingChange }: {
+function UserFields({ initial, roles, orgUnits, loading, onDone, onSavingChange }: {
   initial?: UserDetails
   roles: RoleDto[]
+  orgUnits: OrgUnitDto[]
   loading: boolean
   onDone: Props['onDone']
   onSavingChange: Props['onSavingChange']
@@ -80,6 +84,12 @@ function UserFields({ initial, roles, loading, onDone, onSavingChange }: {
   const blocked = submitting || loading || editing || !valid
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [key]: e.target.value }))
+
+  const activeUnits = orgUnits.filter((unit) => unit.isActive)
+  const currentUnit = form.organizationalUnit
+  // مقدار فعلی اگر میان واحدهای فعال نباشد (قدیمی یا غیرفعال) همچنان گزینه می‌ماند تا از دست نرود.
+  const currentIsLegacy = Boolean(currentUnit) && !activeUnits.some((unit) => unit.name === currentUnit)
+  const currentIsInactive = orgUnits.some((unit) => unit.name === currentUnit && !unit.isActive)
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -144,7 +154,19 @@ function UserFields({ initial, roles, loading, onDone, onSavingChange }: {
           </label>
           <label className="sm:col-span-2">
             <span className="label">واحد سازمانی</span>
-            <input className="input" value={form.organizationalUnit} onChange={set('organizationalUnit')} />
+            <select
+              className="input"
+              value={form.organizationalUnit}
+              onChange={(e) => setForm((prev) => ({ ...prev, organizationalUnit: e.target.value }))}
+            >
+              <option value="">— انتخاب کنید —</option>
+              {currentIsLegacy && (
+                <option value={currentUnit}>{currentUnit}{currentIsInactive ? ' (غیرفعال)' : ''}</option>
+              )}
+              {activeUnits.map((unit) => (
+                <option key={unit.id} value={unit.name}>{unit.name}</option>
+              ))}
+            </select>
           </label>
         </div>
         <fieldset>
