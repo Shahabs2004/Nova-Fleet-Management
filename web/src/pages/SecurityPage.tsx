@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { formatFaDateTime, toFa } from '../lib/date'
 import { SESSION_METHOD, SESSION_STATUS } from '../lib/labels'
-import type { AuditEntryDto, DefaultRoleDto, PagedResult, RoleDto, UserListItem, UserSessionDto } from '../lib/types'
+import type { AuditEntryDto, DefaultRoleDto, DirectoryMappingDto, PagedResult, RoleDto, UserListItem, UserSessionDto } from '../lib/types'
 
 interface PermissionDefinition {
   code: string
@@ -265,6 +265,7 @@ function RolesTab() {
   return (
     <div>
       <DefaultRoleCard roles={roles.data ?? []} />
+      <DirectoryMappingsCard roles={roles.data ?? []} />
 
       <div className="grid gap-3 lg:grid-cols-2">
         {(roles.data ?? []).map((role) => (
@@ -366,6 +367,109 @@ function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
       )}
       {notice && <p role="status" className="mt-2 text-xs font-medium text-emerald-700">{notice}</p>}
       {save.isError && <p className="mt-2 text-xs font-medium text-rose-700">{(save.error as Error)?.message}</p>}
+    </div>
+  )
+}
+
+function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
+  const queryClient = useQueryClient()
+  const mappings = useQuery({
+    queryKey: ['directory-mappings'],
+    queryFn: () => api.get<DirectoryMappingDto[]>('/api/roles/directory-mappings'),
+  })
+  const [groupName, setGroupName] = useState('')
+  const [roleId, setRoleId] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const activeRoles = roles.filter((role) => role.isActive)
+  const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['directory-mappings'] })
+
+  const save = useMutation({
+    mutationFn: () => api.post<DirectoryMappingDto>('/api/roles/directory-mappings', { groupName: groupName.trim(), roleId }),
+    onSuccess: () => { setGroupName(''); setRoleId(''); setError(null); invalidate() },
+    onError: (e) => setError((e as Error).message),
+  })
+
+  const remove = useMutation({
+    mutationFn: (id: string) => api.del(`/api/roles/directory-mappings/${id}`),
+    onSuccess: invalidate,
+  })
+
+  return (
+    <div className="card mb-4 p-4">
+      <p className="text-sm font-bold text-emerald-950">نگاشت گروه‌های اکتیو دایرکتوری به نقش</p>
+      <p className="mt-1 text-xs leading-6 text-slate-500">
+        کاربر دایرکتوری با عضویت در هر گروه نگاشت‌شده، نقش مربوط به آن را می‌گیرد؛ برای نمونه گروه DCManager را به «مدیر سامانه» نگاشت کنید.
+        نام گروه را همان‌گونه که در دایرکتوری است وارد کنید (نام CN یا DN کامل). این نقش‌ها با نقش پیش‌فرض جمع می‌شوند.
+      </p>
+
+      {mappings.isLoading ? (
+        <Spinner />
+      ) : mappings.isError ? (
+        <ErrorBox error={mappings.error} />
+      ) : (
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[480px] text-sm">
+            <thead>
+              <tr className="table-head">
+                <th className="text-right">گروه دایرکتوری</th>
+                <th className="text-right">نقش</th>
+                <th className="text-right">وضعیت</th>
+                <th className="text-left">عملیات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {(mappings.data ?? []).length === 0 && (
+                <tr><td colSpan={4} className="py-4 text-center text-xs text-slate-400">هنوز نگاشتی ثبت نشده است.</td></tr>
+              )}
+              {(mappings.data ?? []).map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/70">
+                  <td className="num text-xs text-emerald-950" dir="ltr">{item.groupName}</td>
+                  <td className="text-xs text-slate-600">{item.roleTitle}</td>
+                  <td>
+                    <span className={`badge ${item.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {item.isActive ? 'فعال' : 'غیرفعال'}
+                    </span>
+                  </td>
+                  <td className="text-left">
+                    <button
+                      className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50"
+                      disabled={remove.isPending}
+                      onClick={() => { if (window.confirm(`نگاشت گروه «${item.groupName}» حذف شود؟`)) remove.mutate(item.id) }}
+                    >
+                      حذف
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
+        <div className="min-w-48 flex-1">
+          <label className="label">نام گروه دایرکتوری</label>
+          <input className="input num" dir="ltr" placeholder="DCManager" value={groupName} onChange={(e) => { setGroupName(e.target.value); setError(null) }} />
+        </div>
+        <div className="min-w-44 flex-1">
+          <label className="label">نقش مقصد</label>
+          <select className="input" value={roleId} onChange={(e) => { setRoleId(e.target.value); setError(null) }}>
+            <option value="">— انتخاب نقش —</option>
+            {activeRoles.map((role) => (
+              <option key={role.id} value={role.id}>{role.title}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          className="btn-primary btn-sm"
+          disabled={save.isPending || groupName.trim().length === 0 || roleId.length === 0}
+          onClick={() => save.mutate()}
+        >
+          {save.isPending ? 'در حال ذخیره…' : 'افزودن نگاشت'}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-xs font-medium text-rose-700">{error}</p>}
     </div>
   )
 }
