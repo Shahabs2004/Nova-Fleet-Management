@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '../lib/api'
-import { jalaliHourToUtcUtc, todayJalali, toFa } from '../lib/date'
+import { jalaliHourToUtcUtc, jalaliOf, tehranHour, todayJalali, toFa } from '../lib/date'
 import { jalaliDaysInMonth } from './JalaliDateField'
-import type { LocationDto, OrgUnitDto } from '../lib/types'
+import type { LocationDto, MissionDetails, ProfileDetails } from '../lib/types'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند']
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -11,13 +11,12 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i)
 export interface MissionFormOutput {
   title: string
   type: number
-  purpose: string
+  purpose: string | null
   origin: string
   intermediateStops: string[]
   destination: string
   plannedStartAtUtc: string
   plannedEndAtUtc: string
-  requestingGroup: string
   requesterPhoneSnapshot: string
   requesterOrganizationalUnit: string | null
   description: string | null
@@ -39,6 +38,11 @@ interface DateValue {
 function todayParts(): DateValue {
   const [year, month, day] = todayJalali()
   return { year, month, day, hour: new Date(Date.now() + 210 * 60_000).getUTCHours() }
+}
+
+function isoToParts(iso: string): DateValue {
+  const [year, month, day] = jalaliOf(new Date(iso))
+  return { year, month, day, hour: tehranHour(iso) }
 }
 
 function DateTimeField({
@@ -86,38 +90,46 @@ export function MissionForm({
   onSubmit,
   submitting,
   error,
+  initial,
 }: {
   onSubmit: (output: MissionFormOutput) => void
   submitting: boolean
   error: string | null
+  initial?: MissionDetails
 }) {
   const today = useMemo(todayParts, [])
   const years = useMemo(() => [today.year, today.year + 1], [today.year])
-  const [type, setType] = useState(1)
-  const [title, setTitle] = useState('')
-  const [purpose, setPurpose] = useState('')
-  const [origin, setOrigin] = useState('')
-  const [destination, setDestination] = useState('')
-  const [stops, setStops] = useState('')
-  const [start, setStart] = useState<DateValue>({ ...today, day: today.day, hour: (today.hour + 1) % 24 })
-  const [end, setEnd] = useState<DateValue>({ ...today, hour: (today.hour + 3) % 24 })
-  const [phone, setPhone] = useState('')
-  const [group, setGroup] = useState('')
-  const [unit, setUnit] = useState('')
-  const [description, setDescription] = useState('')
-  const [passengerCount, setPassengerCount] = useState('')
-  const [cargoDescription, setCargoDescription] = useState('')
-  const [consigneeName, setConsigneeName] = useState('')
-  const [passengerNames, setPassengerNames] = useState('')
+  const [type, setType] = useState(initial?.type ?? 1)
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [purpose, setPurpose] = useState(initial?.purpose ?? '')
+  const [origin, setOrigin] = useState(initial?.origin ?? '')
+  const [destination, setDestination] = useState(initial?.destination ?? '')
+  const [stops, setStops] = useState(initial?.intermediateStops.join('\n') ?? '')
+  const [start, setStart] = useState<DateValue>(() => initial ? isoToParts(initial.plannedStartAtUtc) : { ...today, hour: (today.hour + 1) % 24 })
+  const [end, setEnd] = useState<DateValue>(() => initial ? isoToParts(initial.plannedEndAtUtc) : { ...today, hour: (today.hour + 3) % 24 })
+  const [phone, setPhone] = useState(initial?.requesterPhoneSnapshot ?? '')
+  const [description, setDescription] = useState(initial?.description ?? '')
+  const [passengerCount, setPassengerCount] = useState(initial?.passengerCount != null ? String(initial.passengerCount) : '')
+  const [cargoDescription, setCargoDescription] = useState(initial?.cargoDescription ?? '')
+  const [consigneeName, setConsigneeName] = useState(initial?.consigneeName ?? '')
+  const [passengerNames, setPassengerNames] = useState(initial?.passengerNames ?? '')
 
   const { data: locations } = useQuery({
     queryKey: ['approved-locations'],
     queryFn: () => api.get<LocationDto[]>('/api/locations?status=2'),
   })
-  const { data: orgUnits } = useQuery({
-    queryKey: ['org-units'],
-    queryFn: () => api.get<OrgUnitDto[]>('/api/organization-units'),
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => api.get<ProfileDetails>('/api/profile'),
+    enabled: !initial,
   })
+
+  // شماره موبایل درخواست‌کننده از پروفایل پر می‌شود؛ کاربر می‌تواند آن را تغییر دهد.
+  useEffect(() => {
+    if (!initial && profile?.mobilePhone) {
+      setPhone((prev) => prev || profile.mobilePhone!)
+    }
+  }, [profile, initial])
 
   const locationNames = (locations ?? []).map((l) => l.name)
   const datalistId = 'mission-locations'
@@ -127,19 +139,18 @@ export function MissionForm({
     onSubmit({
       title,
       type,
-      purpose,
+      purpose: purpose.trim() || null,
       origin,
       intermediateStops: stops.split('\n').map((s) => s.trim()).filter(Boolean),
       destination,
       plannedStartAtUtc: jalaliHourToUtcUtc(start.year, start.month, start.day, start.hour),
       plannedEndAtUtc: jalaliHourToUtcUtc(end.year, end.month, end.day, end.hour),
-      requestingGroup: group,
       requesterPhoneSnapshot: phone,
-      requesterOrganizationalUnit: unit || null,
+      requesterOrganizationalUnit: initial?.requesterOrganizationalUnit ?? null,
       description: description || null,
       passengerCount: passengerCount ? Number(passengerCount) : null,
-      missionOrderNumber: null,
-      missionOrderDate: null,
+      missionOrderNumber: initial?.missionOrderNumber ?? null,
+      missionOrderDate: initial?.missionOrderDate ?? null,
       cargoDescription: type === 1 ? cargoDescription || null : null,
       consigneeName: type === 1 ? consigneeName || null : null,
       passengerNames: type === 2 ? passengerNames || null : null,
@@ -175,8 +186,8 @@ export function MissionForm({
       </div>
 
       <div>
-        <label className="label">هدف مأموریت</label>
-        <textarea className="input min-h-20 resize-y" value={purpose} onChange={(e) => setPurpose(e.target.value)} required />
+        <label className="label">هدف مأموریت (اختیاری)</label>
+        <textarea className="input min-h-20 resize-y" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -200,30 +211,19 @@ export function MissionForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <DateTimeField label="زمان شروع (به وقت تهران)" value={start} years={years} onChange={setStart} />
-        <DateTimeField label="زمان پایان (به وقت تهران)" value={end} years={years} onChange={setEnd} />
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <DateTimeField label="زمان شروع (به وقت تهران)" value={start} years={years} onChange={setStart} />
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <DateTimeField label="زمان پایان (به وقت تهران)" value={end} years={years} onChange={setEnd} />
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label">شماره موبایل درخواست‌کننده</label>
           <input className="input num" dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09xxxxxxxxx" required />
-        </div>
-        <div>
-          <label className="label">گروه درخواست‌کننده</label>
-          <input className="input" value={group} onChange={(e) => setGroup(e.target.value)} required />
-        </div>
-        <div>
-          <label className="label">واحد سازمانی</label>
-          <select className="input" value={unit} onChange={(e) => setUnit(e.target.value)}>
-            <option value="">— انتخاب کنید —</option>
-            {(orgUnits ?? []).filter((u) => u.isActive).map((u) => (
-              <option key={u.id} value={u.name}>{u.name}</option>
-            ))}
-          </select>
-          {(orgUnits ?? []).filter((u) => u.isActive).length === 0 && (
-            <p className="mt-1.5 text-[11px] text-gold-600">واحد سازمانی فعالی تعریف نشده؛ از تنظیمات › واحدهای سازمانی اضافه کنید.</p>
-          )}
+          <p className="mt-1.5 text-[11px] text-slate-400">از پروفایل شما پر شده است؛ در صورت نیاز تغییر دهید.</p>
         </div>
       </div>
 
@@ -262,7 +262,7 @@ export function MissionForm({
 
       <div className="flex justify-end gap-2">
         <button type="submit" disabled={submitting} className="btn-primary">
-          {submitting ? 'در حال ثبت…' : 'ثبت درخواست'}
+          {submitting ? 'در حال ذخیره…' : initial ? 'ذخیره تغییرات' : 'ثبت درخواست'}
         </button>
       </div>
     </form>

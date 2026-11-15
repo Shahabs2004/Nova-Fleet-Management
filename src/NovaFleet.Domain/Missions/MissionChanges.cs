@@ -4,9 +4,8 @@ namespace NovaFleet.Domain.Missions;
 public sealed record MissionRequestChanges(
     string Title,
     string RequesterPhoneSnapshot,
-    string RequestingGroup,
     MissionType Type,
-    string Purpose,
+    string? Purpose,
     string Origin,
     string Destination,
     IReadOnlyList<string> IntermediateStops,
@@ -24,7 +23,7 @@ public sealed record MissionRequestChanges(
 public sealed record MissionChanges(
     string Title,
     MissionType Type,
-    string Purpose,
+    string? Purpose,
     string Origin,
     string Destination,
     IReadOnlyList<string> IntermediateStops,
@@ -35,7 +34,6 @@ public sealed record MissionChanges(
     string RequesterName,
     string RequesterPhoneSnapshot,
     string RequesterOrganizationalUnit,
-    string RequestingGroup,
     string? Description,
     int? PassengerCount,
     string? MissionOrderNumber,

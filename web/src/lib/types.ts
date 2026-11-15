@@ -64,8 +64,7 @@ export interface ChangeRequestDto {
 export interface MissionDetails extends MissionListItem {
   requesterUsername: string
   requesterPhoneSnapshot: string
-  requestingGroup: string
-  purpose: string
+  purpose: string | null
   intermediateStops: string[]
   actualStartAtUtc: string | null
   driverMobile: string | null

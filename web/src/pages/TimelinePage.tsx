@@ -674,7 +674,6 @@ function MissionQuickEdit({
         destination,
         plannedStartAtUtc,
         plannedEndAtUtc,
-        requestingGroup: mission.requestingGroup,
         requesterPhoneSnapshot: mission.requesterPhoneSnapshot,
         requesterOrganizationalUnit: mission.requesterOrganizationalUnit,
         description: mission.description,

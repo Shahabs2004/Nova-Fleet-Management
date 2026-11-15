@@ -27,11 +27,9 @@ public sealed class Mission : Entity
 
     public string RequesterOrganizationalUnit { get; private set; } = string.Empty;
 
-    public string RequestingGroup { get; private set; } = string.Empty;
-
     public MissionType Type { get; private set; }
 
-    public string Purpose { get; private set; } = string.Empty;
+    public string? Purpose { get; private set; }
 
     public string Origin { get; private set; } = string.Empty;
 
@@ -109,9 +107,8 @@ public sealed class Mission : Entity
         string requesterName,
         string requesterPhoneSnapshot,
         string requesterOrganizationalUnit,
-        string requestingGroup,
         MissionType type,
-        string purpose,
+        string? purpose,
         string origin,
         string destination,
         IEnumerable<string>? intermediateStops,
@@ -130,9 +127,8 @@ public sealed class Mission : Entity
         RequesterUsername = Required(requesterUsername, 64, nameof(requesterUsername));
         RequesterName = Required(requesterName, 200, nameof(requesterName));
         RequesterPhoneSnapshot = Required(requesterPhoneSnapshot, 20, nameof(requesterPhoneSnapshot));
-        RequesterOrganizationalUnit = Required(requesterOrganizationalUnit, 200, nameof(requesterOrganizationalUnit));
-        RequestingGroup = Required(requestingGroup, 200, nameof(requestingGroup));
-        Purpose = Required(purpose, 500, nameof(purpose));
+        RequesterOrganizationalUnit = Optional(requesterOrganizationalUnit, 200) ?? string.Empty;
+        Purpose = Optional(purpose, 500);
         Origin = Required(origin, 200, nameof(origin));
         Destination = Required(destination, 200, nameof(destination));
 
@@ -498,7 +494,7 @@ public sealed class Mission : Entity
 
         Title = Required(changes.Title, 200, nameof(changes.Title));
         Type = changes.Type;
-        Purpose = Required(changes.Purpose, 500, nameof(changes.Purpose));
+        Purpose = Optional(changes.Purpose, 500);
         Origin = Required(changes.Origin, 200, nameof(changes.Origin));
         Destination = Required(changes.Destination, 200, nameof(changes.Destination));
         RouteJson = JsonSerializer.Serialize(NormalizeStops(changes.IntermediateStops));
@@ -508,8 +504,7 @@ public sealed class Mission : Entity
         VehicleId = changes.VehicleId;
         RequesterName = Required(changes.RequesterName, 200, nameof(changes.RequesterName));
         RequesterPhoneSnapshot = Required(changes.RequesterPhoneSnapshot, 20, nameof(changes.RequesterPhoneSnapshot));
-        RequesterOrganizationalUnit = Required(changes.RequesterOrganizationalUnit, 200, nameof(changes.RequesterOrganizationalUnit));
-        RequestingGroup = Required(changes.RequestingGroup, 200, nameof(changes.RequestingGroup));
+        RequesterOrganizationalUnit = Optional(changes.RequesterOrganizationalUnit, 200) ?? string.Empty;
         Description = Optional(changes.Description, 2000);
         PassengerCount = changes.PassengerCount;
         MissionOrderNumber = Optional(changes.MissionOrderNumber, 50);
@@ -557,9 +552,8 @@ public sealed class Mission : Entity
 
         Title = Required(changes.Title, 200, nameof(changes.Title));
         RequesterPhoneSnapshot = Required(changes.RequesterPhoneSnapshot, 20, nameof(changes.RequesterPhoneSnapshot));
-        RequestingGroup = Required(changes.RequestingGroup, 200, nameof(changes.RequestingGroup));
         Type = changes.Type;
-        Purpose = Required(changes.Purpose, 500, nameof(changes.Purpose));
+        Purpose = Optional(changes.Purpose, 500);
         Origin = Required(changes.Origin, 200, nameof(changes.Origin));
         Destination = Required(changes.Destination, 200, nameof(changes.Destination));
         RouteJson = JsonSerializer.Serialize(NormalizeStops(changes.IntermediateStops));

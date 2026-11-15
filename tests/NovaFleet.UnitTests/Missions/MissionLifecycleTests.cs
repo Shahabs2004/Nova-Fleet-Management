@@ -150,13 +150,14 @@ public sealed class MissionLifecycleTests : MissionTestBase
     }
 
     [Fact]
-    public async Task CreateAsync_RejectsRequesterWithoutOrganizationalUnit()
+    public async Task CreateAsync_AllowsRequesterWithoutOrganizationalUnit()
     {
         var service = ServiceFor(User("demo.outsider", PermissionCatalog.Missions.Create));
 
-        var error = await Assert.ThrowsAsync<ValidationAppException>(
-            () => service.CreateAsync(Request(Hour(0, 10), Hour(0, 14))));
-        Assert.Contains("واحد سازمانی", error.Message);
+        var mission = await service.CreateAsync(Request(Hour(0, 10), Hour(0, 14)));
+
+        Assert.Equal(MissionStatus.Pending, mission.Status);
+        Assert.Equal(string.Empty, mission.RequesterOrganizationalUnit);
     }
 
     [Fact]
@@ -165,6 +166,29 @@ public sealed class MissionLifecycleTests : MissionTestBase
         var mission = await CreatePendingAsync();
 
         Assert.Equal("واحد ترانسفر", mission.RequesterOrganizationalUnit);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AllowsMissingPurpose()
+    {
+        var service = ServiceFor(MissionAdmin());
+
+        var mission = await service.CreateAsync(ValidRequest() with { Purpose = null });
+
+        Assert.Null(mission.Purpose);
+    }
+
+    [Fact]
+    public async Task CreateAsync_TakesPhoneFromProfileWhenFormOmitsIt()
+    {
+        var requester = await Db.Users.FirstAsync(item => item.Username == RequesterUsername);
+        requester.UpdateProfile(requester.FirstName, requester.LastName, "09120000000", requester.Email, requester.OrganizationalUnit);
+        await Db.SaveChangesAsync();
+        var service = ServiceFor(MissionAdmin());
+
+        var mission = await service.CreateAsync(ValidRequest() with { RequesterPhoneSnapshot = "" });
+
+        Assert.Equal("09120000000", mission.RequesterPhoneSnapshot);
     }
 
     [Fact]

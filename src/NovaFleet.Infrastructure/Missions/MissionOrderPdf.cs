@@ -66,7 +66,6 @@ public static class MissionOrderPdf
                         Field("عنوان", mission.Title),
                         Field("نوع", mission.Type == MissionType.Freight ? "باربری" : "سرنشین‌دار"),
                         Field("درخواست‌کننده", $"{mission.RequesterName} ({mission.RequesterUsername})"),
-                        Field("گروه درخواست‌کننده", mission.RequestingGroup),
                         Field("واحد سازمانی", mission.RequesterOrganizationalUnit),
                         Field("موبایل", mission.RequesterPhoneSnapshot),
                         Field("هدف مأموریت", mission.Purpose),

@@ -127,10 +127,6 @@ DECLARE @Passengers table (idx int identity(1,1), value nvarchar(1000));
 INSERT INTO @Passengers (value) VALUES
   (N'تیم فنی (۴ نفر)'), (N'نیروهای اداری'), (N'پیمانکار'), (N'بازرس'), (N'مدیران منطقه');
 
-DECLARE @Groups table (idx int identity(1,1), value nvarchar(200));
-INSERT INTO @Groups (value) VALUES
-  (N'گروه ترابری ۱'), (N'گروه ترابری ۲'), (N'گروه پشتیبانی');
-
 DECLARE @SplitReasons table (idx int identity(1,1), value nvarchar(500));
 INSERT INTO @SplitReasons (value) VALUES
   (N'خرابی خودرو'), (N'تعویض راننده'), (N'تعویض هم‌زمان راننده و خودرو'), (N'سایر');
@@ -146,7 +142,6 @@ DECLARE @TitleCount int  = (SELECT COUNT(*) FROM @Titles);
 DECLARE @PurposeCount int = (SELECT COUNT(*) FROM @Purposes);
 DECLARE @CargoCount int  = (SELECT COUNT(*) FROM @Cargo);
 DECLARE @PaxCount int    = (SELECT COUNT(*) FROM @Passengers);
-DECLARE @GroupCount int  = (SELECT COUNT(*) FROM @Groups);
 DECLARE @SplitCount int  = (SELECT COUNT(*) FROM @SplitReasons);
 
 /* ---------- واحدهای سازمانی و مقاصد ---------- */
@@ -355,7 +350,7 @@ SET @n = @n + @@ROWCOUNT;
 /* ---------- مأموریت‌ها ---------- */
 
 INSERT INTO Missions (Id, MissionNumber, Title, RequesterUsername, RequesterName, RequesterPhoneSnapshot,
-                      RequesterOrganizationalUnit, RequestingGroup, Type, Purpose, Origin, Destination, RouteJson,
+                      RequesterOrganizationalUnit, Type, Purpose, Origin, Destination, RouteJson,
                       PlannedStartAtUtc, PlannedEndAtUtc, DriverId, VehicleId, Description, PassengerCount,
                       MissionOrderNumber, MissionOrderDate, CargoDescription, ConsigneeName, PassengerNames,
                       Status, ReviewStartedAtUtc, ApprovedBy, ApprovedAtUtc, ActualStartAtUtc, ActualEndAtUtc,
@@ -369,7 +364,6 @@ SELECT
     usr.FirstName + N' ' + usr.LastName,
     usr.MobilePhone,
     usr.OrganizationalUnit,
-    grp.value,
     b.type,
     pp.value,
     org.value,
@@ -432,7 +426,6 @@ CROSS APPLY (SELECT value FROM @Places WHERE idx = 1 + ((b.n * 5 + 3) % @PlaceCo
 CROSS APPLY (SELECT value FROM @Places WHERE idx = 1 + ((b.n * 7 + 5) % @PlaceCount)) stop
 CROSS APPLY (SELECT value FROM @Cargo WHERE idx = 1 + (b.n % @CargoCount)) cg
 CROSS APPLY (SELECT value FROM @Passengers WHERE idx = 1 + (b.n % @PaxCount)) px
-CROSS APPLY (SELECT value FROM @Groups WHERE idx = 1 + (b.n % @GroupCount)) grp
 CROSS APPLY (SELECT value FROM @SplitReasons WHERE idx = 1 + (b.n % @SplitCount)) sr
 CROSS APPLY (SELECT u.Username, u.FirstName, u.LastName, u.MobilePhone, u.OrganizationalUnit
              FROM (SELECT Username, FirstName, LastName, MobilePhone, OrganizationalUnit,

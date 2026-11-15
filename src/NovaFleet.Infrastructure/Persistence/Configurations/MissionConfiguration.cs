@@ -17,9 +17,8 @@ public sealed class MissionConfiguration : IEntityTypeConfiguration<Mission>
         builder.Property(x => x.RequesterName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.RequesterPhoneSnapshot).HasMaxLength(20).IsRequired();
         builder.Property(x => x.RequesterOrganizationalUnit).HasMaxLength(200).IsRequired();
-        builder.Property(x => x.RequestingGroup).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Type).HasConversion<int>();
-        builder.Property(x => x.Purpose).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.Purpose).HasMaxLength(500);
         builder.Property(x => x.Origin).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Destination).HasMaxLength(200).IsRequired();
         builder.Property(x => x.RouteJson).HasColumnType("nvarchar(max)");

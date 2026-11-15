@@ -7,6 +7,7 @@ import { faNumber, formatFaDateTime, toFa } from '../lib/date'
 import { MISSION_TYPE } from '../lib/labels'
 import type { DriverDto, MissionDetails, VehicleDto } from '../lib/types'
 import { Modal, PageHeader, Spinner, StatusBadge } from '../components/ui'
+import { MissionForm, type MissionFormOutput } from '../components/MissionForm'
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -50,6 +51,17 @@ export function MissionDetailsPage() {
     onError: (err) => setActionError(err instanceof Error ? err.message : 'عملیات ناموفق بود.'),
   })
 
+  const editMission = useMutation({
+    mutationFn: (body: MissionFormOutput) => api.put(`/api/missions/${id}`, body),
+    onSuccess: async () => {
+      setAction(null)
+      setActionError(null)
+      await invalidate()
+      await queryClient.invalidateQueries({ queryKey: ['missions'] })
+    },
+    onError: (err) => setActionError(err instanceof Error ? err.message : 'ویرایش مأموریت ناموفق بود.'),
+  })
+
   if (isLoading) return <Spinner />
   if (!mission) return <p className="py-10 text-center text-slate-400">مأموریت پیدا نشد.</p>
 
@@ -64,6 +76,13 @@ export function MissionDetailsPage() {
   }
 
   const actions: React.ReactNode[] = []
+  if (m.status === 1 && can('missions.edit') && (isRequester || can('missions.approve'))) {
+    actions.push(
+      <button key="edit" className="btn-ghost" onClick={() => { setAction('edit'); setActionError(null) }}>
+        ویرایش درخواست
+      </button>,
+    )
+  }
   if (m.status === 1 && can('missions.review')) {
     actions.push(
       <button key="review" className="btn-ghost" onClick={() => runAction(`/api/missions/${id}/review`)}>
@@ -176,7 +195,6 @@ export function MissionDetailsPage() {
             <InfoRow label="نوع" value={MISSION_TYPE[m.type]} />
             <InfoRow label="درخواست‌کننده" value={`${m.requesterName} (${m.requesterUsername})`} />
             <InfoRow label="واحد سازمانی" value={m.requesterOrganizationalUnit || '—'} />
-            <InfoRow label="گروه درخواست‌کننده" value={m.requestingGroup} />
             <InfoRow label="مبدأ" value={m.origin} />
             <InfoRow label="مقصد" value={m.destination} />
             <InfoRow label="مقصدهای میانی" value={m.intermediateStops.length > 0 ? m.intermediateStops.join(' ← ') : '—'} />
@@ -378,6 +396,15 @@ export function MissionDetailsPage() {
             ثبت
           </button>
         </div>
+      </Modal>
+
+      <Modal open={action === 'edit'} title="ویرایش درخواست مأموریت" onClose={closeModal} wide>
+        <MissionForm
+          initial={m}
+          submitting={editMission.isPending}
+          error={actionError}
+          onSubmit={(output) => editMission.mutate(output)}
+        />
       </Modal>
     </div>
   )

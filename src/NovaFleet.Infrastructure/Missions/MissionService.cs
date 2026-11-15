@@ -144,7 +144,7 @@ public sealed class MissionService(
 
         var user = await db.Users.AsNoTracking()
             .Where(item => item.Username == currentUser.Username)
-            .Select(item => new { item.FirstName, item.LastName, item.OrganizationalUnit })
+            .Select(item => new { item.FirstName, item.LastName, item.OrganizationalUnit, item.MobilePhone })
             .FirstOrDefaultAsync(cancellationToken);
         var requesterName = currentUser.IsAuthenticated ? currentUser.DisplayName : $"{user?.FirstName} {user?.LastName}".Trim();
         if (string.IsNullOrWhiteSpace(requesterName))
@@ -155,10 +155,9 @@ public sealed class MissionService(
         var organizationalUnit = !string.IsNullOrWhiteSpace(input.RequesterOrganizationalUnit)
             ? input.RequesterOrganizationalUnit
             : user?.OrganizationalUnit ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(organizationalUnit))
-        {
-            throw new ValidationAppException("واحد سازمانی درخواست‌کننده مشخص نیست؛ آن را در فرم انتخاب کنید یا در تنظیمات > واحدهای سازمانی تعریف شود.");
-        }
+        var requesterPhone = !string.IsNullOrWhiteSpace(input.RequesterPhoneSnapshot)
+            ? input.RequesterPhoneSnapshot
+            : user?.MobilePhone ?? string.Empty;
 
         await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
         var missionNumber = await NextMissionNumberAsync(now, cancellationToken);
@@ -167,9 +166,8 @@ public sealed class MissionService(
             input.Title,
             currentUser.Username,
             requesterName,
-            input.RequesterPhoneSnapshot,
+            requesterPhone,
             organizationalUnit,
-            input.RequestingGroup,
             input.Type,
             input.Purpose,
             input.Origin,
@@ -219,7 +217,6 @@ public sealed class MissionService(
         Run(() => mission.EditPendingRequest(new MissionRequestChanges(
             input.Title,
             input.RequesterPhoneSnapshot,
-            input.RequestingGroup,
             input.Type,
             input.Purpose,
             input.Origin,
@@ -568,7 +565,6 @@ public sealed class MissionService(
                     mission.RequesterName,
                     proposed.RequesterPhoneSnapshot,
                     mission.RequesterOrganizationalUnit,
-                    proposed.RequestingGroup,
                     proposed.Description,
                     proposed.PassengerCount,
                     proposed.MissionOrderNumber,
@@ -640,7 +636,6 @@ public sealed class MissionService(
                 first.RequesterName,
                 first.RequesterPhoneSnapshot,
                 first.RequesterOrganizationalUnit,
-                first.RequestingGroup,
                 first.Type,
                 first.Purpose,
                 first.Origin,
@@ -835,7 +830,6 @@ public sealed class MissionService(
                 mission.Destination,
                 mission.PlannedStartAtUtc,
                 mission.PlannedEndAtUtc,
-                mission.RequestingGroup,
                 mission.RequesterPhoneSnapshot,
                 mission.Description,
                 mission.PassengerCount,
@@ -858,7 +852,6 @@ public sealed class MissionService(
             mission.RequesterName,
             mission.RequesterPhoneSnapshot,
             mission.RequesterOrganizationalUnit,
-            mission.RequestingGroup,
             mission.Purpose,
             mission.Origin,
             mission.GetIntermediateStops(),
