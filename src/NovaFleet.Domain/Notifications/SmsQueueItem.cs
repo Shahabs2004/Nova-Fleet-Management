@@ -85,6 +85,9 @@ public sealed class SmsQueueItem : Entity
 
     public bool CanRetryManually => Status is SmsQueueStatus.Failed or SmsQueueStatus.PermanentFailure;
 
+    /// <summary>تنها پیام‌های هنوز ارسال‌نشده قابل لغو هستند؛ پیام پذیرفته/تحویل‌شده دیگر لغو نمی‌شود.</summary>
+    public bool CanCancel => Status is SmsQueueStatus.Queued or SmsQueueStatus.RetryScheduled or SmsQueueStatus.Sending;
+
     /// <summary>آماده‌برداشت برای worker؛ تنها پیام‌های صف‌شده و سررسیدشده.</summary>
     public bool IsDue(DateTimeOffset nowUtc) =>
         Status is SmsQueueStatus.Queued or SmsQueueStatus.RetryScheduled
@@ -170,9 +173,9 @@ public sealed class SmsQueueItem : Entity
 
     public void Cancel(string reason, DateTimeOffset nowUtc)
     {
-        if (Status.IsTerminal())
+        if (!CanCancel)
         {
-            throw new InvalidOperationException("پیامک پایان‌یافته قابل لغو نیست.");
+            throw new InvalidOperationException("فقط پیامک ارسال‌نشده در صف قابل لغو است.");
         }
 
         Status = SmsQueueStatus.Cancelled;

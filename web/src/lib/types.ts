@@ -192,6 +192,7 @@ export interface SmsItem {
   deliveredAtUtc: string | null
   nextAttemptAtUtc: string | null
   canRetry: boolean
+  canCancel: boolean
 }
 
 export interface SmsTemplate {

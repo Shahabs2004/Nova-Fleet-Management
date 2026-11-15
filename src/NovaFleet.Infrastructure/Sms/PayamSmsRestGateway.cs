@@ -81,7 +81,16 @@ public sealed class PayamSmsRestGateway(
                 : SmsSendResult.Transient($"سرویس پیامک پاسخ ناموفق داد (کد {envelope.Code}).");
         }
 
-        return MapSendData(envelope.Data);
+        var result = MapSendData(envelope.Data);
+        if (!result.Accepted && !result.IsPermanentFailure)
+        {
+            // پاسخ ۲۰۰ بود ولی به شناسه پیام نگاشت نشد؛ شکل خام فقط در لاگ می‌نشیند تا
+            // بدون ارسال آزمایشیِ هزینه‌دار، قرارداد واقعیِ پاسخ موفق قابل تشخیص باشد.
+            var raw = envelope.Data.ValueKind == JsonValueKind.Undefined ? "(غایب)" : envelope.Data.GetRawText();
+            logger.LogWarning("پاسخ send درگاه REST به شناسه پیام نگاشت نشد؛ data خام: {Data}", raw);
+        }
+
+        return result;
     }
 
     public Task<SmsDeliveryResult> GetDeliveryStatusAsync(
@@ -143,8 +152,9 @@ public sealed class PayamSmsRestGateway(
     }
 
     /// <summary>
-    /// شکل موفق از قرارداد SOAP وام گرفته شده (آرایه‌ای از {ID, Mobile}) و هنوز با پاسخ زنده
-    /// تأیید نشده؛ تا وقتی شناسه عددی برنگردد، هیچ پاسخی «موفق» ثبت نمی‌شود.
+    /// شکل موفق قرارداد SOAP است: آرایه‌ای از {ID, Mobile} که ID شناسه یکتای پیام است.
+    /// سرویس‌دهنده ID را عددی برمی‌گرداند (مطابق SendResult در حالت Wsdl)، پس هم رشته و هم
+    /// عدد پذیرفته می‌شود؛ وگرنه پیامِ واقعاً ارسال‌شده «موقت» می‌ماند و صف آن را تکرار می‌کند.
     /// شکل خطای مشاهده‌شده: [{"ErrorCode":"E5"}].
     /// </summary>
     private static SmsSendResult MapSendData(JsonElement data)
@@ -158,19 +168,19 @@ public sealed class PayamSmsRestGateway(
                     continue;
                 }
 
-                var fault = PayamSmsFaults.Classify(ReadString(item, "ErrorCode") ?? ReadString(item, "ID"));
-                if (fault is not null)
+                var mapped = MapSendItem(item);
+                if (mapped is not null)
                 {
-                    return fault.Value.IsPermanent
-                        ? SmsSendResult.Permanent(fault.Value.Description)
-                        : SmsSendResult.Transient(fault.Value.Description);
+                    return mapped;
                 }
-
-                var reference = ReadString(item, "ID");
-                if (!string.IsNullOrWhiteSpace(reference))
-                {
-                    return SmsSendResult.Success(reference.Trim(), null);
-                }
+            }
+        }
+        else if (data.ValueKind == JsonValueKind.Object)
+        {
+            var mapped = MapSendItem(data);
+            if (mapped is not null)
+            {
+                return mapped;
             }
         }
         else if (data.ValueKind == JsonValueKind.String)
@@ -187,10 +197,43 @@ public sealed class PayamSmsRestGateway(
         return SmsSendResult.Transient("سرویس پیامک شناسه پیام برنگرداند.");
     }
 
+    /// <summary>یک آیتم پاسخ send را به خطا یا شناسه پیام نگاشت می‌کند؛ بدون ID و بدون خطا null است.</summary>
+    private static SmsSendResult? MapSendItem(JsonElement item)
+    {
+        var fault = PayamSmsFaults.Classify(ReadString(item, "ErrorCode") ?? ReadReference(item, "ID"));
+        if (fault is not null)
+        {
+            return fault.Value.IsPermanent
+                ? SmsSendResult.Permanent(fault.Value.Description)
+                : SmsSendResult.Transient(fault.Value.Description);
+        }
+
+        var reference = ReadReference(item, "ID");
+        return string.IsNullOrWhiteSpace(reference)
+            ? null
+            : SmsSendResult.Success(reference.Trim(), null);
+    }
+
     private static string? ReadString(JsonElement item, string name) =>
         item.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    /// <summary>شناسه پیام ممکن است رشته یا عدد باشد؛ هر دو به متن تبدیل می‌شوند.</summary>
+    private static string? ReadReference(JsonElement item, string name)
+    {
+        if (!item.TryGetProperty(name, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(),
+            _ => null
+        };
+    }
 
     private void LogRejected(RestEnvelope envelope) =>
         logger.LogWarning("پاسخ ناموفق درگاه REST پیامک: کد {Code} — {Message}", envelope.Code, envelope.Message);

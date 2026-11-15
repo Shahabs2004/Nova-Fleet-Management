@@ -31,8 +31,8 @@ export const DRIVER_STATUS: Record<number, string> = {
 export const SMS_STATUS: Record<number, { title: string; badge: string }> = {
   1: { title: 'در صف', badge: 'bg-slate-100 text-slate-600' },
   2: { title: 'در حال ارسال', badge: 'bg-sky-50 text-sky-700' },
-  3: { title: 'تحویل‌شده', badge: 'bg-emerald-50 text-emerald-700' },
-  4: { title: 'پذیرفته‌شده', badge: 'bg-teal-50 text-teal-700' },
+  3: { title: 'پذیرفته‌شده', badge: 'bg-teal-50 text-teal-700' },
+  4: { title: 'تحویل‌شده', badge: 'bg-emerald-50 text-emerald-700' },
   5: { title: 'ارسال مجدد', badge: 'bg-amber-50 text-amber-700' },
   6: { title: 'ناموفق', badge: 'bg-rose-50 text-rose-700' },
   7: { title: 'خطای دائمی', badge: 'bg-rose-100 text-rose-800' },

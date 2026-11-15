@@ -75,7 +75,8 @@ public sealed class SmsService(
                 row.item.AcceptedAtUtc,
                 row.item.DeliveredAtUtc,
                 row.item.NextAttemptAtUtc,
-                row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure))
+                row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure,
+                row.item.Status == SmsQueueStatus.Queued || row.item.Status == SmsQueueStatus.RetryScheduled || row.item.Status == SmsQueueStatus.Sending))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<SmsQueueItemDto>(items, total, page, pageSize);
@@ -90,6 +91,23 @@ public sealed class SmsService(
         item.QueueManualRetry(clock.UtcNow);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RetrySms", "SmsQueueItem", id.ToString(), "Success",
+            After: new { item.EventKey, item.RecipientMobile }), cancellationToken);
+    }
+
+    public async Task CancelAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        currentUser.Require(PermissionCatalog.Notifications.SmsCancel);
+        var item = await db.SmsQueueItems.FirstOrDefaultAsync(row => row.Id == id, cancellationToken)
+            ?? throw new NotFoundAppException("پیامک پیدا نشد.");
+
+        if (!item.CanCancel)
+        {
+            throw new ValidationAppException("فقط پیامک‌های ارسال‌نشده در صف قابل لغو هستند.");
+        }
+
+        item.Cancel("لغو دستی توسط اپراتور.", clock.UtcNow);
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("CancelSms", "SmsQueueItem", id.ToString(), "Success",
             After: new { item.EventKey, item.RecipientMobile }), cancellationToken);
     }
 

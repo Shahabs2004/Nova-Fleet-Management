@@ -47,7 +47,8 @@ public sealed record SmsQueueItemDto(
     DateTimeOffset? AcceptedAtUtc,
     DateTimeOffset? DeliveredAtUtc,
     DateTimeOffset? NextAttemptAtUtc,
-    bool CanRetry);
+    bool CanRetry,
+    bool CanCancel);
 
 public sealed record SmsQuery(
     string? Search,
@@ -74,6 +75,9 @@ public interface ISmsService
     Task<PagedResult<SmsQueueItemDto>> ListAsync(SmsQuery query, CancellationToken cancellationToken = default);
 
     Task RetryAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>لغو دستی یک پیامک ارسال‌نشده در صف (صف‌شده، زمان‌بندی مجدد یا در حال ارسال).</summary>
+    Task CancelAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SmsTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken = default);
 

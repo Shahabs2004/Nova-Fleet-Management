@@ -75,6 +75,31 @@ public sealed class PayamSmsRestGatewayTests : MissionTestBase
     }
 
     [Fact]
+    public async Task Send_NumericMessageIdIsAcceptedAsProviderReference()
+    {
+        // سرویس‌دهنده ID را عددی برمی‌گرداند؛ اگر فقط رشته پذیرفته شود پیامِ ارسال‌شده
+        // «موقت» می‌ماند و صف آن را تکرار می‌کند تا سرانجام ناموفق شود.
+        var gateway = await WiredGatewayAsync("""{"code":200,"message":"send result","data":[{"ID":700123,"Mobile":"989121112233"}]}""");
+
+        var result = await gateway.SendAsync(Message);
+
+        Assert.True(result.Accepted);
+        Assert.Equal("700123", result.ProviderReference);
+        Assert.Null(result.Error);
+    }
+
+    [Fact]
+    public async Task Send_SingleObjectWithNumericIdIsAccepted()
+    {
+        var gateway = await WiredGatewayAsync("""{"code":200,"message":"send result","data":{"ID":700123,"Mobile":"989121112233"}}""");
+
+        var result = await gateway.SendAsync(Message);
+
+        Assert.True(result.Accepted);
+        Assert.Equal("700123", result.ProviderReference);
+    }
+
+    [Fact]
     public async Task Send_ErrorCodeItemBecomesAPermanentFailure()
     {
         var gateway = await WiredGatewayAsync(SendError("E5"));

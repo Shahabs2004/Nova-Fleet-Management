@@ -53,6 +53,14 @@ export function SmsPage() {
     },
   })
 
+  const cancel = useMutation({
+    mutationFn: (id: string) => api.post(`/api/sms/${id}/cancel`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['sms'] })
+      void queryClient.invalidateQueries({ queryKey: ['sms-summary'] })
+    },
+  })
+
   return (
     <div>
       <PageHeader
@@ -168,11 +176,24 @@ export function SmsPage() {
                         </td>
                         <td className="num text-[11px] text-slate-400">{formatFaDateTime(item.createdAtUtc)}</td>
                         <td className="text-left">
-                          {can('notifications.sms.retry') && item.canRetry && (
-                            <button className="btn-ghost btn-sm" disabled={retry.isPending} onClick={() => retry.mutate(item.id)}>
-                              ارسال مجدد
-                            </button>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {can('notifications.sms.retry') && item.canRetry && (
+                              <button className="btn-ghost btn-sm" disabled={retry.isPending} onClick={() => retry.mutate(item.id)}>
+                                ارسال مجدد
+                              </button>
+                            )}
+                            {can('notifications.sms.cancel') && item.canCancel && (
+                              <button
+                                className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50"
+                                disabled={cancel.isPending}
+                                onClick={() => {
+                                  if (window.confirm('این پیامک ارسال‌نشده لغو شود؟')) cancel.mutate(item.id)
+                                }}
+                              >
+                                لغو
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

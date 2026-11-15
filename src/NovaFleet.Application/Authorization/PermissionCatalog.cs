@@ -62,6 +62,7 @@ public static class PermissionCatalog
         public const string View = "notifications.view";
         public const string SmsView = "notifications.sms.view";
         public const string SmsRetry = "notifications.sms.retry";
+        public const string SmsCancel = "notifications.sms.cancel";
         public const string SmsTemplatesManage = "notifications.sms.templates.manage";
     }
 
@@ -119,6 +120,7 @@ public static class PermissionCatalog
             new(Notifications.View, "مشاهده اعلان‌ها", "مشاهده اعلان‌های داخلی کاربر."),
             new(Notifications.SmsView, "مشاهده گزارش پیامک", "مشاهده صف و سوابق پیامک با مجوز مستقل."),
             new(Notifications.SmsRetry, "ارسال مجدد پیامک", "ارسال مجدد دستی پیامک ناموفق."),
+            new(Notifications.SmsCancel, "لغو پیامک در صف", "لغو دستی پیامک‌های ارسال‌نشده در صف."),
             new(Notifications.SmsTemplatesManage, "مدیریت قالب پیامک", "مدیریت قالب‌های رویداد پیامکی."),
             new(Security.AuditView, "مشاهده گزارش ممیزی", "مشاهده سوابق ممیزی با مجوز مستقل."),
             new(Security.SessionsView, "مشاهده سوابق نشست", "مشاهده سوابق ورود و نشست کاربران."),
