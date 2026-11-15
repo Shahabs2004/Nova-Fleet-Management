@@ -34,7 +34,7 @@ public class AuthorizationGuardTests : MissionTestBase
 
     private UserService UsersFor(ICurrentUser user) => new(Db, new StubPasswordHasher(), user, Audit);
 
-    private RoleService RolesFor(ICurrentUser user) => new(Db, user, Audit);
+    private RoleService RolesFor(ICurrentUser user) => new(Db, user, Audit, Runtime);
 
     private SessionService SessionsFor(ICurrentUser user) => new(Db, user, Clock);
 

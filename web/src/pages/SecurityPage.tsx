@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { formatFaDateTime, toFa } from '../lib/date'
 import { SESSION_METHOD, SESSION_STATUS } from '../lib/labels'
-import type { AuditEntryDto, PagedResult, RoleDto, UserListItem, UserSessionDto } from '../lib/types'
+import type { AuditEntryDto, DefaultRoleDto, PagedResult, RoleDto, UserListItem, UserSessionDto } from '../lib/types'
 
 interface PermissionDefinition {
   code: string
@@ -264,6 +264,8 @@ function RolesTab() {
 
   return (
     <div>
+      <DefaultRoleCard roles={roles.data ?? []} />
+
       <div className="grid gap-3 lg:grid-cols-2">
         {(roles.data ?? []).map((role) => (
           <div key={role.id} className="card p-4">
@@ -312,6 +314,58 @@ function RolesTab() {
           />
         )}
       </Modal>
+    </div>
+  )
+}
+
+function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
+  const queryClient = useQueryClient()
+  const query = useQuery({ queryKey: ['default-role'], queryFn: () => api.get<DefaultRoleDto>('/api/roles/default-role') })
+  const [selected, setSelected] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+
+  const saved = query.data?.roleName ?? ''
+  const value = selected ?? saved
+  const activeRoles = roles.filter((role) => role.isActive)
+
+  const save = useMutation({
+    mutationFn: (roleName: string) => api.put<DefaultRoleDto>('/api/roles/default-role', { roleName }),
+    onSuccess: () => {
+      setSelected(null)
+      setNotice('نقش پیش‌فرض کاربران جدید ذخیره شد.')
+      void queryClient.invalidateQueries({ queryKey: ['default-role'] })
+    },
+  })
+
+  return (
+    <div className="card mb-4 p-4">
+      <p className="text-sm font-bold text-emerald-950">نقش پیش‌فرض کاربران جدید دایرکتوری</p>
+      <p className="mt-1 text-xs leading-6 text-slate-500">
+        کاربرانی که نخستین بار با حساب اکتیو دایرکتوری یا ویندوز وارد می‌شوند، این نقش را می‌گیرند.
+        با انتخاب «بدون نقش»، دسترسی آنان تنها از نگاشت گروه‌های دایرکتوری تأمین می‌شود.
+      </p>
+      {query.isLoading ? (
+        <Spinner />
+      ) : query.isError ? (
+        <ErrorBox error={query.error} />
+      ) : (
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <div className="min-w-56 flex-1">
+            <label className="label">نقش پیش‌فرض</label>
+            <select className="input" value={value} onChange={(e) => { setSelected(e.target.value); setNotice(null) }}>
+              <option value="">بدون نقش پیش‌فرض</option>
+              {activeRoles.map((role) => (
+                <option key={role.id} value={role.name}>{role.title}</option>
+              ))}
+            </select>
+          </div>
+          <button className="btn-primary btn-sm" disabled={save.isPending || value === saved} onClick={() => save.mutate(value)}>
+            {save.isPending ? 'در حال ذخیره…' : 'ذخیره'}
+          </button>
+        </div>
+      )}
+      {notice && <p role="status" className="mt-2 text-xs font-medium text-emerald-700">{notice}</p>}
+      {save.isError && <p className="mt-2 text-xs font-medium text-rose-700">{(save.error as Error)?.message}</p>}
     </div>
   )
 }

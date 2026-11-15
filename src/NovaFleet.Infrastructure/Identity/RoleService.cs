@@ -4,6 +4,7 @@ using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Identity;
+using NovaFleet.Application.Settings;
 using NovaFleet.Domain.Identity;
 using NovaFleet.Infrastructure.Persistence;
 
@@ -13,7 +14,8 @@ namespace NovaFleet.Infrastructure.Identity;
 public sealed class RoleService(
     NovaFleetDbContext db,
     ICurrentUser currentUser,
-    IAuditTrail audit) : IRoleService
+    IAuditTrail audit,
+    IRuntimeSettings runtime) : IRoleService
 {
     private const string SystemAdministrator = "SystemAdministrator";
     private static readonly Regex RoleNamePattern = new("^[A-Za-z][A-Za-z0-9]{2,49}$", RegexOptions.Compiled);
@@ -179,6 +181,27 @@ public sealed class RoleService(
         db.DirectoryGroupRoleMappings.Remove(mapping);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RemoveDirectoryMapping", "DirectoryGroupRoleMapping", id.ToString(), "Success"), cancellationToken);
+    }
+
+    public async Task<DefaultRoleDto> GetDefaultRoleAsync(CancellationToken cancellationToken = default)
+    {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
+        var roleName = await runtime.GetStringAsync(SettingKeys.DefaultUserRole, cancellationToken);
+        return new DefaultRoleDto(roleName ?? SettingKeys.DefaultUserRoleValue);
+    }
+
+    public async Task<DefaultRoleDto> SetDefaultRoleAsync(SetDefaultRoleRequest request, CancellationToken cancellationToken = default)
+    {
+        currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
+        var roleName = request.RoleName?.Trim() ?? string.Empty;
+        if (roleName.Length > 0 && !await db.Roles.AnyAsync(item => item.Name == roleName, cancellationToken))
+        {
+            throw new ValidationAppException("نقش انتخاب‌شده برای کاربران جدید وجود ندارد.");
+        }
+
+        await runtime.SetAsync(SettingKeys.DefaultUserRole, roleName, cancellationToken);
+        await audit.WriteAsync(new AuditRecord("SetDefaultUserRole", "SystemSetting", SettingKeys.DefaultUserRole, "Success", After: new { roleName }), cancellationToken);
+        return new DefaultRoleDto(roleName);
     }
 
     private async Task<Role> LoadAsync(Guid id, CancellationToken cancellationToken) =>

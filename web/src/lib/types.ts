@@ -251,6 +251,18 @@ export interface RoleDto {
   permissions: { permission: string; effect: number }[]
 }
 
+export interface DirectoryMappingDto {
+  id: string
+  groupName: string
+  roleId: string
+  roleTitle: string
+  isActive: boolean
+}
+
+export interface DefaultRoleDto {
+  roleName: string
+}
+
 export interface AuditEntryDto {
   id: string
   actorUsername: string

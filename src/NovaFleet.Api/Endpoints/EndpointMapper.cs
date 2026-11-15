@@ -413,6 +413,9 @@ public static class EndpointMapper
             await service.RemoveDirectoryMappingAsync(id, ct);
             return Results.Ok(new { message = "نگاشت حذف شد." });
         });
+        group.MapGet("/roles/default-role", async (IRoleService service, CancellationToken ct) => await service.GetDefaultRoleAsync(ct));
+        group.MapPut("/roles/default-role", async (SetDefaultRoleRequest request, IRoleService service, CancellationToken ct) =>
+            Results.Ok(await service.SetDefaultRoleAsync(request, ct)));
     }
 
     private static void MapReportEndpoints(this RouteGroupBuilder group)

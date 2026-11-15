@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Identity;
+using NovaFleet.Application.Settings;
 using NovaFleet.Domain.Auditing;
 using NovaFleet.Domain.Identity;
 using NovaFleet.Domain.Sessions;
@@ -97,6 +98,7 @@ public sealed class AuthService(
         if (isNew)
         {
             db.Users.Add(user);
+            await AssignDefaultRoleAsync(user, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -152,6 +154,11 @@ public sealed class AuthService(
                 user.OrganizationalUnit,
                 JsonSerializer.Serialize(info.Groups),
                 info.DistinguishedName ?? $"CN={info.DisplayName}");
+        }
+
+        if (isNew)
+        {
+            await AssignDefaultRoleAsync(user, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -248,6 +255,27 @@ public sealed class AuthService(
         db.UserSessions.Add(UserSession.Failed(username, method, context.ClientIpAddress, reason));
         db.AuditEntries.Add(new AuditEntry(username, "Login", "Session", null, "Failed", reason, clientIpAddress: context.ClientIpAddress));
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>نقش پیش‌فرض مصوب را در نخستین ورود به کاربر جدید دایرکتوری می‌دهد؛ مقدار خالی یا نقش ناموجود/غیرفعال یعنی بدون نقش.</summary>
+    private async Task AssignDefaultRoleAsync(ApplicationUser user, CancellationToken cancellationToken)
+    {
+        var roleName = await db.SystemSettings.AsNoTracking()
+            .Where(item => item.Key == SettingKeys.DefaultUserRole && !item.IsSecret)
+            .Select(item => item.Value)
+            .FirstOrDefaultAsync(cancellationToken);
+        roleName = (roleName ?? SettingKeys.DefaultUserRoleValue).Trim();
+        if (roleName.Length == 0)
+        {
+            return;
+        }
+
+        var role = await db.Roles.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Name == roleName && item.IsActive, cancellationToken);
+        if (role is not null)
+        {
+            db.UserRoles.Add(new UserRole(user.Id, role.Id));
+        }
     }
 
     private static CurrentUserDto ToDto(UserAccessSnapshot snapshot) => new(

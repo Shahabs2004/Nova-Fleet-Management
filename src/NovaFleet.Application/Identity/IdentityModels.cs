@@ -140,6 +140,11 @@ public sealed record DirectoryMappingDto(Guid Id, string GroupName, Guid RoleId,
 
 public sealed record SaveDirectoryMappingRequest(string GroupName, Guid RoleId);
 
+/// <summary>نقش پیش‌فرض کاربران جدید دایرکتوری؛ RoleName تهی یعنی بدون نقش پیش‌فرض.</summary>
+public sealed record DefaultRoleDto(string RoleName);
+
+public sealed record SetDefaultRoleRequest(string? RoleName);
+
 public interface IRoleService
 {
     Task<IReadOnlyList<RoleDto>> ListAsync(CancellationToken cancellationToken = default);
@@ -157,4 +162,8 @@ public interface IRoleService
     Task<DirectoryMappingDto> SaveDirectoryMappingAsync(SaveDirectoryMappingRequest request, CancellationToken cancellationToken = default);
 
     Task RemoveDirectoryMappingAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<DefaultRoleDto> GetDefaultRoleAsync(CancellationToken cancellationToken = default);
+
+    Task<DefaultRoleDto> SetDefaultRoleAsync(SetDefaultRoleRequest request, CancellationToken cancellationToken = default);
 }

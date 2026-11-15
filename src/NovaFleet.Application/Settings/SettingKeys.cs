@@ -24,6 +24,9 @@ public static class SettingKeys
     public const string MissionOrderFooter = "missions.order.footer";
     public const string MissionOrderShowLogo = "missions.order.show-logo";
 
+    /// <summary>نقش پیش‌فرض کاربران جدید دایرکتوری در نخستین ورود؛ بر پایه Name نقش ذخیره می‌شود. مقدار خالی یعنی بدون نقش پیش‌فرض.</summary>
+    public const string DefaultUserRole = "identity.default-role";
+
     public const string DirectoryEnabled = "directory.enabled";
     public const string DirectoryHost = "directory.host";
     public const string DirectoryPort = "directory.port";
@@ -67,6 +70,7 @@ public static class SettingKeys
     public const int DefaultSmsMaxPollingAttempts = 12;
 
     public const string DefaultSmsMode = "Simulation";
+    public const string DefaultUserRoleValue = "Requester";
     public const int DefaultSmsTimeoutSeconds = 20;
     public const int DefaultDirectoryPort = 636;
     public const int DefaultDirectoryTimeoutSeconds = 15;
