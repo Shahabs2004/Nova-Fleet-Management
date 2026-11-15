@@ -89,6 +89,20 @@ public sealed class PayamSmsRestGatewayTests : MissionTestBase
     }
 
     [Fact]
+    public async Task Send_RealRestServerIdIsAcceptedAsProviderReference()
+    {
+        // پاسخ زندهٔ واقعی درگاه REST: شناسه پیام در فیلد serverId (عددی) است، نه ID.
+        // اگر فقط ID خوانده شود، پیامِ واقعاً تحویل‌شده «موقت» می‌ماند و سرانجام ناموفق ثبت می‌شود.
+        var gateway = await WiredGatewayAsync("""{"code":200,"message":"send result","data":[{"serverId":2265189067,"customerId":"1","Mobile":"989177388400"}]}""");
+
+        var result = await gateway.SendAsync(Message);
+
+        Assert.True(result.Accepted);
+        Assert.Equal("2265189067", result.ProviderReference);
+        Assert.Null(result.Error);
+    }
+
+    [Fact]
     public async Task Send_SingleObjectWithNumericIdIsAccepted()
     {
         var gateway = await WiredGatewayAsync("""{"code":200,"message":"send result","data":{"ID":700123,"Mobile":"989121112233"}}""");

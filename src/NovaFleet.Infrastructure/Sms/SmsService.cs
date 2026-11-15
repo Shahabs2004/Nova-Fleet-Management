@@ -76,7 +76,7 @@ public sealed class SmsService(
                 row.item.DeliveredAtUtc,
                 row.item.NextAttemptAtUtc,
                 row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure,
-                row.item.Status == SmsQueueStatus.Queued || row.item.Status == SmsQueueStatus.RetryScheduled || row.item.Status == SmsQueueStatus.Sending))
+                row.item.Status == SmsQueueStatus.Queued || row.item.Status == SmsQueueStatus.RetryScheduled || row.item.Status == SmsQueueStatus.Sending || row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<SmsQueueItemDto>(items, total, page, pageSize);
@@ -102,7 +102,7 @@ public sealed class SmsService(
 
         if (!item.CanCancel)
         {
-            throw new ValidationAppException("فقط پیامک‌های ارسال‌نشده در صف قابل لغو هستند.");
+            throw new ValidationAppException("فقط پیامک‌های ارسال‌نشده یا ناموفق قابل لغو هستند؛ پیام پذیرفته/تحویل‌شده لغو نمی‌شود.");
         }
 
         item.Cancel("لغو دستی توسط اپراتور.", clock.UtcNow);

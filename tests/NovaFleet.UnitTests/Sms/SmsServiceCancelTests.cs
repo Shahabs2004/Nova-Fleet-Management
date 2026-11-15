@@ -9,7 +9,7 @@ using NovaFleet.UnitTests.Missions;
 
 namespace NovaFleet.UnitTests.Sms;
 
-/// <summary>لغو دستی پیامک ارسال‌نشده در صف؛ پیام پذیرفته/تحویل‌شده دیگر لغو نمی‌شود.</summary>
+/// <summary>لغو دستی پیامک ارسال‌نشده یا ناموفق؛ پیام پذیرفته/تحویل‌شده دیگر لغو نمی‌شود.</summary>
 public sealed class SmsServiceCancelTests : MissionTestBase
 {
     private SmsService SmsServiceFor(ICurrentUser user) => new(Db, Settings, user, Audit, Clock);
@@ -68,6 +68,39 @@ public sealed class SmsServiceCancelTests : MissionTestBase
     }
 
     [Fact]
+    public async Task CancelAsync_FailedItem_MarksCancelled()
+    {
+        var now = Clock.UtcNow;
+        var item = await SeedAsync(row =>
+        {
+            row.MarkSending(now);
+            row.MarkFailed("خطای موقت", now);
+        });
+
+        await SmsServiceFor(Operator()).CancelAsync(item.Id);
+
+        var stored = await Db.SmsQueueItems.AsNoTracking().FirstAsync(row => row.Id == item.Id);
+        Assert.Equal(SmsQueueStatus.Cancelled, stored.Status);
+        Assert.Null(stored.NextAttemptAtUtc);
+    }
+
+    [Fact]
+    public async Task CancelAsync_PermanentFailureItem_MarksCancelled()
+    {
+        var now = Clock.UtcNow;
+        var item = await SeedAsync(row =>
+        {
+            row.MarkSending(now);
+            row.MarkPermanentFailure("شماره نامعتبر", now);
+        });
+
+        await SmsServiceFor(Operator()).CancelAsync(item.Id);
+
+        var stored = await Db.SmsQueueItems.AsNoTracking().FirstAsync(row => row.Id == item.Id);
+        Assert.Equal(SmsQueueStatus.Cancelled, stored.Status);
+    }
+
+    [Fact]
     public async Task CancelAsync_DeliveredItem_IsRejected()
     {
         var now = Clock.UtcNow;
@@ -97,10 +130,15 @@ public sealed class SmsServiceCancelTests : MissionTestBase
     }
 
     [Fact]
-    public async Task ListAsync_FlagsCanCancelOnlyForUnsentItems()
+    public async Task ListAsync_FlagsCanCancelForUnsentAndFailedItems()
     {
         var now = Clock.UtcNow;
         var queued = await SeedAsync();
+        var failed = await SeedAsync(row =>
+        {
+            row.MarkSending(now);
+            row.MarkFailed("خطای موقت", now);
+        });
         var accepted = await SeedAsync(row =>
         {
             row.MarkSending(now);
@@ -110,6 +148,7 @@ public sealed class SmsServiceCancelTests : MissionTestBase
         var page = await SmsServiceFor(Operator()).ListAsync(new SmsQuery(null, null, null, null, 1, 20));
 
         Assert.True(page.Items.Single(row => row.Id == queued.Id).CanCancel);
+        Assert.True(page.Items.Single(row => row.Id == failed.Id).CanCancel);
         Assert.False(page.Items.Single(row => row.Id == accepted.Id).CanCancel);
     }
 }

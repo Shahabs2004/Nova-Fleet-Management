@@ -152,9 +152,10 @@ public sealed class PayamSmsRestGateway(
     }
 
     /// <summary>
-    /// شکل موفق قرارداد SOAP است: آرایه‌ای از {ID, Mobile} که ID شناسه یکتای پیام است.
-    /// سرویس‌دهنده ID را عددی برمی‌گرداند (مطابق SendResult در حالت Wsdl)، پس هم رشته و هم
-    /// عدد پذیرفته می‌شود؛ وگرنه پیامِ واقعاً ارسال‌شده «موقت» می‌ماند و صف آن را تکرار می‌کند.
+    /// شکل موفق پاسخ send در درگاه REST آرایه‌ای از {serverId, customerId, Mobile} است که
+    /// serverId شناسه یکتای پیام (عدد) است؛ این شکل با پاسخ زنده تأیید شده است. برای سازگاری
+    /// با قرارداد SOAP، ID نیز به‌عنوان جایگزین پذیرفته می‌شود. هم رشته و هم عدد به متن تبدیل
+    /// می‌شوند؛ وگرنه پیامِ واقعاً ارسال‌شده «موقت» می‌ماند و صف آن را تکرار می‌کند.
     /// شکل خطای مشاهده‌شده: [{"ErrorCode":"E5"}].
     /// </summary>
     private static SmsSendResult MapSendData(JsonElement data)
@@ -197,10 +198,11 @@ public sealed class PayamSmsRestGateway(
         return SmsSendResult.Transient("سرویس پیامک شناسه پیام برنگرداند.");
     }
 
-    /// <summary>یک آیتم پاسخ send را به خطا یا شناسه پیام نگاشت می‌کند؛ بدون ID و بدون خطا null است.</summary>
+    /// <summary>یک آیتم پاسخ send را به خطا یا شناسه پیام (serverId یا ID) نگاشت می‌کند؛ بدون شناسه و بدون خطا null است.</summary>
     private static SmsSendResult? MapSendItem(JsonElement item)
     {
-        var fault = PayamSmsFaults.Classify(ReadString(item, "ErrorCode") ?? ReadReference(item, "ID"));
+        var reference = ReadReference(item, "serverId") ?? ReadReference(item, "ID");
+        var fault = PayamSmsFaults.Classify(ReadString(item, "ErrorCode") ?? reference);
         if (fault is not null)
         {
             return fault.Value.IsPermanent
@@ -208,7 +210,6 @@ public sealed class PayamSmsRestGateway(
                 : SmsSendResult.Transient(fault.Value.Description);
         }
 
-        var reference = ReadReference(item, "ID");
         return string.IsNullOrWhiteSpace(reference)
             ? null
             : SmsSendResult.Success(reference.Trim(), null);

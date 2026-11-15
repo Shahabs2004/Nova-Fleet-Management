@@ -187,7 +187,7 @@ export function SmsPage() {
                                 className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50"
                                 disabled={cancel.isPending}
                                 onClick={() => {
-                                  if (window.confirm('این پیامک ارسال‌نشده لغو شود؟')) cancel.mutate(item.id)
+                                  if (window.confirm('این پیامک لغو شود؟')) cancel.mutate(item.id)
                                 }}
                               >
                                 لغو
