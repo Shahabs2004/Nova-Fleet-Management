@@ -25,9 +25,18 @@ public sealed class JsonBootstrapConfigurationStore : IBootstrapConfigurationSto
     };
 
     public string FilePath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        HomeDirectory(),
         ".novafleet",
         "bootstrap.json");
+
+    /// <summary>NOVAFLEET_HOME مسیر خانه را بازنویسی می‌کند؛ زیر IIS پروفایل پیش‌فرض قابل‌نوشتن نیست.</summary>
+    private static string HomeDirectory()
+    {
+        var home = Environment.GetEnvironmentVariable("NOVAFLEET_HOME");
+        return string.IsNullOrWhiteSpace(home)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            : home;
+    }
 
     public string? ReadConnectionString()
     {

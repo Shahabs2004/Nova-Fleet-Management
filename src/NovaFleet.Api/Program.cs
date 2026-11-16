@@ -59,8 +59,14 @@ builder.Services.AddSingleton<IDatabaseHealthProbe, DatabaseHealthProbe>();
 builder.Services.AddDbContext<NovaFleetDbContext>(options => options.UseSqlServer(connectionString));
 
 // حلقه کلید رمزنگاری اسرار تنظیمات؛ پوشه کلیدها کنار فایل بوت‌استرپ و بیرون مخزن می‌ماند.
-var keyDirectory = new DirectoryInfo(Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".novafleet", "keys"));
+// NOVAFLEET_HOME مسیر خانه را (مثلاً زیر IIS که پروفایل SYSTEM قابل‌نوشتن نیست) بازنویسی می‌کند.
+var homeDirectory = Environment.GetEnvironmentVariable("NOVAFLEET_HOME");
+if (string.IsNullOrWhiteSpace(homeDirectory))
+{
+    homeDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+}
+
+var keyDirectory = new DirectoryInfo(Path.Combine(homeDirectory, ".novafleet", "keys"));
 keyDirectory.Create();
 builder.Services.AddDataProtection()
     .SetApplicationName("NovaFleet")
