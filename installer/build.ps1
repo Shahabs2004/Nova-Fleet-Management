@@ -6,7 +6,29 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 $Version = if ($env:VERSION) { $env:VERSION.TrimStart('v') } else { (cmd /c "git describe --tags --abbrev=0 2>nul") }
 if (-not $Version) { $Version = '0.0.0-dev' }
 
+# bundled .NET 10 IIS Hosting Bundle prerequisite; bump both when the runtime patch changes
+# https://dotnet.microsoft.com/en-us/download/dotnet/10.0 + release-notes .sha512 sidecar
+$HBundleVersion = '10.0.15'
+$HBundleName = "dotnet-hosting-$HBundleVersion-win.exe"
+$HBundleUrl = "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/$HBundleVersion/$HBundleName"
+$HBundleSha512 = '48DD82516CAE1296FE8E6E6C0FBEB4A00033951966373BC1E8309ECD1E02F9F344DB701DADB2344568D7AE86EF968439A4708FEF5DF3CF742D207CF585B5BF5E'
+
 Write-Host "== version $Version =="
+
+Write-Host '::group ensure hosting bundle prereq'
+$prereqDir = Join-Path $PSScriptRoot 'prereq'
+$prereqFile = Join-Path $prereqDir $HBundleName
+$have = (Test-Path $prereqFile) -and ((Get-FileHash $prereqFile -Algorithm SHA512).Hash -eq $HBundleSha512)
+if (-not $have) {
+    New-Item -ItemType Directory -Path $prereqDir -Force | Out-Null
+    Remove-Item $prereqFile -ErrorAction SilentlyContinue
+    Write-Host "downloading $HBundleName"
+    Invoke-WebRequest $HBundleUrl -OutFile "$prereqFile.tmp" -UseBasicParsing
+    $actual = (Get-FileHash "$prereqFile.tmp" -Algorithm SHA512).Hash
+    if ($actual -ne $HBundleSha512) { Remove-Item "$prereqFile.tmp" -Force; throw "hosting bundle sha512 mismatch: $actual" }
+    Move-Item "$prereqFile.tmp" $prereqFile -Force
+}
+Write-Host '::endgroup'
 
 Write-Host '::group build frontend'
 Push-Location web
@@ -39,7 +61,7 @@ $iscc = @(
     "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { throw 'Inno Setup 6 not found. Run: winget install JRSoftware.InnoSetup' }
-& $iscc "/DAppVersion=$Version" installer\NovaFleet.iss
+& $iscc "/DAppVersion=$Version" "/DHBundleName=$HBundleName" installer\NovaFleet.iss
 if ($LASTEXITCODE -ne 0) { throw 'ISCC failed' }
 Write-Host "::endgroup"
 

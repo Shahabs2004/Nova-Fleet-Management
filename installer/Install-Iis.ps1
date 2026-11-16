@@ -1,7 +1,8 @@
 ﻿param(
     [Parameter(Mandatory)] [string]$SiteName,
     [Parameter(Mandatory)] [int]$Port,
-    [Parameter(Mandatory)] [string]$AppDir
+    [Parameter(Mandatory)] [string]$AppDir,
+    [string]$BundlePath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,14 +24,26 @@ try {
     }
 
     # 2) ASP.NET Core Module V2 must be registered AND new enough for .NET 10 (file version 20.x)
+    #    if not, run the Hosting Bundle carried inside Setup.exe silently, then re-check
+    $ancmPath = Join-Path ${env:ProgramFiles} 'IIS\Asp.Net Core Module\V2\aspnetcorev2.dll'
+    function AncmMajor {
+        if (Test-Path $ancmPath) { [int]((Get-Item $ancmPath).VersionInfo.FileVersion.Split('.')[0]) } else { 0 }
+    }
     $modCheck = (& $appcmd list module /name:AspNetCoreModuleV2 2>&1) -join ' '
+    $ancmMajor = AncmMajor
+    if (($modCheck -notmatch 'AspNetCoreModuleV2') -or ($ancmMajor -lt 20)) {
+        if ($BundlePath -and (Test-Path $BundlePath)) {
+            Say ('installing bundled Hosting Bundle: ' + (Split-Path $BundlePath -Leaf))
+            $p = Start-Process $BundlePath -ArgumentList '/quiet /norestart' -Wait -PassThru
+            if (($p.ExitCode -ne 0) -and ($p.ExitCode -ne 3010)) {
+                Say ("bundled Hosting Bundle exited with code $($p.ExitCode)")
+            }
+            $modCheck = (& $appcmd list module /name:AspNetCoreModuleV2 2>&1) -join ' '
+            $ancmMajor = AncmMajor
+        }
+    }
     if ($modCheck -notmatch 'AspNetCoreModuleV2') {
         throw 'ماژول ASP.NET Core (Hosting Bundle) روی این سرور نصب نیست. آخرین .NET 10 Hosting Bundle (windows x64) را از https://dotnet.microsoft.com/download/dotnet/10.0 نصب و IIS را reset کنید، سپس Installer را دوباره اجرا کنید.'
-    }
-    $ancmPath = Join-Path ${env:ProgramFiles} 'IIS\Asp.Net Core Module\V2\aspnetcorev2.dll'
-    $ancmMajor = 0
-    if (Test-Path $ancmPath) {
-        $ancmMajor = [int]((Get-Item $ancmPath).VersionInfo.FileVersion.Split('.')[0])
     }
     if ($ancmMajor -lt 20) {
         throw ('نسخه ماژول ASP.NET Core روی این سرور برای اجرای برنامه .NET 10 قدیمی است (aspnetcorev2 ' +

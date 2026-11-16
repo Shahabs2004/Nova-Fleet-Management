@@ -17,34 +17,17 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Build frontend into wwwroot
-        working-directory: web
-        run: |
-          npm ci
-          npm run build
-          rm -rf ../src/NovaFleet.Api/wwwroot
-          cp -r dist ../src/NovaFleet.Api/wwwroot
-
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
 
-      - name: Unit tests
-        run: dotnet test tests/NovaFleet.UnitTests -c Release --nologo -v quiet
-
-      - name: Publish self-contained
-        run: dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=${{ github.ref_name }} -o installer/stage
-
-      - name: Remove generated web.config (installer renders its own)
-        run: Remove-Item installer/stage/web.config -ErrorAction SilentlyContinue
-        shell: pwsh
-
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
 
-      - name: Compile Setup.exe
-        run: & "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" installer\NovaFleet.iss
-        shell: pwsh
+      - name: Build Setup.exe (frontend + tests + publish + bundle prereq download + ISCC)
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
+        env:
+          VERSION: ${{ github.ref_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

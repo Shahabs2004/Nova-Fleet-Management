@@ -48,6 +48,7 @@ graphify-out/.graphify_build_state.json
 # installer/publish build artifacts
 installer/stage/
 installer/output/
+installer/prereq/
 
 # frontend build output copied by installer/CI builds
 src/NovaFleet.Api/wwwroot/

@@ -6,6 +6,10 @@
 #ifndef AppVersion
   #define AppVersion "0.0.0-dev"
 #endif
+; .NET 10 IIS Hosting Bundle carried in installer/prereq/ (downloaded+hash-checked by build.ps1)
+#ifndef HBundleName
+  #define HBundleName "dotnet-hosting-10.0.15-win.exe"
+#endif
 
 [Setup]
 AppId=NovaFleet-Install-8E0C4B27
@@ -36,10 +40,10 @@ Source: "{#Stage}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs crea
 Source: "Install-Iis.ps1"; DestDir: "{app}\installer"; Flags: ignoreversion
 Source: "Uninstall-Iis.ps1"; DestDir: "{app}\installer"; Flags: ignoreversion
 Source: "web.config.template"; DestDir: "{app}\installer"; Flags: ignoreversion
+Source: "prereq\{#HBundleName}"; DestDir: "{tmp}"; Flags: deleteafterinstall ignoreversion
 
 [Run]
-Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ runtime..."; Flags: skipifdoesntexist
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-Iis.ps1"" -SiteName ""{code:GetSiteName}"" -Port {code:GetPort} -AppDir ""{app}"""; StatusMsg: "Setting up IIS site, app pool, firewall and web.config..."; Flags: runhidden
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installer\Install-Iis.ps1"" -SiteName ""{code:GetSiteName}"" -Port {code:GetPort} -AppDir ""{app}"" -BundlePath ""{tmp}\{#HBundleName}"""; StatusMsg: "Setting up IIS site, app pool, firewall and web.config..."; Flags: runhidden
 Filename: "{code:GetSetupUrl}"; Description: "Open the NovaFleet setup wizard in the browser"; Flags: postinstall nowait shellexec runascurrentuser
 
 [UninstallRun]
