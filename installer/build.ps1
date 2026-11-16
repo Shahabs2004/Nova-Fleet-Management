@@ -55,15 +55,17 @@ Pop-Location
 Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
-# Tag-triggered CI runners restore instantly from a pre-populated NuGet cache /
-# fallback folder and RestoreTask then fails silently (MSB4181, no error logged);
-# the same commit restores fine when packages download fresh from nuget.org.
-# Force a clean slate: a fresh packages folder, no fallback folders, wiped obj/bin.
+# Tag-triggered CI runs die at NuGet restore with bare MSB4181 (RestoreTask returns
+# false, no error logged) while the same commit passes via workflow_dispatch. The
+# windows-2025-vs2026 image adds machine-level local NuGet folder sources and .NET 10
+# package pruning; pin nuget.org as the only source, disable pruning/fallback folders,
+# and use a fresh packages folder + wiped obj/bin so restore is a clean download.
 $env:NUGET_PACKAGES = Join-Path $PSScriptRoot 'nuget-packages'
 Get-ChildItem src,tests -Recurse -Directory |
     Where-Object { $_.Name -eq 'obj' -or $_.Name -eq 'bin' } |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-$restoreArgs = @('--nologo', '--force', '-p:NuGetAudit=false', '-p:RestoreFallbackFolders=', '-tl:false')
+$restoreProps = @('-p:NuGetAudit=false', '-p:RestoreFallbackFolders=', '-p:RestoreEnablePackagePruning=false', '-p:RestoreSources=https://api.nuget.org/v3/index.json')
+$restoreArgs = @('--nologo', '--force', '-tl:false') + $restoreProps
 for ($try = 1; $try -le 3; $try++) {
     dotnet restore tests/NovaFleet.UnitTests @restoreArgs
     if ($LASTEXITCODE -eq 0) { break }
@@ -79,7 +81,7 @@ if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
 dotnet test tests/NovaFleet.UnitTests -c Release --nologo --no-restore
 if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
 for ($try = 1; $try -le 3; $try++) {
-    dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -p:NuGetAudit=false -p:RestoreFallbackFolders= -o installer/stage
+    dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version @restoreProps -o installer/stage
     if ($LASTEXITCODE -eq 0) { break }
     Write-Host "publish attempt $try failed"; Start-Sleep -Seconds 5
 }
