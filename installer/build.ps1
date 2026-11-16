@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-$Version = if ($env:VERSION) { $env:VERSION.TrimStart('v') } else { (cmd /c "git describe --tags --abbrev=0 2>nul") }
+$Version = if ($env:VERSION) { $env:VERSION.TrimStart('v') } else { ((cmd /c "git describe --tags --abbrev=0 2>nul") -as [string]).Trim().TrimStart('v') }
 if (-not $Version) { $Version = '0.0.0-dev' }
 
 # bundled .NET 10 IIS Hosting Bundle prerequisite; bump both when the runtime patch changes
@@ -32,8 +32,22 @@ Write-Host '::endgroup'
 
 Write-Host '::group build frontend'
 Push-Location web
-npm ci
+# npm ci wipes node_modules; on dev machines native .node files may be locked
+# (dev server/antivirus). Keep the existing tree locally, clean install on CI.
+$ok = $false
+for ($try = 1; $try -le 3 -and -not $ok; $try++) {
+    if (Test-Path node_modules) { $npmOut = npm install --no-audit --no-fund }
+    else { $npmOut = npm ci }
+    $ok = ($LASTEXITCODE -eq 0)
+    if (-not $ok) {
+        Write-Host "npm attempt $try failed (locked files? stop any vite dev server)"
+        ($npmOut | Select-Object -Last 8) | ForEach-Object { Write-Host $_ }
+        Start-Sleep -Seconds 5
+    }
+}
+if (-not $ok) { throw 'npm install/ci failed' }
 npm run build
+if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
 if (-not (Test-Path dist/index.html)) { throw 'web/dist build missing' }
 if (Test-Path ../src/NovaFleet.Api/wwwroot) { Remove-Item ../src/NovaFleet.Api/wwwroot -Recurse -Force }
 Copy-Item dist ../src/NovaFleet.Api/wwwroot -Recurse
@@ -41,9 +55,21 @@ Pop-Location
 Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
-dotnet test tests/NovaFleet.UnitTests -c Release --nologo
+# CI runners intermittently fail NuGet restore (MSB4181, error text swallowed);
+# retry so a transient blip cannot kill the release build.
+for ($try = 1; $try -le 3; $try++) {
+    dotnet restore tests/NovaFleet.UnitTests --nologo
+    if ($LASTEXITCODE -eq 0) { break }
+    Write-Host "restore attempt $try failed"; Start-Sleep -Seconds 5
+}
+if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
+dotnet test tests/NovaFleet.UnitTests -c Release --nologo --no-restore
 if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
-dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -o installer/stage
+for ($try = 1; $try -le 3; $try++) {
+    dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -o installer/stage
+    if ($LASTEXITCODE -eq 0) { break }
+    Write-Host "publish attempt $try failed"; Start-Sleep -Seconds 5
+}
 if ($LASTEXITCODE -ne 0) { throw 'publish failed' }
 # the installer renders its own web.config from the template
 Remove-Item installer/stage/web.config -ErrorAction SilentlyContinue
