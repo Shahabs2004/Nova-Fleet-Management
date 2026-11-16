@@ -11,9 +11,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history: a shallow detached tag checkout breaks the SDK's git/SourceLink
-          # queries during NuGet restore (bare MSB4181); branch checkouts work.
           fetch-depth: 0
+
+      # A tag push checks out a detached HEAD; the identical commit on a branch ref
+      # restores fine, but the detached tag checkout dies at NuGet restore (bare
+      # MSB4181). Attach HEAD to a local branch so the git state matches a branch
+      # checkout. The Release step still keys off github.ref (refs/tags/v*), not HEAD.
+      - name: Attach detached tag HEAD to a branch
+        shell: pwsh
+        run: |
+          git checkout -B ci-build
+          git status
+          git symbolic-ref -q HEAD
+          git rev-parse HEAD
 
       - uses: actions/setup-node@v4
         with:
