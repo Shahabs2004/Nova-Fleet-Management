@@ -51,6 +51,18 @@ public static class PermissionCatalog
         public const string ChangeReview = "missions.change.review";
     }
 
+    public static class Maintenance
+    {
+        public const string View = "maintenance.view";
+        public const string Create = "maintenance.create";
+        public const string Correct = "maintenance.correct";
+        public const string Manage = "maintenance.manage";
+        public const string OdometerCreate = "maintenance.odometer.create";
+        public const string OdometerCorrect = "maintenance.odometer.correct";
+        public const string Attach = "maintenance.attach";
+        public const string All = "maintenance.*";
+    }
+
     public static class Reports
     {
         public const string View = "reports.view";
@@ -115,6 +127,14 @@ public static class PermissionCatalog
             new(Missions.ChangeReview, "بررسی درخواست تغییر", "بررسی، تأیید یا رد درخواست تغییر مأموریت."),
             new(Administration.MissionTemplateManage, "مدیریت قالب حکم", "مدیریت قالب چاپ حکم مأموریت."),
             new(Administration.MissionSplitReasonsManage, "مدیریت دلایل تقسیم", "مدیریت فهرست دلایل تقسیم مأموریت."),
+            new(Maintenance.View, "مشاهده نگهداری", "مشاهده سرویس‌ها، هزینه‌ها، قطعات و کیلومتر خودروها."),
+            new(Maintenance.Create, "ثبت سرویس", "ثبت مراجعه، عملیات و قطعات."),
+            new(Maintenance.Correct, "اصلاح سوابق نگهداری", "اصلاح یا ابطال با دلیل و حفظ نسخهٔ قبلی."),
+            new(Maintenance.Manage, "مدیریت برنامه نگهداری", "مدیریت الگوها و برنامه‌ها و دریافت اعلان سررسید."),
+            new(Maintenance.OdometerCreate, "ثبت قرائت کیلومتر", "افزودن قرائت جدید خودرو."),
+            new(Maintenance.OdometerCorrect, "اصلاح کیلومتر تاریخی", "اصلاح کیلومتر خودرو با دلیل و حفظ سابقه."),
+            new(Maintenance.Attach, "پیوست فاکتور سرویس", "افزودن فایل فاکتور به سابقهٔ سرویس."),
+            new(Maintenance.All, "همه عملیات نگهداری", "مجوزهای ماژول سرویس و نگهداری."),
             new(Reports.View, "مشاهده گزارش‌ها", "مشاهده گزارش‌های ناوگان."),
             new(Reports.Export, "خروجی گزارش‌ها", "دریافت خروجی Excel و PDF گزارش‌ها."),
             new(Notifications.View, "مشاهده اعلان‌ها", "مشاهده اعلان‌های داخلی کاربر."),
@@ -136,7 +156,7 @@ public static class PermissionCatalog
         new(DefinitionsValue.Select(item => item.Code), StringComparer.OrdinalIgnoreCase);
 
     /// <summary>پیشوندهای wildcard مجاز؛ wildcard فقط برای ماژول‌های عملیاتی تعریف شده است.</summary>
-    private static readonly string[] WildcardPrefixes = ["drivers.", "vehicles.", "missions."];
+    private static readonly string[] WildcardPrefixes = ["drivers.", "vehicles.", "missions.", "maintenance."];
 
     public static IReadOnlyList<PermissionDefinition> Definitions => DefinitionsValue;
 

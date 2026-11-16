@@ -45,6 +45,7 @@ public static class EndpointMapper
             Results.Ok(await service.UpdateProfilePhotoAsync(request, ct)));
         api.MapDriverEndpoints();
         api.MapVehicleEndpoints();
+        api.MapMaintenanceEndpoints();
         api.MapLocationEndpoints();
         api.MapOrganizationEndpoints();
         api.MapMissionEndpoints();

@@ -5,6 +5,7 @@ using NovaFleet.Domain.Drivers;
 using NovaFleet.Domain.Identity;
 using NovaFleet.Domain.Locations;
 using NovaFleet.Domain.Missions;
+using NovaFleet.Domain.Maintenance;
 using NovaFleet.Domain.Notifications;
 using NovaFleet.Domain.Organization;
 using NovaFleet.Domain.Sessions;
@@ -35,6 +36,41 @@ public sealed class NovaFleetDbContext(DbContextOptions<NovaFleetDbContext> opti
     public DbSet<SmsQueueItem> SmsQueueItems => Set<SmsQueueItem>();
     public DbSet<SmsTemplate> SmsTemplates => Set<SmsTemplate>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+
+    public DbSet<MaintenanceTemplate> MaintenanceTemplates => Set<MaintenanceTemplate>();
+    public DbSet<MaintenanceRecord> MaintenanceRecords => Set<MaintenanceRecord>();
+    public DbSet<MaintenanceRecordItem> MaintenanceRecordItems => Set<MaintenanceRecordItem>();
+    public DbSet<MaintenanceRecordPart> MaintenanceRecordParts => Set<MaintenanceRecordPart>();
+    public DbSet<MaintenanceSchedule> MaintenanceSchedules => Set<MaintenanceSchedule>();
+    public DbSet<VehicleOdometerReading> VehicleOdometerReadings => Set<VehicleOdometerReading>();
+    public DbSet<MaintenanceRevision> MaintenanceRevisions => Set<MaintenanceRevision>();
+    public DbSet<MaintenanceAttachment> MaintenanceAttachments => Set<MaintenanceAttachment>();
+    public DbSet<MaintenanceReminderDelivery> MaintenanceReminderDeliveries => Set<MaintenanceReminderDelivery>();
+
+    public string OdometerActor { get; set; } = "system";
+    public string OdometerChangeReason { get; set; } = "همگام‌سازی با مأموریت";
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        if (Maintenance.OdometerLedger.NeedsSynchronization(this))
+            throw new InvalidOperationException("Mileage-affecting changes must use SaveChangesAsync to synchronize the odometer ledger.");
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        if (!Maintenance.OdometerLedger.NeedsSynchronization(this))
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+
+        var ownsTransaction = Database.CurrentTransaction is null;
+        await using var transaction = ownsTransaction
+            ? await Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken)
+            : null;
+        await Maintenance.OdometerLedger.SynchronizeAsync(this, cancellationToken);
+        var result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        if (transaction is not null) await transaction.CommitAsync(cancellationToken);
+        return result;
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

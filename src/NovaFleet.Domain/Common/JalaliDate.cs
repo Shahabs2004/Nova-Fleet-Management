@@ -17,6 +17,9 @@ public static class JalaliDate
 
     public static DateTime ToTehranDateTime(DateTimeOffset value) => ToTehran(value).DateTime;
 
+    public static DateTimeOffset AddMonths(DateTimeOffset value, int months) =>
+        new DateTimeOffset(Calendar.AddMonths(ToTehranDateTime(value), months), TehranOffset).ToUniversalTime();
+
     public static int YearOf(DateTimeOffset value) => Calendar.GetYear(ToTehranDateTime(value));
 
     public static int MonthOf(DateTimeOffset value) => Calendar.GetMonth(ToTehranDateTime(value));

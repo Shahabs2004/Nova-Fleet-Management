@@ -44,6 +44,7 @@ export function JalaliDateField({
     <div className="grid grid-cols-3 gap-2">
       <select
         className="input"
+        aria-label="سال شمسی"
         value={value?.jy ?? ''}
         onChange={(e) => {
           const jy = Number(e.target.value)
@@ -61,6 +62,7 @@ export function JalaliDateField({
       </select>
       <select
         className="input"
+        aria-label="ماه شمسی"
         value={value?.jm ?? ''}
         onChange={(e) => {
           const jm = Number(e.target.value)
@@ -78,6 +80,7 @@ export function JalaliDateField({
       </select>
       <select
         className="input"
+        aria-label="روز شمسی"
         value={value?.jd ?? ''}
         onChange={(e) => {
           const jd = Number(e.target.value)

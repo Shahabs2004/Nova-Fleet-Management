@@ -40,6 +40,7 @@ public static class DatabaseInitializer
                     PermissionCatalog.Drivers.All,
                     PermissionCatalog.Drivers.DefaultVehicleManage,
                     PermissionCatalog.Vehicles.All,
+                    PermissionCatalog.Maintenance.All,
                     PermissionCatalog.Missions.All,
                     PermissionCatalog.Missions.SplitScheduleEdit,
                     PermissionCatalog.Missions.WithdrawalReview,
@@ -49,6 +50,10 @@ public static class DatabaseInitializer
                 ]),
             ("Operator", "اپراتور", "بررسی، تأیید و اجرای مأموریت‌ها", true,
                 [
+                    PermissionCatalog.Maintenance.View,
+                    PermissionCatalog.Maintenance.Create,
+                    PermissionCatalog.Maintenance.OdometerCreate,
+                    PermissionCatalog.Maintenance.Attach,
                     PermissionCatalog.Dashboard.View,
                     PermissionCatalog.Drivers.View,
                     PermissionCatalog.Vehicles.View,

@@ -18,6 +18,8 @@ import { SecurityPage } from './pages/SecurityPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TimelinePage } from './pages/TimelinePage'
+import { MaintenanceFleetPage } from './pages/MaintenanceFleetPage'
+import { MaintenanceVehiclePage } from './pages/MaintenanceVehiclePage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +63,8 @@ const router = createBrowserRouter([
       { path: 'timeline', element: <TimelinePage /> },
       { path: 'drivers', element: <DriversPage /> },
       { path: 'vehicles', element: <VehiclesPage /> },
+      { path: 'maintenance', element: <MaintenanceFleetPage /> },
+      { path: 'maintenance/vehicles/:id', element: <MaintenanceVehiclePage /> },
       { path: 'reports', element: <ReportsPage /> },
       { path: 'sms', element: <SmsPage /> },
       { path: 'security', element: <SecurityPage /> },

@@ -132,6 +132,8 @@ builder.Services.AddScoped<ISmsService, SmsService>();
 builder.Services.AddScoped<ISmsDispatcher, SmsDispatcher>();
 builder.Services.AddScoped<IDriverService, DriverService>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<NovaFleet.Application.Maintenance.IMaintenanceService, NovaFleet.Infrastructure.Maintenance.MaintenanceService>();
+builder.Services.AddScoped<NovaFleet.Infrastructure.Maintenance.MaintenanceReminders>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IOrganizationUnitService, OrganizationUnitService>();
 builder.Services.AddScoped<IMissionService, MissionService>();
@@ -145,6 +147,7 @@ if (!string.IsNullOrWhiteSpace(connectionString))
 {
     builder.Services.AddHostedService<SmsQueueWorker>();
     builder.Services.AddHostedService<MissionLifecycleWorker>();
+    builder.Services.AddHostedService<MaintenanceReminderWorker>();
 }
 
 var app = builder.Build();

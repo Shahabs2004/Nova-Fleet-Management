@@ -38,6 +38,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/dashboard', title: 'داشبورد', permission: 'dashboard.view', icon: icon('M3 12h7V3H3v9Zm11 9h7v-9h-7v9ZM3 21h7v-6H3v6Zm11-12h7V3h-7v6Z') },
       { to: '/missions', title: 'مأموریت‌ها', permission: 'missions.view.own', icon: icon('M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 5h6m-8 8h10M12 11v4') },
+      { to: '/maintenance', title: 'سرویس و نگهداری', permission: 'maintenance.view', icon: icon('m14 6 4-4 4 4-4 4M18 2v8M14 10 4 20l-2-2L12 8') },
       { to: '/timeline', title: 'تایم‌لاین', permission: 'missions.timeline.view', icon: icon('M3 6h18M6 12h12M10 18h4') },
       { to: '/drivers', title: 'رانندگان', permission: 'drivers.view', icon: icon('M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z') },
       { to: '/vehicles', title: 'خودروها', permission: 'vehicles.view', icon: icon('M5 17h14M7 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM3 13l1.5-5A2 2 0 0 1 6.4 6.5h11.2a2 2 0 0 1 1.9 1.5L21 13v4H3v-4Z') },
@@ -60,6 +61,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 ]
 
 function NotificationBell() {
+  const { can } = useAuth()
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const { data } = useQuery({
@@ -105,6 +107,7 @@ function NotificationBell() {
                 <p className="text-sm font-semibold text-slate-700">{n.title}</p>
                 <p className="mt-0.5 text-xs leading-5 text-slate-500">{n.message}</p>
                 <p className="mt-1 text-[10px] text-slate-400">{formatFaTime(n.createdAtUtc)}</p>
+                {n.referenceType === 'maintenance' && n.referenceId && can('maintenance.view') && <NavLink className="text-xs text-emerald-700 underline" to={`/maintenance/vehicles/${encodeURIComponent(n.referenceId)}`} onClick={() => setOpen(false)}>دفترچهٔ خودرو</NavLink>}
               </div>
             ))}
           </div>
@@ -118,6 +121,7 @@ export function AppLayout() {
   const { user, logout, can } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: () => api.get<SettingsBundle>('/api/settings'),
@@ -129,7 +133,7 @@ export function AppLayout() {
     <div className="flex min-h-screen">
       {sidebarOpen && <button className="fixed inset-0 z-20 bg-emerald-950/30 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="بستن منو" />}
       <aside
-        className={`fixed inset-y-0 right-0 z-30 flex w-64 flex-col bg-emerald-950 text-emerald-100 transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 right-0 z-30 flex w-64 flex-col bg-emerald-950 text-emerald-100 transition-transform lg:static lg:translate-x-0 ${sidebarCollapsed ? 'lg:hidden' : ''} ${
           sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
         }`}
       >
@@ -192,6 +196,7 @@ export function AppLayout() {
             <button className="rounded-xl p-2 text-slate-500 hover:bg-emerald-50 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="منو">
               {icon('M4 6h16M4 12h16M4 18h16')}
             </button>
+            <button className="hidden rounded-xl p-2 text-slate-500 hover:bg-emerald-50 lg:block" onClick={() => setSidebarCollapsed(v => !v)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? 'بازکردن منوی کناری' : 'جمع‌کردن منوی کناری'}>{icon('M4 6h16M4 12h16M4 18h16')}</button>
             <p className="hidden text-sm text-slate-400 lg:block">به سامانه {organizationName} خوش آمدید</p>
             <div className="flex items-center gap-2">
               <NotificationBell />

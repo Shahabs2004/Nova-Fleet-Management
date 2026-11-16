@@ -12,7 +12,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     credentials: 'same-origin',
     headers: {
-      ...(init?.body ? { 'Content-Type': 'application/json; charset=utf-8' } : {}),
+      ...(init?.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json; charset=utf-8' } : {}),
       'X-Requested-With': 'XMLHttpRequest',
       ...init?.headers,
     },
@@ -44,6 +44,11 @@ export const api = {
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) }),
   del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  upload: <T>(path: string, file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    return request<T>(path, { method: 'POST', body })
+  },
 }
 
 export async function downloadFile(path: string, body: unknown, fallbackName: string): Promise<string> {

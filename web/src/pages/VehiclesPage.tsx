@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { formatFaDate } from '../lib/date'
 import { VEHICLE_STATUS } from '../lib/labels'
@@ -10,6 +12,7 @@ import { Plate, PLATE_LETTER_GROUPS } from '../components/Plate'
 const emptyPlate = { brand: '', model: '', plateFirstTwo: '', plateLetter: '', plateNextThree: '', plateIranCode: '' }
 
 export function VehiclesPage() {
+  const { can } = useAuth()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -99,6 +102,7 @@ export function VehiclesPage() {
                       <td className="num px-4 py-3.5 text-xs text-slate-400">{formatFaDate(v.createdAtUtc)}</td>
                       <td className="px-4 py-3.5">
                         <div className="flex justify-end gap-1.5">
+                          {can('maintenance.view') && <Link className="btn-ghost btn-sm" to={`/maintenance/vehicles/${v.id}`}>سرویس و نگهداری</Link>}
                           <button className="btn-ghost btn-sm" onClick={() => setEdit(v)}>ویرایش</button>
                           <button className="btn-ghost btn-sm" onClick={() => mutation.mutate({ path: `/api/vehicles/${v.id}/archive`, body: { archived: !v.isArchived } })}>
                             {v.isArchived ? 'بازگردانی' : 'بایگانی'}

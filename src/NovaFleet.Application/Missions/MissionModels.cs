@@ -153,7 +153,7 @@ public sealed record MissionWithdrawalRequest(string Reason);
 
 public sealed record MissionWithdrawalDecision(string? Reason);
 
-public sealed record MissionSplitRequest(DateTimeOffset SplitAtUtc, long OdometerEndKm, Guid? SecondDriverId, Guid? SecondVehicleId, string Reason, string? Note);
+public sealed record MissionSplitRequest(DateTimeOffset SplitAtUtc, long OdometerEndKm, Guid? SecondDriverId, Guid? SecondVehicleId, string Reason, string? Note, long? SecondOdometerStartKm = null);
 
 public sealed record MissionChangeRequestInput(string Reason, MissionChangeInput Proposed);
 

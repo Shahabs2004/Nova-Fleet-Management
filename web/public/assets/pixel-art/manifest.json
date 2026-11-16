@@ -1,0 +1,299 @@
+{
+  "status": "provisional",
+  "sourceSha256": "a3d3176f2e0ed15d181db2b60021b7f3ef588090cc5edc43ea2a62c328391944",
+  "assets": [
+    {
+      "name": "vehicle-top",
+      "path": "vehicles/vehicle-top.png",
+      "width": 32,
+      "height": 64,
+      "transparent": true,
+      "sourceCrop": [
+        950,
+        16,
+        1118,
+        282
+      ]
+    },
+    {
+      "name": "vehicle-profile",
+      "path": "vehicles/vehicle-profile.png",
+      "width": 128,
+      "height": 64,
+      "transparent": true,
+      "sourceCrop": [
+        1160,
+        115,
+        1510,
+        263
+      ]
+    },
+    {
+      "name": "oil-can",
+      "path": "maintenance/oil-can.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        52,
+        299,
+        218,
+        485
+      ]
+    },
+    {
+      "name": "oil-spill",
+      "path": "maintenance/oil-spill.png",
+      "width": 48,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        255,
+        315,
+        476,
+        480
+      ]
+    },
+    {
+      "name": "oil-filter",
+      "path": "maintenance/oil-filter.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        520,
+        307,
+        664,
+        485
+      ]
+    },
+    {
+      "name": "air-filter",
+      "path": "maintenance/air-filter.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        707,
+        304,
+        943,
+        485
+      ]
+    },
+    {
+      "name": "old-tire",
+      "path": "maintenance/old-tire.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        980,
+        300,
+        1205,
+        491
+      ]
+    },
+    {
+      "name": "old-brake-pad",
+      "path": "maintenance/old-brake-pad.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        1250,
+        304,
+        1475,
+        497
+      ]
+    },
+    {
+      "name": "old-battery",
+      "path": "maintenance/old-battery.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        32,
+        525,
+        217,
+        710
+      ]
+    },
+    {
+      "name": "timing-belt",
+      "path": "maintenance/timing-belt.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        232,
+        540,
+        416,
+        710
+      ]
+    },
+    {
+      "name": "engine",
+      "path": "maintenance/engine.png",
+      "width": 48,
+      "height": 48,
+      "transparent": true,
+      "sourceCrop": [
+        425,
+        508,
+        618,
+        720
+      ]
+    },
+    {
+      "name": "transmission",
+      "path": "maintenance/transmission.png",
+      "width": 48,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        620,
+        548,
+        842,
+        708
+      ]
+    },
+    {
+      "name": "radiator",
+      "path": "maintenance/radiator.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        848,
+        533,
+        1017,
+        710
+      ]
+    },
+    {
+      "name": "electrical",
+      "path": "maintenance/electrical.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        1025,
+        529,
+        1198,
+        710
+      ]
+    },
+    {
+      "name": "inspection",
+      "path": "maintenance/inspection.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        1207,
+        532,
+        1335,
+        710
+      ]
+    },
+    {
+      "name": "general-service",
+      "path": "maintenance/general-service.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        1354,
+        545,
+        1508,
+        710
+      ]
+    },
+    {
+      "name": "tree",
+      "path": "scenery/tree.png",
+      "width": 48,
+      "height": 48,
+      "transparent": true,
+      "sourceCrop": [
+        244,
+        739,
+        465,
+        963
+      ]
+    },
+    {
+      "name": "bush",
+      "path": "scenery/bush.png",
+      "width": 32,
+      "height": 32,
+      "transparent": true,
+      "sourceCrop": [
+        472,
+        797,
+        621,
+        933
+      ]
+    },
+    {
+      "name": "road-sign",
+      "path": "scenery/road-sign.png",
+      "width": 32,
+      "height": 48,
+      "transparent": true,
+      "sourceCrop": [
+        649,
+        757,
+        754,
+        966
+      ]
+    },
+    {
+      "name": "road-background",
+      "path": "road/road-background.png",
+      "width": 64,
+      "height": 64,
+      "transparent": false,
+      "processing": "sampled from source; reflected texture for matched tile edges"
+    },
+    {
+      "name": "road-edge-left",
+      "path": "road/road-edge-left.png",
+      "width": 16,
+      "height": 64,
+      "transparent": true,
+      "processing": "sampled from source; reflected texture for matched tile edges"
+    },
+    {
+      "name": "road-edge-right",
+      "path": "road/road-edge-right.png",
+      "width": 16,
+      "height": 64,
+      "transparent": true,
+      "processing": "sampled from source; reflected texture for matched tile edges"
+    },
+    {
+      "name": "road-markings",
+      "path": "road/road-markings.png",
+      "width": 16,
+      "height": 64,
+      "transparent": true,
+      "processing": "isolated source lane marking"
+    },
+    {
+      "name": "grass-tile",
+      "path": "scenery/grass-tile.png",
+      "width": 32,
+      "height": 32,
+      "transparent": false
+    },
+    {
+      "name": "dashboard-landscape",
+      "path": "scenery/dashboard-landscape.png",
+      "width": 256,
+      "height": 96,
+      "transparent": false
+    }
+  ]
+}

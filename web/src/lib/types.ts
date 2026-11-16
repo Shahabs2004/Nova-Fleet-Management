@@ -170,6 +170,8 @@ export interface NotificationDto {
   id: string
   title: string
   message: string
+  referenceType: string | null
+  referenceId: string | null
   eventKey: string
   createdAtUtc: string
   readAtUtc: string | null

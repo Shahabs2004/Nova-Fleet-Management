@@ -291,12 +291,28 @@ public sealed class MissionChangeAndSplitTests : MissionTestBase
 
         await ServiceFor(MissionAdmin()).SplitAsync(
             running.Id,
-            new MissionSplitRequest(Hour(0, 12), 1_100, otherDriver.Id, otherVehicle.Id, "تغییر تیم", null));
+            new MissionSplitRequest(Hour(0, 12), 1_100, otherDriver.Id, otherVehicle.Id, "تغییر تیم", null, 8_500));
 
         var second = Db.Missions.AsNoTracking().Single(item => item.Id != running.Id);
         Assert.Equal(otherDriver.Id, second.DriverId);
         Assert.Equal(otherVehicle.Id, second.VehicleId);
         Assert.NotEqual(first.VehicleId, second.VehicleId);
+        Assert.Equal(8_500L, second.OdometerStartKm);
+    }
+
+    [Fact]
+    public async Task SplitAsync_DifferentVehicleRequiresIndependentOdometer()
+    {
+        var running = await ConfirmRunningAsync();
+        var otherVehicle = NewVehicle();
+        Db.SaveChanges();
+
+        await Assert.ThrowsAsync<ValidationAppException>(() => ServiceFor(MissionAdmin()).SplitAsync(
+            running.Id, new MissionSplitRequest(Hour(0, 12), 1_100, null, otherVehicle.Id, "تغییر خودرو", null)));
+
+        Db.ChangeTracker.Clear();
+        Assert.Equal(MissionStatus.Running, Reload(running.Id).Status);
+        Assert.Single(Db.Missions.AsNoTracking());
     }
 
     [Fact]

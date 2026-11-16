@@ -183,7 +183,7 @@ public sealed class MissionService(
             input.ConsigneeName,
             input.PassengerNames));
         db.Missions.Add(mission);
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
 
         await audit.WriteAsync(new AuditRecord("CreateMission", "Mission", mission.Id.ToString(), "Success", After: new { mission.MissionNumber, mission.Title, mission.PlannedStartAtUtc }), cancellationToken);
@@ -231,7 +231,7 @@ public sealed class MissionService(
             input.CargoDescription,
             input.ConsigneeName,
             input.PassengerNames), now));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateMissionRequest", "Mission", id.ToString(), "Success", Before: before, After: new { mission.Title, mission.PlannedStartAtUtc, mission.PlannedEndAtUtc }), cancellationToken);
         return await ToDetailsAsync(mission, cancellationToken);
     }
@@ -241,7 +241,7 @@ public sealed class MissionService(
         currentUser.Require(PermissionCatalog.Missions.Review);
         var mission = await LoadAsync(id, cancellationToken);
         Run(() => mission.StartReview(clock.UtcNow));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("StartMissionReview", "Mission", id.ToString(), "Success"), cancellationToken);
         await notifications.PublishAsync(
             new NotificationMessage(
@@ -285,7 +285,7 @@ public sealed class MissionService(
         }
 
         Run(() => mission.Approve(driver.Id, vehicle.Id, currentUser.Username, now));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
 
         await audit.WriteAsync(new AuditRecord("ApproveMission", "Mission", id.ToString(), "Success", Reason: request.Note, After: new { mission.MissionNumber, Driver = driver.DisplayName, Vehicle = vehicle.PlateDisplay }), cancellationToken);
@@ -300,7 +300,7 @@ public sealed class MissionService(
         currentUser.Require(PermissionCatalog.Missions.Reject);
         var mission = await LoadAsync(id, cancellationToken);
         Run(() => mission.Reject(request.Reason, clock.UtcNow));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RejectMission", "Mission", id.ToString(), "Success", Reason: request.Reason), cancellationToken);
         await NotifyRequesterAsync(mission, "درخواست مأموریت رد شد", $"درخواست «{mission.Title}» با شماره {mission.MissionNumber} رد شد. علت: {request.Reason}", "mission.rejected", cancellationToken);
         await sms.QueueForMissionAsync(id, SmsEventType.MissionRejected, request.Reason, cancellationToken);
@@ -313,7 +313,7 @@ public sealed class MissionService(
         var mission = await LoadAsync(id, cancellationToken);
         var before = new { mission.Status };
         Run(() => mission.Cancel(request.Reason, clock.UtcNow));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("CancelMission", "Mission", id.ToString(), "Success", Reason: request.Reason, Before: before, After: new { mission.Status }), cancellationToken);
         await NotifyRequesterAsync(mission, "مأموریت لغو شد", $"مأموریت «{mission.Title}» با شماره {mission.MissionNumber} لغو شد. علت: {request.Reason}", "mission.cancelled", cancellationToken);
         await sms.CancelStartReminderAsync(id, cancellationToken);
@@ -337,7 +337,7 @@ public sealed class MissionService(
 
         var before = new { mission.PlannedEndAtUtc };
         Run(() => mission.Extend(request.NewPlannedEndAtUtc, request.Reason, clock.UtcNow));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("ExtendMission", "Mission", id.ToString(), "Success", Reason: request.Reason, Before: before, After: new { mission.PlannedEndAtUtc }), cancellationToken);
         await NotifyRequesterAsync(mission, "مأموریت تمدید شد", $"زمان پایان مأموریت {mission.MissionNumber} تمدید شد.", "mission.extended", cancellationToken);
         await sms.QueueForMissionAsync(id, SmsEventType.MissionChanged, request.Reason, cancellationToken);
@@ -355,7 +355,7 @@ public sealed class MissionService(
         }
 
         Run(() => mission.EndEarly(request.EndedAtUtc, request.Reason, now));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("EndMission", "Mission", id.ToString(), "Success", Reason: request.Reason, After: new { mission.ActualEndAtUtc, mission.OdometerEndKm }), cancellationToken);
         await NotifyRequesterAsync(mission, "مأموریت خاتمه یافت", $"مأموریت «{mission.Title}» با شماره {mission.MissionNumber} خاتمه یافت.", "mission.ended", cancellationToken);
         await sms.QueueForMissionAsync(id, SmsEventType.MissionCompleted, request.Reason, cancellationToken);
@@ -377,7 +377,7 @@ public sealed class MissionService(
             Run(() => mission.SetOdometerEnd(request.EndKm.Value));
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("SetMissionOdometer", "Mission", id.ToString(), "Success", After: new { mission.OdometerStartKm, mission.OdometerEndKm }), cancellationToken);
         return await ToDetailsAsync(mission, cancellationToken);
     }
@@ -392,7 +392,7 @@ public sealed class MissionService(
         }
 
         Run(() => mission.RequestWithdrawal(request.Reason, clock.UtcNow));
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RequestWithdrawal", "Mission", id.ToString(), "Success", Reason: request.Reason), cancellationToken);
         await notifications.PublishToPermissionAsync(
             new NotificationMessage(
@@ -421,7 +421,7 @@ public sealed class MissionService(
                 mission.RejectWithdrawal(decision.Reason ?? "درخواست انصراف رد شد.", clock.UtcNow);
             }
         });
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord(approve ? "ApproveWithdrawal" : "RejectWithdrawal", "Mission", id.ToString(), "Success", Reason: decision.Reason, After: new { mission.Status }), cancellationToken);
 
         if (approve)
@@ -470,7 +470,7 @@ public sealed class MissionService(
             request.Reason,
             JsonSerializer.Serialize(proposed, ChangeJson));
         db.MissionChangeRequests.Add(change);
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RequestMissionChange", "Mission", id.ToString(), "Success", Reason: request.Reason, After: new { change.Id, ProposedStart = proposed.PlannedStartAtUtc, ProposedEnd = proposed.PlannedEndAtUtc }), cancellationToken);
         await notifications.PublishToPermissionAsync(
             new NotificationMessage(
@@ -494,7 +494,7 @@ public sealed class MissionService(
             Run(() => change.StartReview(currentUser.Username, clock.UtcNow));
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("StartMissionChangeReview", "MissionChangeRequest", changeRequestId.ToString(), "Success"), cancellationToken);
         return await ToDetailsAsync(mission, cancellationToken);
     }
@@ -521,7 +521,7 @@ public sealed class MissionService(
             if (!approve)
             {
                 Run(() => change.Reject(currentUser.Username, decision.Reason ?? "درخواست تغییر رد شد.", now));
-                await db.SaveChangesAsync(cancellationToken);
+                await SaveAsync(cancellationToken);
                 await tx.CommitAsync(cancellationToken);
             }
             else
@@ -575,7 +575,7 @@ public sealed class MissionService(
                     proposed.OdometerStartKm);
                 Run(() => mission.ApplyApprovedChanges(changes, now));
                 Run(() => change.Approve(currentUser.Username, decision.Reason, now));
-                await db.SaveChangesAsync(cancellationToken);
+                await SaveAsync(cancellationToken);
                 await tx.CommitAsync(cancellationToken);
             }
         }
@@ -651,11 +651,13 @@ public sealed class MissionService(
                 first.ConsigneeName,
                 first.PassengerNames));
             Run(() => second.SetResourcesForSplitSegment(secondDriverId.Value, secondVehicleId.Value));
-            Run(() => second.SetOdometerStart(request.OdometerEndKm));
+            if (secondVehicleId != first.VehicleId && request.SecondOdometerStartKm is null)
+                throw new ValidationAppException("برای خودروی متفاوت، کیلومتر شروع بخش دوم را جداگانه وارد کنید.");
+            Run(() => second.SetOdometerStart(secondVehicleId == first.VehicleId ? request.OdometerEndKm : request.SecondOdometerStartKm!.Value));
             Run(() => second.MarkAsSecondSplitSegment(first.Id, request.SplitAtUtc, request.Reason, currentUser.Username, now));
             Run(() => first.SetRelatedMission(second.Id));
             db.Missions.Add(second);
-            await db.SaveChangesAsync(cancellationToken);
+            await SaveAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);
         }
 
@@ -705,6 +707,12 @@ public sealed class MissionService(
         var details = await ToDetailsAsync(mission, cancellationToken);
         var bundle = await settings.GetRuntimeBundleAsync(cancellationToken);
         return MissionOrderPdf.Build(details, bundle, currentUser.DisplayName, clock.UtcNow);
+    }
+
+    private Task<int> SaveAsync(CancellationToken cancellationToken)
+    {
+        db.OdometerActor = currentUser.Username;
+        return db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<Mission> LoadAsync(Guid id, CancellationToken cancellationToken) =>
