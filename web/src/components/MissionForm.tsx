@@ -98,7 +98,7 @@ export function MissionForm({
   initial?: MissionDetails
 }) {
   const today = useMemo(todayParts, [])
-  const years = useMemo(() => [today.year, today.year + 1], [today.year])
+  const years = useMemo(() => Array.from({ length: 11 }, (_, i) => today.year + i), [today.year])
   const [type, setType] = useState(initial?.type ?? 1)
   const [title, setTitle] = useState(initial?.title ?? '')
   const [purpose, setPurpose] = useState(initial?.purpose ?? '')
