@@ -80,15 +80,16 @@ public sealed class LdapDirectoryAuthenticator(
         string Text(string key, string fallback = "") =>
             values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value) ? value : fallback;
 
+        var domain = Text(SettingKeys.DirectoryDomain);
         return new DirectoryConfig(
             ReadBool(values, SettingKeys.DirectoryEnabled),
             Text(SettingKeys.DirectoryHost),
             int.TryParse(Text(SettingKeys.DirectoryPort), out var port) ? port : SettingKeys.DefaultDirectoryPort,
             ReadBool(values, SettingKeys.DirectoryUseSsl),
-            Text(SettingKeys.DirectoryDomain),
+            domain,
             Text(SettingKeys.DirectoryBaseDn),
             Text(SettingKeys.DirectorySearchFilter, SettingKeys.DefaultDirectorySearchFilter),
-            Text(SettingKeys.DirectoryBindDn),
+            NormalizeBindDn(Text(SettingKeys.DirectoryBindDn), domain),
             await settings.GetSecretAsync(SettingKeys.DirectoryBindPassword, cancellationToken),
             int.TryParse(Text(SettingKeys.DirectoryTimeoutSeconds), out var timeout)
                 ? timeout
@@ -220,6 +221,16 @@ public sealed class LdapDirectoryAuthenticator(
 
     private static string BuildUpn(DirectoryConfig config, string username) =>
         username.Contains('@') ? username : $"{username}@{config.Domain}";
+
+    /// <summary>حساب Bind ساده (بدون @، \ یا فرمت DN) برای bind دامنه به UPN تبدیل می‌شود؛ اکانت‌دایرکتوری نام خالی را با Error 49 رد می‌کند.</summary>
+    internal static string NormalizeBindDn(string bindDn, string domain) =>
+        bindDn.Length == 0
+            || bindDn.Contains('@')
+            || bindDn.Contains('\\')
+            || bindDn.Contains('=')
+            || string.IsNullOrWhiteSpace(domain)
+            ? bindDn
+            : $"{bindDn}@{domain}";
 
     private static bool ReadBool(IReadOnlyDictionary<string, string> values, string key) =>
         bool.TryParse(values.GetValueOrDefault(key), out var value) && value;

@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\NovaFleet.Application\NovaFleet.Application.csproj" />
     <ProjectReference Include="..\NovaFleet.Domain\NovaFleet.Domain.csproj" />
+    <InternalsVisibleTo Include="NovaFleet.UnitTests" />
   </ItemGroup>
 
   <ItemGroup>
