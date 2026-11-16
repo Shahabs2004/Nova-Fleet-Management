@@ -187,6 +187,9 @@ public class DefaultRoleProvisioningTests : MissionTestBase
 
         public Task<DirectoryProbeResult> ProbeAsync(string? sampleUsername, CancellationToken cancellationToken = default)
             => Task.FromResult(DirectoryProbeResult.Bound(1, false));
+
+        public Task<DirectoryGroupsResult> ListGroupsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(DirectoryGroupsResult.Loaded([], false));
     }
 
     private sealed class StubPasswordHasher : IPasswordHasher

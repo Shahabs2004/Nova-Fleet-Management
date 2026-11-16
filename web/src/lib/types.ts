@@ -263,6 +263,18 @@ export interface DefaultRoleDto {
   roleName: string
 }
 
+export interface DirectoryGroupDto {
+  name: string
+  distinguishedName: string
+}
+
+export interface DirectoryGroupsResultDto {
+  success: boolean
+  error: string | null
+  groups: DirectoryGroupDto[]
+  hitSearchLimit: boolean
+}
+
 export interface AuditEntryDto {
   id: string
   actorUsername: string

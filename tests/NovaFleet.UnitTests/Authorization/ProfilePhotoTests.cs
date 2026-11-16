@@ -360,5 +360,8 @@ public sealed class ProfilePhotoTests : MissionTestBase
             Task.FromResult<DirectoryUserInfo?>(Info);
         public Task<DirectoryProbeResult> ProbeAsync(string? sampleUsername, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<DirectoryGroupsResult> ListGroupsAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

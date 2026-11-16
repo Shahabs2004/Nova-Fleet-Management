@@ -196,6 +196,9 @@ public class ConnectionTestsServiceTests : MissionTestBase
             return Task.FromResult(Result);
         }
 
+        public Task<DirectoryGroupsResult> ListGroupsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(DirectoryGroupsResult.Loaded([], false));
+
         public Task<DirectoryAuthResult> AuthenticateAsync(string username, string password, CancellationToken cancellationToken = default)
             => Task.FromResult(DirectoryAuthResult.Failed("unused"));
 

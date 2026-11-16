@@ -21,6 +21,9 @@ public sealed class LdapDirectoryAuthenticator(
     /// </summary>
     private const int ProbeSearchSizeLimit = 25;
 
+    /// <summary>سقف نتایج فهرست گروه‌ها؛ رسیدن به آن یعنی گروه‌های بیشتری در دایرکتوری هست.</summary>
+    private const int GroupsSearchSizeLimit = 500;
+
     public async Task<DirectoryAuthResult> AuthenticateAsync(
         string username,
         string password,
@@ -168,6 +171,64 @@ public sealed class LdapDirectoryAuthenticator(
         {
             logger.LogError(ex, "آزمون اتصال LDAPS ناموفق بود.");
             return DirectoryProbeResult.Failed("ارتباط با سرویس دایرکتوری برقرار نشد.");
+        }
+    }
+
+    public async Task<DirectoryGroupsResult> ListGroupsAsync(CancellationToken cancellationToken = default)
+    {
+        var config = await ReadAsync(cancellationToken);
+        if (!config.IsUsable)
+        {
+            return DirectoryGroupsResult.Failed("ورود دامنه در این نصب فعال نیست.");
+        }
+
+        if (string.IsNullOrWhiteSpace(config.BindDn) || string.IsNullOrEmpty(config.BindPassword))
+        {
+            return DirectoryGroupsResult.Failed("حساب Bind یا رمز آن تنظیم نشده است.");
+        }
+
+        return await Task.Run(() => ListGroupsCore(config), cancellationToken);
+    }
+
+    private DirectoryGroupsResult ListGroupsCore(DirectoryConfig config)
+    {
+        try
+        {
+            using var connection = CreateConnection(config);
+            connection.Credential = new NetworkCredential(config.BindDn, config.BindPassword);
+            connection.Bind();
+
+            var request = new SearchRequest(
+                config.BaseDn,
+                "(&(objectClass=group)(sAMAccountName=*))",
+                SearchScope.Subtree,
+                "cn",
+                "distinguishedName")
+            {
+                SizeLimit = GroupsSearchSizeLimit
+            };
+
+            if (connection.SendRequest(request) is not SearchResponse response)
+            {
+                return DirectoryGroupsResult.Loaded([], false);
+            }
+
+            var groups = response.Entries.Cast<SearchResultEntry>()
+                .Select(entry => new DirectoryGroupInfo(Read(entry, "cn") ?? string.Empty, Read(entry, "distinguishedName") ?? string.Empty))
+                .Where(group => group.Name.Length > 0)
+                .OrderBy(group => group.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return DirectoryGroupsResult.Loaded(groups, response.Entries.Count >= GroupsSearchSizeLimit);
+        }
+        catch (LdapException ex) when (ex.ErrorCode == 49)
+        {
+            return DirectoryGroupsResult.Failed("حساب Bind یا رمز آن در دامنه پذیرفته نشد.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "جست‌وجوی گروه‌های دایرکتوری ناموفق بود.");
+            return DirectoryGroupsResult.Failed("ارتباط با سرویس دایرکتوری برقرار نشد.");
         }
     }
 

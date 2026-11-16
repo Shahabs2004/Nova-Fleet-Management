@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 export function Avatar({ name, src, size = 'md' }: { name: string; src?: string | null; size?: 'sm' | 'md' | 'lg' }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
-  const sizes = { sm: 'h-8 w-8 text-xs', md: 'h-9 w-9 text-xs', lg: 'h-20 w-20 text-2xl' }
+  const sizes = { sm: 'h-8 w-8 text-xs', md: 'h-9 w-9 text-xs', lg: 'h-32 w-32 text-4xl' }
   return (
     <span className={`avatar ${sizes[size]}`}>
       {src && src !== failedSource ? (

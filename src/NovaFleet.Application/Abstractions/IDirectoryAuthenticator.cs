@@ -27,6 +27,17 @@ public sealed record DirectoryProbeResult(bool Success, string? Error, int Found
     public static DirectoryProbeResult Bound(int foundUsers, bool hitSearchLimit) => new(true, null, foundUsers, hitSearchLimit);
 }
 
+/// <summary>یک گروه امنیتی خوانده‌شده از دایرکتوری.</summary>
+public sealed record DirectoryGroupInfo(string Name, string DistinguishedName);
+
+/// <summary>نتیجه خواندن گروه‌ها برای فهرست انتخاب نگاشت نقش.</summary>
+public sealed record DirectoryGroupsResult(bool Success, string? Error, IReadOnlyList<DirectoryGroupInfo> Groups, bool HitSearchLimit)
+{
+    public static DirectoryGroupsResult Failed(string error) => new(false, error, [], false);
+
+    public static DirectoryGroupsResult Loaded(IReadOnlyList<DirectoryGroupInfo> groups, bool hitSearchLimit) => new(true, null, groups, hitSearchLimit);
+}
+
 /// <summary>
 /// درگاه احراز هویت Active Directory از طریق LDAPS.
 /// در نبود تنظیمات معتبر، پیاده‌سازی باید صراحتاً شکست برگرداند و هرگز اعتبارسنجی گواهی را غیرفعال نکند.
@@ -42,4 +53,9 @@ public interface IDirectoryAuthenticator
     /// نام کاربری اختیاری است؛ اگر داده شود همان فیلتر پیکربندی‌شده روی آن اجرا می‌شود.
     /// </summary>
     Task<DirectoryProbeResult> ProbeAsync(string? sampleUsername, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// خواندن گروه‌های امنیتی دایرکتوری (فقط‌خواندنی با حساب Bind) برای فهرست انتخاب نگاشت نقش.
+    /// </summary>
+    Task<DirectoryGroupsResult> ListGroupsAsync(CancellationToken cancellationToken = default);
 }

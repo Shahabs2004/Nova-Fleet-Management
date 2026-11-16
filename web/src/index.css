@@ -124,7 +124,7 @@
   }
 
   .avatar-preview {
-    @apply relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-emerald-900 ring-offset-2;
+    @apply relative h-24 w-24 shrink-0 overflow-hidden rounded-full ring-2 ring-emerald-900 ring-offset-2;
   }
 
   .avatar-range {

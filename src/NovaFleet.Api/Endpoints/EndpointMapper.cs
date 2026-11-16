@@ -406,6 +406,8 @@ public static class EndpointMapper
             return Results.Ok(new { message = "مجوزهای نقش ذخیره شد." });
         });
         group.MapGet("/roles/directory-mappings", async (IRoleService service, CancellationToken ct) => await service.ListDirectoryMappingsAsync(ct));
+        group.MapGet("/roles/directory-groups", async (IDirectoryAuthenticator directory, CancellationToken ct) =>
+            Results.Ok(await directory.ListGroupsAsync(ct)));
         group.MapPost("/roles/directory-mappings", async (SaveDirectoryMappingRequest request, IRoleService service, CancellationToken ct) =>
             Results.Ok(await service.SaveDirectoryMappingAsync(request, ct)));
         group.MapDelete("/roles/directory-mappings/{id:guid}", async (Guid id, IRoleService service, CancellationToken ct) =>

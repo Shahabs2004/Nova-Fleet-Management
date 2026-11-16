@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { formatFaDateTime, toFa } from '../lib/date'
 import { SESSION_METHOD, SESSION_STATUS } from '../lib/labels'
-import type { AuditEntryDto, DefaultRoleDto, DirectoryMappingDto, PagedResult, RoleDto, UserListItem, UserSessionDto } from '../lib/types'
+import type { AuditEntryDto, DefaultRoleDto, DirectoryGroupsResultDto, DirectoryMappingDto, PagedResult, RoleDto, UserListItem, UserSessionDto } from '../lib/types'
 
 interface PermissionDefinition {
   code: string
@@ -381,6 +381,11 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
   const [roleId, setRoleId] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  const groups = useQuery({
+    queryKey: ['directory-groups'],
+    queryFn: () => api.get<DirectoryGroupsResultDto>('/api/roles/directory-groups'),
+  })
+
   const activeRoles = roles.filter((role) => role.isActive)
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['directory-mappings'] })
 
@@ -400,7 +405,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
       <p className="text-sm font-bold text-emerald-950">نگاشت گروه‌های اکتیو دایرکتوری به نقش</p>
       <p className="mt-1 text-xs leading-6 text-slate-500">
         کاربر دایرکتوری با عضویت در هر گروه نگاشت‌شده، نقش مربوط به آن را می‌گیرد؛ برای نمونه گروه DCManager را به «مدیر سامانه» نگاشت کنید.
-        نام گروه را همان‌گونه که در دایرکتوری است وارد کنید (نام CN یا DN کامل). این نقش‌ها با نقش پیش‌فرض جمع می‌شوند.
+        گروه‌ها از اکتیو دایرکتوری خوانده می‌شوند و یکی‌شده را انتخاب کنید. این نقش‌ها با نقش پیش‌فرض جمع می‌شوند.
       </p>
 
       {mappings.isLoading ? (
@@ -450,8 +455,29 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
       <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
         <div className="min-w-48 flex-1">
           <label className="label">نام گروه دایرکتوری</label>
-          <input className="input num" dir="ltr" placeholder="DCManager" value={groupName} onChange={(e) => { setGroupName(e.target.value); setError(null) }} />
+          <select className="input" dir="ltr" value={groupName} onChange={(e) => { setGroupName(e.target.value); setError(null) }}>
+            <option value="">— انتخاب گروه —</option>
+            {(groups.data?.groups ?? []).map((group) => (
+              <option key={group.distinguishedName || group.name} value={group.name}>{group.name}</option>
+            ))}
+          </select>
+          {groups.isLoading && <p className="mt-1 text-[11px] text-slate-400">در حال خواندن گروه‌ها از دایرکتوری…</p>}
+          {!groups.isLoading && groups.isError && <p className="mt-1 text-[11px] text-rose-700">خواندن گروه‌ها ناموفق بود.</p>}
+          {!groups.isLoading && groups.data && !groups.data.success && <p className="mt-1 text-[11px] text-rose-700">{groups.data.error}</p>}
+          {!groups.isLoading && groups.data?.success && groups.data.groups.length === 0 &&
+            <p className="mt-1 text-[11px] text-slate-400">هیچ گروهی زیر BaseDn تنظیم‌شده پیدا نشد.</p>}
+          {groups.data?.success && groups.data.hitSearchLimit &&
+            <p className="mt-1 text-[11px] text-amber-700">فهرست کامل نیست؛ فقط ۵۰۰ گروه اول نمایش داده شده‌اند.</p>}
         </div>
+        <button
+          type="button"
+          className="btn-ghost btn-sm"
+          onClick={() => void groups.refetch()}
+          disabled={groups.isFetching}
+          title="بازخوانی گروه‌ها از دایرکتوری"
+        >
+          {groups.isFetching ? 'در حال خواندن…' : 'بازخوانی گروه‌ها'}
+        </button>
         <div className="min-w-44 flex-1">
           <label className="label">نقش مقصد</label>
           <select className="input" value={roleId} onChange={(e) => { setRoleId(e.target.value); setError(null) }}>
@@ -463,7 +489,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
         </div>
         <button
           className="btn-primary btn-sm"
-          disabled={save.isPending || groupName.trim().length === 0 || roleId.length === 0}
+          disabled={save.isPending || groupName.length === 0 || roleId.length === 0}
           onClick={() => save.mutate()}
         >
           {save.isPending ? 'در حال ذخیره…' : 'افزودن نگاشت'}
