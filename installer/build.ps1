@@ -60,7 +60,14 @@ Write-Host '::group dotnet self-contained publish'
 for ($try = 1; $try -le 3; $try++) {
     dotnet restore tests/NovaFleet.UnitTests --nologo
     if ($LASTEXITCODE -eq 0) { break }
-    Write-Host "restore attempt $try failed"; Start-Sleep -Seconds 5
+    Write-Host "restore attempt $try failed"
+    if ($try -lt 3) {
+        # some CI runners carry a corrupt NuGet http-cache -> instant MSB4181
+        dotnet nuget locals http-cache --clear | Out-Null
+        Start-Sleep -Seconds 5
+    } else {
+        dotnet restore tests/NovaFleet.UnitTests --nologo -v detailed
+    }
 }
 if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
 dotnet test tests/NovaFleet.UnitTests -c Release --nologo --no-restore
