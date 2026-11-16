@@ -22,10 +22,21 @@ try {
         }
     }
 
-    # 2) ASP.NET Core Module V2 must be registered (from the .NET Hosting Bundle)
+    # 2) ASP.NET Core Module V2 must be registered AND new enough for .NET 10 (file version 20.x)
     $modCheck = (& $appcmd list module /name:AspNetCoreModuleV2 2>&1) -join ' '
     if ($modCheck -notmatch 'AspNetCoreModuleV2') {
         throw 'ماژول ASP.NET Core (Hosting Bundle) روی این سرور نصب نیست. آخرین .NET 10 Hosting Bundle (windows x64) را از https://dotnet.microsoft.com/download/dotnet/10.0 نصب و IIS را reset کنید، سپس Installer را دوباره اجرا کنید.'
+    }
+    $ancmPath = Join-Path ${env:ProgramFiles} 'IIS\Asp.Net Core Module\V2\aspnetcorev2.dll'
+    $ancmMajor = 0
+    if (Test-Path $ancmPath) {
+        $ancmMajor = [int]((Get-Item $ancmPath).VersionInfo.FileVersion.Split('.')[0])
+    }
+    if ($ancmMajor -lt 20) {
+        throw ('نسخه ماژول ASP.NET Core روی این سرور برای اجرای برنامه .NET 10 قدیمی است (aspnetcorev2 ' +
+            $(if ($ancmMajor -gt 0) { "$ancmMajor.x" } else { 'نامعلوم' }) +
+            '، حداقل 20.x لازم است). آخرین .NET 10 Hosting Bundle (windows x64) را از https://dotnet.microsoft.com/download/dotnet/10.0 یا با دستور ' +
+            '«winget install --id Microsoft.DotNet.HostingBundle.10» نصب کنید؛ نصب، IIS را خودکار reset می‌کند.')
     }
 
     Import-Module WebAdministration
@@ -44,6 +55,9 @@ try {
     Set-ItemProperty "IIS:\AppPools\$SiteName" -Name processModel.identityType -Value ApplicationPoolIdentity
     Set-ItemProperty "IIS:\AppPools\$SiteName" -Name startMode -Value AlwaysRunning
     Set-ItemProperty "IIS:\AppPools\$SiteName" -Name autoStart -Value $true
+    # the app is x64; some servers carry a 32-bit applicationPoolDefaults and New-WebAppPool inherits it -> 500.32
+    & $appcmd set apppool "$SiteName" /enable32BitAppOnWin64:false | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "تنظیم ۶۴-بیتی بودن استخر برنامه ناموفق بود ($LASTEXITCODE)" }
 
     # 5) site + binding
     New-Website -Name $SiteName -PhysicalPath $AppDir -ApplicationPool $SiteName -Port $Port | Out-Null
