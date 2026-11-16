@@ -56,7 +56,7 @@ var connectionString = ResolveConnectionString(builder.Configuration, bootstrap)
 builder.Services.AddSingleton<IBootstrapConfigurationStore>(bootstrap);
 builder.Services.AddSingleton<IDatabaseSetupProbe, DatabaseSetupProbe>();
 builder.Services.AddSingleton<IDatabaseHealthProbe, DatabaseHealthProbe>();
-builder.Services.AddDbContext<NovaFleetDbContext>(options => options.UseSqlServer(connectionString));
+builder.Services.AddDbContext<NovaFleetDbContext>(options => options.UseSqlServer(connectionString ?? string.Empty));
 
 // حلقه کلید رمزنگاری اسرار تنظیمات؛ پوشه کلیدها کنار فایل بوت‌استرپ و بیرون مخزن می‌ماند.
 // NOVAFLEET_HOME مسیر خانه را (مثلاً زیر IIS که پروفایل SYSTEM قابل‌نوشتن نیست) بازنویسی می‌کند.
@@ -140,12 +140,19 @@ builder.Services.AddScoped<ITimelineService, TimelineService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
-builder.Services.AddHostedService<SmsQueueWorker>();
-builder.Services.AddHostedService<MissionLifecycleWorker>();
+// در حالت نصاب (بدون رشته اتصال) workerها به پایگاه داده نیاز دارند و ساخته نمی‌شوند.
+if (!string.IsNullOrWhiteSpace(connectionString))
+{
+    builder.Services.AddHostedService<SmsQueueWorker>();
+    builder.Services.AddHostedService<MissionLifecycleWorker>();
+}
 
 var app = builder.Build();
 
-await InitializeDatabaseAsync(app);
+if (!string.IsNullOrWhiteSpace(connectionString))
+{
+    await InitializeDatabaseAsync(app);
+}
 
 app.UseMiddleware<ApiExceptionHandlerMiddleware>();
 
@@ -189,7 +196,7 @@ static void RegisterPersianFont()
     }
 }
 
-static string ResolveConnectionString(IConfiguration configuration, IBootstrapConfigurationStore bootstrap)
+static string? ResolveConnectionString(IConfiguration configuration, IBootstrapConfigurationStore bootstrap)
 {
     var (resolved, _) = ConnectionStringResolver.Resolve(configuration, bootstrap);
     if (!string.IsNullOrWhiteSpace(resolved))
@@ -204,9 +211,8 @@ static string ResolveConnectionString(IConfiguration configuration, IBootstrapCo
     if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(database)
         || string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
     {
-        throw new InvalidOperationException(
-            "رشته اتصال تنظیم نشده است؛ NOVAFLEET_ConnectionStrings__Default، فایل بوت‌استرپ، "
-            + "ConnectionStrings:Default یا متغیرهای SQL_HOST/DB_NAME/APP_LOGIN/APP_PASSWORD لازم است.");
+        // نصاب: سرویس بدون پایگاه داده بالا می‌آید تا ویزارد /setup گام دیتابیس را کامل کند.
+        return null;
     }
 
     return $"Server={host};Database={database};User ID={login};Password={password};TrustServerCertificate=True;MultipleActiveResultSets=True";

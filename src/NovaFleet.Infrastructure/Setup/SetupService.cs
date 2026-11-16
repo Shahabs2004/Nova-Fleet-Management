@@ -28,8 +28,17 @@ public sealed class SetupService(
     IDatabaseSetupProbe probe,
     IConfiguration configuration) : ISetupService
 {
+    /// <summary>سرویس با رشته اتصال بالا آمده و می‌تواند پایگاه داده را لمس کند.</summary>
+    private bool HasAttachedDatabase => !string.IsNullOrWhiteSpace(db.Database.GetConnectionString());
+
     public async Task<SetupStatusDto> GetStatusAsync(CancellationToken cancellationToken = default)
     {
+        if (!HasAttachedDatabase)
+        {
+            // حالت نصاب: هنوز پایگاه داده‌ای به سرویس وصل نشده و راه‌اندازی تکمیل‌نشده است.
+            return new SetupStatusDto(false, false, 0, null);
+        }
+
         var userCount = await db.Users.CountAsync(cancellationToken);
         var hasAdmin = await db.Users.AnyAsync(item => item.IsLocalAdmin, cancellationToken);
         var organization = await db.SystemSettings
@@ -90,33 +99,43 @@ public sealed class SetupService(
         bootstrap.WriteConnectionString(candidate);
 
         var (active, source) = ConnectionStringResolver.Resolve(configuration, bootstrap);
-        var isActive = source == ConnectionSource.BootstrapFile && Equivalent(active, candidate);
+        // در حالت نصاب پروسه بدون رشته اتصال بالا آمده؛ فایل تازه‌نوشته تا restart اثر ندارد.
+        var attached = db.Database.GetConnectionString();
+        var isActive = !string.IsNullOrWhiteSpace(attached)
+            && source == ConnectionSource.BootstrapFile
+            && Equivalent(active, candidate);
 
-        db.AuditEntries.Add(new AuditEntry(
-            "setup",
-            "SetupDatabase",
-            "SystemSetting",
-            null,
-            "Success",
-            afterJson: JsonSerializer.Serialize(new
-            {
-                request.ServerName,
-                request.DatabaseName,
-                request.UseWindowsAuthentication,
-                request.UserName,
-                request.TrustServerCertificate,
-                CreatedDatabase = probeResult.CreatedDatabase,
-                File = bootstrap.FilePath
-            }, JsonOptions),
-            clientIpAddress: null));
-        await db.SaveChangesAsync(cancellationToken);
+        if (HasAttachedDatabase)
+        {
+            db.AuditEntries.Add(new AuditEntry(
+                "setup",
+                "SetupDatabase",
+                "SystemSetting",
+                null,
+                "Success",
+                afterJson: JsonSerializer.Serialize(new
+                {
+                    request.ServerName,
+                    request.DatabaseName,
+                    request.UseWindowsAuthentication,
+                    request.UserName,
+                    request.TrustServerCertificate,
+                    CreatedDatabase = probeResult.CreatedDatabase,
+                    File = bootstrap.FilePath
+                }, JsonOptions),
+                clientIpAddress: null));
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         var hint = isActive
             ? $"پایگاه داده «{request.DatabaseName.Trim()}» روی «{request.ServerName.Trim()}» آماده است"
                 + (probeResult.CreatedDatabase ? " و تازه ساخته شد" : " و از قبل وجود داشت")
                 + $". رشته اتصال در {bootstrap.FilePath} ذخیره شد و همین حالا فعال است."
-            : $"پایگاه داده آماده شد و رشته اتصال در {bootstrap.FilePath} ذخیره گردید. "
-                + $"منبع فعال در حال حاضر {source} است؛ سرویس NovaFleet را راه‌اندازی مجدد کنید تا ویزارد از گام دوم ادامه دهد.";
+            : string.IsNullOrWhiteSpace(attached)
+                ? $"پایگاه داده آماده شد و رشته اتصال در {bootstrap.FilePath} ذخیره گردید. "
+                    + "سرویس NovaFleet را یک‌بار راه‌اندازی مجدد کنید (در IIS: بازیافت App Pool همین سایت) تا ویزارد از گام دوم ادامه دهد."
+                : $"پایگاه داده آماده شد و رشته اتصال در {bootstrap.FilePath} ذخیره گردید. "
+                    + $"منبع فعال در حال حاضر {source} است؛ سرویس NovaFleet را راه‌اندازی مجدد کنید تا ویزارد از گام دوم ادامه دهد.";
 
         return new SetupDatabaseResultDto(!isActive, probeResult.CreatedDatabase, isActive, hint);
     }
@@ -237,6 +256,11 @@ public sealed class SetupService(
 
     private async Task RequireNotInstalledAsync(CancellationToken cancellationToken)
     {
+        if (!HasAttachedDatabase)
+        {
+            return;
+        }
+
         if (await db.Users.AnyAsync(cancellationToken))
         {
             throw new ConflictAppException("راه‌اندازی اولیه قبلاً انجام شده است.");
@@ -267,7 +291,7 @@ public sealed class SetupService(
 
     public async Task<SetupStatusDto> InitializeAsync(SetupRequest request, CancellationToken cancellationToken = default)
     {
-        if (await db.Users.AnyAsync(cancellationToken))
+        if (HasAttachedDatabase && await db.Users.AnyAsync(cancellationToken))
         {
             throw new ConflictAppException("راه‌اندازی اولیه قبلاً انجام شده است.");
         }
