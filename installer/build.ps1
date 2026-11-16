@@ -56,15 +56,16 @@ Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
 # Tag-triggered CI runs die at NuGet restore with bare MSB4181 (RestoreTask returns
-# false, no error logged) while the same commit passes via workflow_dispatch. The
-# windows-2025-vs2026 image adds machine-level local NuGet folder sources and .NET 10
-# package pruning; pin nuget.org as the only source, disable pruning/fallback folders,
-# and use a fresh packages folder + wiped obj/bin so restore is a clean download.
+# false, no error logged) while the same commit passes on a branch ref. A tag checkout
+# is a detached/shallow HEAD; the SDK's auto-imported SourceLink (Microsoft.Build.Tasks.Git)
+# reads git metadata and aborts restore there. Disable source-control queries/SourceLink,
+# pin nuget.org as the only source, disable pruning/fallback folders, and use a fresh
+# packages folder + wiped obj/bin so restore is a clean download independent of git state.
 $env:NUGET_PACKAGES = Join-Path $PSScriptRoot 'nuget-packages'
 Get-ChildItem src,tests -Recurse -Directory |
     Where-Object { $_.Name -eq 'obj' -or $_.Name -eq 'bin' } |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-$restoreProps = @('-p:NuGetAudit=false', '-p:RestoreFallbackFolders=', '-p:RestoreEnablePackagePruning=false', '-p:RestoreSources=https://api.nuget.org/v3/index.json')
+$restoreProps = @('-p:NuGetAudit=false', '-p:RestoreFallbackFolders=', '-p:RestoreEnablePackagePruning=false', '-p:RestoreSources=https://api.nuget.org/v3/index.json', '-p:EnableSourceControlManagerQueries=false', '-p:EnableSourceLink=false', '-p:DeterministicSourcePaths=false')
 $restoreArgs = @('--nologo', '--force', '-tl:false') + $restoreProps
 for ($try = 1; $try -le 3; $try++) {
     dotnet restore tests/NovaFleet.UnitTests @restoreArgs

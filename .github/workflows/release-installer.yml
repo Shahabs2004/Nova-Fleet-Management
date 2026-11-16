@@ -10,6 +10,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: a shallow detached tag checkout breaks the SDK's git/SourceLink
+          # queries during NuGet restore (bare MSB4181); branch checkouts work.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
