@@ -28,6 +28,12 @@ jobs:
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
         env:
           VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '0.0.0-dev' }}
+          # The .NET terminal logger swallows NuGet restore errors, surfacing as bare
+          # MSB4181 ("RestoreTask returned false but did not log an error"). Disable it
+          # so any real failure is visible; skip cert-revocation network checks that can
+          # abort restore silently on locked-down CI runners.
+          DOTNET_CLI_USE_TERMINAL_LOGGER: false
+          NUGET_CERT_REVOCATION_MODE: offline
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
