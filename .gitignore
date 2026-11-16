@@ -44,3 +44,10 @@ graphify-out/.graphify_labels.pending.json
 
 # graphify: build state records its own mtime/scan_root, so it churns on every run
 graphify-out/.graphify_build_state.json
+
+# installer/publish build artifacts
+installer/stage/
+installer/output/
+
+# frontend build output copied by installer/CI builds
+src/NovaFleet.Api/wwwroot/

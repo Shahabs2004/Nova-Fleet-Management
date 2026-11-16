@@ -1,0 +1,63 @@
+name: release-installer
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-setup-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build frontend into wwwroot
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+          rm -rf ../src/NovaFleet.Api/wwwroot
+          cp -r dist ../src/NovaFleet.Api/wwwroot
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Unit tests
+        run: dotnet test tests/NovaFleet.UnitTests -c Release --nologo -v quiet
+
+      - name: Publish self-contained
+        run: dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=${{ github.ref_name }} -o installer/stage
+
+      - name: Remove generated web.config (installer renders its own)
+        run: Remove-Item installer/stage/web.config -ErrorAction SilentlyContinue
+        shell: pwsh
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Compile Setup.exe
+        run: & "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe" "/DAppVersion=$($env:GITHUB_REF_NAME.TrimStart('v'))" installer\NovaFleet.iss
+        shell: pwsh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NovaFleet-Setup
+          path: installer/output/NovaFleet-Setup-*.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/output/NovaFleet-Setup-*.exe
+          body: |
+            NovaFleet installer (Setup.exe). Runs IIS + firewall setup, then opens the in-app
+            setup wizard for database/domain/SMS settings. Requires .NET 10 Hosting Bundle on
+            the target server (the installer aborts with a link if it is missing).
+            Unsigned build — SmartScreen "unknown publisher" warning is expected.
