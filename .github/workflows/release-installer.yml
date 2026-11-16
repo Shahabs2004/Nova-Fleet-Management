@@ -24,6 +24,14 @@ jobs:
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
 
+      - name: NuGet diagnostics
+        shell: pwsh
+        run: |
+          dotnet --info
+          dotnet nuget locals all --list
+          Get-ChildItem Env: | Where-Object { $_.Name -match 'NUGET|DOTNET|MSBUILD|GITHUB_REF' } | Sort-Object Name | Format-Table -AutoSize
+          Get-ChildItem -Path . -Recurse -Filter NuGet.config -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "=== $($_.FullName) ==="; Get-Content $_.FullName }
+
       - name: Build Setup.exe (frontend + tests + publish + bundle prereq download + ISCC)
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
         env:
@@ -34,6 +42,15 @@ jobs:
           # abort restore silently on locked-down CI runners.
           DOTNET_CLI_USE_TERMINAL_LOGGER: false
           NUGET_CERT_REVOCATION_MODE: offline
+          MSBUILDDISABLENODEREUSE: 1
+
+      - name: Upload restore binlog on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-binlog
+          path: installer/restore.binlog
+          if-no-files-found: ignore
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

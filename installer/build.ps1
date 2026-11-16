@@ -63,7 +63,7 @@ $env:NUGET_PACKAGES = Join-Path $PSScriptRoot 'nuget-packages'
 Get-ChildItem src,tests -Recurse -Directory |
     Where-Object { $_.Name -eq 'obj' -or $_.Name -eq 'bin' } |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-$restoreArgs = @('--nologo', '--force', '-p:NuGetAudit=false', '-p:RestoreFallbackFolders=')
+$restoreArgs = @('--nologo', '--force', '-p:NuGetAudit=false', '-p:RestoreFallbackFolders=', '-tl:false')
 for ($try = 1; $try -le 3; $try++) {
     dotnet restore tests/NovaFleet.UnitTests @restoreArgs
     if ($LASTEXITCODE -eq 0) { break }
@@ -72,7 +72,7 @@ for ($try = 1; $try -le 3; $try++) {
         dotnet nuget locals all --clear | Out-Null
         Start-Sleep -Seconds 5
     } else {
-        dotnet restore tests/NovaFleet.UnitTests @restoreArgs -v detailed
+        dotnet restore tests/NovaFleet.UnitTests @restoreArgs -v diag -maxcpucount:1 -bl:installer/restore.binlog
     }
 }
 if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
