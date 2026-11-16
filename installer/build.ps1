@@ -5,6 +5,11 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 
 $Version = if ($env:VERSION) { $env:VERSION.TrimStart('v') } else { ((cmd /c "git describe --tags --abbrev=0 2>nul") -as [string]).Trim().TrimStart('v') }
 if (-not $Version) { $Version = '0.0.0-dev' }
+# MSBuild inherits environment variables as properties. A tag build sets VERSION to
+# the ref_name "v1.0.0"; the leading 'v' makes MSBuild's Version property an invalid
+# NuGet version, which fails restore silently (bare MSB4181). Normalize it to the
+# trimmed version so every dotnet invocation sees a valid Version.
+$env:VERSION = $Version
 
 # bundled .NET 10 IIS Hosting Bundle prerequisite; bump both when the runtime patch changes
 # https://dotnet.microsoft.com/en-us/download/dotnet/10.0 + release-notes .sha512 sidecar
@@ -55,37 +60,11 @@ Pop-Location
 Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
-# Tag-triggered CI runs die at NuGet restore with bare MSB4181 (RestoreTask returns
-# false, no error logged) while the same commit passes on a branch ref. A tag checkout
-# is a detached/shallow HEAD; the SDK's auto-imported SourceLink (Microsoft.Build.Tasks.Git)
-# reads git metadata and aborts restore there. Disable source-control queries/SourceLink,
-# pin nuget.org as the only source, disable pruning/fallback folders, and use a fresh
-# packages folder + wiped obj/bin so restore is a clean download independent of git state.
-$env:NUGET_PACKAGES = Join-Path $PSScriptRoot 'nuget-packages'
-Get-ChildItem src,tests -Recurse -Directory |
-    Where-Object { $_.Name -eq 'obj' -or $_.Name -eq 'bin' } |
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-$restoreProps = @('-p:NuGetAudit=false', '-p:RestoreFallbackFolders=', '-p:RestoreEnablePackagePruning=false', '-p:RestoreSources=https://api.nuget.org/v3/index.json', '-p:EnableSourceControlManagerQueries=false', '-p:EnableSourceLink=false', '-p:DeterministicSourcePaths=false')
-$restoreArgs = @('--nologo', '--force', '-tl:false') + $restoreProps
-for ($try = 1; $try -le 3; $try++) {
-    dotnet restore tests/NovaFleet.UnitTests @restoreArgs
-    if ($LASTEXITCODE -eq 0) { break }
-    Write-Host "restore attempt $try failed"
-    if ($try -lt 3) {
-        dotnet nuget locals all --clear | Out-Null
-        Start-Sleep -Seconds 5
-    } else {
-        dotnet restore tests/NovaFleet.UnitTests @restoreArgs -v diag -maxcpucount:1 -bl:installer/restore.binlog
-    }
-}
+dotnet restore tests/NovaFleet.UnitTests --nologo
 if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
 dotnet test tests/NovaFleet.UnitTests -c Release --nologo --no-restore
 if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
-for ($try = 1; $try -le 3; $try++) {
-    dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version @restoreProps -o installer/stage
-    if ($LASTEXITCODE -eq 0) { break }
-    Write-Host "publish attempt $try failed"; Start-Sleep -Seconds 5
-}
+dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -o installer/stage
 if ($LASTEXITCODE -ne 0) { throw 'publish failed' }
 # the installer renders its own web.config from the template
 Remove-Item installer/stage/web.config -ErrorAction SilentlyContinue
