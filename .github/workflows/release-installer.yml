@@ -27,7 +27,7 @@ jobs:
       - name: Build Setup.exe (frontend + tests + publish + bundle prereq download + ISCC)
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
         env:
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '0.0.0-dev' }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -36,11 +36,13 @@ jobs:
           path: installer/output/NovaFleet-Setup-*.exe
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: installer/output/NovaFleet-Setup-*.exe
           body: |
             NovaFleet installer (Setup.exe). Runs IIS + firewall setup, then opens the in-app
-            setup wizard for database/domain/SMS settings. Requires .NET 10 Hosting Bundle on
-            the target server (the installer aborts with a link if it is missing).
+            setup wizard for database/domain/SMS settings. Carries the .NET 10 Hosting Bundle
+            inside the package and installs it silently when the target server lacks a
+            supported ANCM (20.x or newer).
             Unsigned build — SmartScreen "unknown publisher" warning is expected.

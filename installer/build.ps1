@@ -41,7 +41,7 @@ Pop-Location
 Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
-dotnet test tests/NovaFleet.UnitTests -c Release --nologo -v quiet | Out-Null
+dotnet test tests/NovaFleet.UnitTests -c Release --nologo
 if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
 dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -o installer/stage
 if ($LASTEXITCODE -ne 0) { throw 'publish failed' }
