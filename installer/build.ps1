@@ -55,25 +55,31 @@ Pop-Location
 Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
-# CI runners intermittently fail NuGet restore (MSB4181, error text swallowed);
-# retry so a transient blip cannot kill the release build.
+# Tag-triggered CI runners restore instantly from a pre-populated NuGet cache /
+# fallback folder and RestoreTask then fails silently (MSB4181, no error logged);
+# the same commit restores fine when packages download fresh from nuget.org.
+# Force a clean slate: a fresh packages folder, no fallback folders, wiped obj/bin.
+$env:NUGET_PACKAGES = Join-Path $PSScriptRoot 'nuget-packages'
+Get-ChildItem src,tests -Recurse -Directory |
+    Where-Object { $_.Name -eq 'obj' -or $_.Name -eq 'bin' } |
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+$restoreArgs = @('--nologo', '--force', '-p:NuGetAudit=false', '-p:RestoreFallbackFolders=')
 for ($try = 1; $try -le 3; $try++) {
-    dotnet restore tests/NovaFleet.UnitTests --nologo -p:NuGetAudit=false
+    dotnet restore tests/NovaFleet.UnitTests @restoreArgs
     if ($LASTEXITCODE -eq 0) { break }
     Write-Host "restore attempt $try failed"
     if ($try -lt 3) {
-        # some CI runners carry a corrupt NuGet cache -> instant MSB4181
         dotnet nuget locals all --clear | Out-Null
         Start-Sleep -Seconds 5
     } else {
-        dotnet restore tests/NovaFleet.UnitTests --nologo -p:NuGetAudit=false -v detailed
+        dotnet restore tests/NovaFleet.UnitTests @restoreArgs -v detailed
     }
 }
 if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
 dotnet test tests/NovaFleet.UnitTests -c Release --nologo --no-restore
 if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
 for ($try = 1; $try -le 3; $try++) {
-    dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -p:NuGetAudit=false -o installer/stage
+    dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -p:NuGetAudit=false -p:RestoreFallbackFolders= -o installer/stage
     if ($LASTEXITCODE -eq 0) { break }
     Write-Host "publish attempt $try failed"; Start-Sleep -Seconds 5
 }
