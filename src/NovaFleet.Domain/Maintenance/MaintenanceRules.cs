@@ -1,10 +1,15 @@
+using System.Text.RegularExpressions;
 using NovaFleet.Domain.Common;
 
 namespace NovaFleet.Domain.Maintenance;
 
 public static class MaintenanceRules
 {
-    public static readonly string[] AssetKeys = ["oil-can", "oil-filter", "air-filter", "old-tire", "old-brake-pad", "old-battery", "timing-belt", "engine", "transmission", "radiator", "electrical", "inspection", "general-service"];
+    // assetKey only builds a client-side URL under a fixed icon folder; a lowercase slug (≤40, the column width)
+    // accepts every current and future drop-in pack icon without a backend edit while blocking traversal/garbage.
+    private static readonly Regex AssetKeyPattern = new("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    public static bool IsValidAssetKey(string? key) => key is { Length: > 0 and <= 40 } && AssetKeyPattern.IsMatch(key);
 
     public static void ValidateIntervals(long? km, int? months, int warningKm, int warningDays)
     {

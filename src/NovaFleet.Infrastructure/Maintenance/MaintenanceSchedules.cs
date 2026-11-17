@@ -28,7 +28,7 @@ public sealed partial class MaintenanceService
         user.Require(PermissionCatalog.Maintenance.Manage);
         MaintenanceRules.ValidateIntervals(input.IntervalKm, input.IntervalMonths, input.WarningKm, input.WarningDays);
         var name = MaintenanceRules.Required(input.Name, 100, "نام الگو");
-        if (!MaintenanceRules.AssetKeys.Contains(input.AssetKey)) throw new ValidationAppException("تصویر انتخاب‌شده معتبر نیست.");
+        if (!MaintenanceRules.IsValidAssetKey(input.AssetKey)) throw new ValidationAppException("تصویر انتخاب‌شده معتبر نیست.");
         if (await db.MaintenanceTemplates.AnyAsync(t => t.Name == name && t.Id != id, ct))
             throw new ValidationAppException("الگویی با این نام وجود دارد.");
         var template = id.HasValue ? await db.MaintenanceTemplates.SingleOrDefaultAsync(t => t.Id == id, ct)

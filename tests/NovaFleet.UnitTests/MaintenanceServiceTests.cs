@@ -406,4 +406,27 @@ public sealed class MaintenanceServiceTests : MissionTestBase
     [InlineData(8000, "healthy")]
     public void OdometerWarningUsesInclusiveThreshold(long current, string expected) => Assert.Equal(expected,
         MaintenanceRules.DueState(10000, null, current, Hour(0, 8), 1000, 30, false));
+
+    [Theory]
+    [InlineData("030-tools")]
+    [InlineData("100-dashboard-interface")]
+    [InlineData("055-manual-transmission")]
+    [InlineData("general-service")]
+    [InlineData("oil-can")]
+    [InlineData("engine")]
+    public void AssetKeyAcceptsPackAndLegacySlugs(string key) => Assert.True(MaintenanceRules.IsValidAssetKey(key));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("../secret")]
+    [InlineData("a/b")]
+    [InlineData("Oil-Can")]
+    [InlineData("oil can")]
+    [InlineData("-leading")]
+    [InlineData("trailing-")]
+    [InlineData("double--hyphen")]
+    public void AssetKeyRejectsTraversalAndMalformedSlugs(string key) => Assert.False(MaintenanceRules.IsValidAssetKey(key));
+
+    [Fact]
+    public void AssetKeyRejectsOverColumnWidth() => Assert.False(MaintenanceRules.IsValidAssetKey(new string('a', 41)));
 }
