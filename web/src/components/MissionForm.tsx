@@ -61,22 +61,25 @@ function DateTimeField({
     <div>
       <label className="label">{label}</label>
       <div className="grid grid-cols-4 gap-2">
-        <select className="input" value={value.year} onChange={(e) => onChange({ ...value, year: Number(e.target.value) })}>
+        <select aria-label={`سال ${label}`} className="input" value={value.year} onChange={(e) => {
+          const year = Number(e.target.value)
+          onChange({ ...value, year, day: Math.min(value.day, jalaliDaysInMonth(year, value.month)) })
+        }}>
           {years.map((y) => (
             <option key={y} value={y}>{toFa(y)}</option>
           ))}
         </select>
-        <select className="input" value={value.month} onChange={(e) => onChange({ ...value, month: Number(e.target.value), day: 1 })}>
+        <select aria-label={`ماه ${label}`} className="input" value={value.month} onChange={(e) => onChange({ ...value, month: Number(e.target.value), day: 1 })}>
           {MONTHS.map((name, index) => (
             <option key={name} value={index + 1}>{name}</option>
           ))}
         </select>
-        <select className="input" value={value.day} onChange={(e) => onChange({ ...value, day: Number(e.target.value) })}>
+        <select aria-label={`روز ${label}`} className="input" value={value.day} onChange={(e) => onChange({ ...value, day: Number(e.target.value) })}>
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => (
             <option key={d} value={d}>{toFa(d)}</option>
           ))}
         </select>
-        <select className="input" value={value.hour} onChange={(e) => onChange({ ...value, hour: Number(e.target.value) })}>
+        <select aria-label={`ساعت ${label}`} className="input" value={value.hour} onChange={(e) => onChange({ ...value, hour: Number(e.target.value) })}>
           {HOURS.map((h) => (
             <option key={h} value={h}>{toFa(`${h < 10 ? '0' : ''}${h}:00`)}</option>
           ))}
@@ -98,15 +101,15 @@ export function MissionForm({
   initial?: MissionDetails
 }) {
   const today = useMemo(todayParts, [])
-  const years = useMemo(() => Array.from({ length: 11 }, (_, i) => today.year + i), [today.year])
+  const years = useMemo(() => Array.from({ length: today.year + 10 }, (_, i) => today.year + 10 - i), [today.year])
   const [type, setType] = useState(initial?.type ?? 1)
   const [title, setTitle] = useState(initial?.title ?? '')
   const [purpose, setPurpose] = useState(initial?.purpose ?? '')
   const [origin, setOrigin] = useState(initial?.origin ?? '')
   const [destination, setDestination] = useState(initial?.destination ?? '')
   const [stops, setStops] = useState(initial?.intermediateStops.join('\n') ?? '')
-  const [start, setStart] = useState<DateValue>(() => initial ? isoToParts(initial.plannedStartAtUtc) : { ...today, hour: (today.hour + 1) % 24 })
-  const [end, setEnd] = useState<DateValue>(() => initial ? isoToParts(initial.plannedEndAtUtc) : { ...today, hour: (today.hour + 3) % 24 })
+  const [start, setStart] = useState<DateValue>(() => isoToParts(initial?.plannedStartAtUtc ?? new Date(Date.now() + 3_600_000).toISOString()))
+  const [end, setEnd] = useState<DateValue>(() => isoToParts(initial?.plannedEndAtUtc ?? new Date(Date.now() + 3 * 3_600_000).toISOString()))
   const [phone, setPhone] = useState(initial?.requesterPhoneSnapshot ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [passengerCount, setPassengerCount] = useState(initial?.passengerCount != null ? String(initial.passengerCount) : '')
@@ -133,6 +136,9 @@ export function MissionForm({
 
   const locationNames = (locations ?? []).map((l) => l.name)
   const datalistId = 'mission-locations'
+  const plannedStartAtUtc = jalaliHourToUtcUtc(start.year, start.month, start.day, start.hour)
+  const plannedEndAtUtc = jalaliHourToUtcUtc(end.year, end.month, end.day, end.hour)
+  const isBackdated = new Date(plannedStartAtUtc).getTime() < Date.now() || new Date(plannedEndAtUtc).getTime() < Date.now()
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,8 +149,8 @@ export function MissionForm({
       origin,
       intermediateStops: stops.split('\n').map((s) => s.trim()).filter(Boolean),
       destination,
-      plannedStartAtUtc: jalaliHourToUtcUtc(start.year, start.month, start.day, start.hour),
-      plannedEndAtUtc: jalaliHourToUtcUtc(end.year, end.month, end.day, end.hour),
+      plannedStartAtUtc,
+      plannedEndAtUtc,
       requesterPhoneSnapshot: phone,
       requesterOrganizationalUnit: initial?.requesterOrganizationalUnit ?? null,
       description: description || null,
@@ -218,6 +224,11 @@ export function MissionForm({
           <DateTimeField label="زمان پایان (به وقت تهران)" value={end} years={years} onChange={setEnd} />
         </div>
       </div>
+
+      {isBackdated && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong className="block">ثبت با تاریخ گذشته</strong>
+        زمان این مأموریت در گذشته است. درخواست در محدوده مجاز تنظیمات ثبت می‌شود و تا تأیید مدیر ناوگان در انتظار تأیید می‌ماند.
+      </div>}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>

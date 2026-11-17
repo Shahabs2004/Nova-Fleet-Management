@@ -914,6 +914,9 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DriverId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsBackdated")
+                        .HasColumnType("bit");
+
                     b.Property<string>("MissionNumber")
                         .IsRequired()
                         .HasMaxLength(20)

@@ -146,7 +146,7 @@ export function MissionsPage() {
                         <span className="num">{formatFaDateTime(m.plannedStartAtUtc)}</span>
                       </td>
                       <td className="px-4 py-3.5">
-                        <StatusBadge status={m.status} />
+                        <StatusBadge status={m.status} isBackdated={m.isBackdated} />
                       </td>
                     </tr>
                   ))}

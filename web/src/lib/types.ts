@@ -46,6 +46,7 @@ export interface MissionListItem {
   splitReason: string | null
   relatedMissionId: string | null
   isOwn: boolean
+  isBackdated: boolean
 }
 
 export interface ChangeRequestDto {
@@ -321,7 +322,7 @@ export interface OrgUnitDto {
 
 export interface SettingsBundle {
   organization: { name: string; logoDataUrl: string | null }
-  missionRules: { minimumGapMinutes: number; futureRequestDays: number; withdrawalAutoCloseHours: number; startReminderMinutes: number }
+  missionRules: { minimumGapMinutes: number; futureRequestDays: number; withdrawalAutoCloseHours: number; startReminderMinutes: number; backdateRequestDays: number | null }
   sessionPolicy: { absoluteMinutes: number; idleMinutes: number }
   missionOrderTemplate: { headerText: string | null; footerText: string | null; showLogo: boolean }
 }

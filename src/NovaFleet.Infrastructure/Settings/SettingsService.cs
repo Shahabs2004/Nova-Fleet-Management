@@ -37,7 +37,8 @@ public sealed class SettingsService(
                 ReadInt(Read(SettingKeys.MinimumGapMinutes), SettingKeys.DefaultMinimumGapMinutes),
                 ReadInt(Read(SettingKeys.FutureRequestDays), SettingKeys.DefaultFutureRequestDays),
                 ReadInt(Read(SettingKeys.WithdrawalAutoCloseHours), SettingKeys.DefaultWithdrawalAutoCloseHours),
-                ReadInt(Read(SettingKeys.SmsReminderMinutes), SettingKeys.DefaultSmsReminderMinutes)),
+                ReadInt(Read(SettingKeys.SmsReminderMinutes), SettingKeys.DefaultSmsReminderMinutes),
+                int.TryParse(Read(SettingKeys.BackdateRequestDays), out var pastDays) && pastDays > 0 ? pastDays : null),
             new SessionPolicyDto(
                 ReadInt(Read(SettingKeys.SessionAbsoluteMinutes), SettingKeys.DefaultSessionAbsoluteMinutes),
                 ReadInt(Read(SettingKeys.SessionIdleMinutes), SettingKeys.DefaultSessionIdleMinutes)),

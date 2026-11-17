@@ -156,7 +156,8 @@ public sealed class FakeSettingsService : ISettingsService
                 Parse(SettingKeys.MinimumGapMinutes, SettingKeys.DefaultMinimumGapMinutes),
                 Parse(SettingKeys.FutureRequestDays, SettingKeys.DefaultFutureRequestDays),
                 24,
-                30),
+                30,
+                int.TryParse(Values.GetValueOrDefault(SettingKeys.BackdateRequestDays), out var pastDays) && pastDays > 0 ? pastDays : null),
             new SessionPolicyDto(480, 60),
             new MissionOrderTemplateDto(null, null, false)));
 

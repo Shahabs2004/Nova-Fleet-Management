@@ -52,6 +52,7 @@ public class SetupWizardTests : MissionTestBase
         Assert.Equal("A5", await Runtime.GetStringAsync(SettingKeys.BrandingReportPaperSize));
         Assert.Equal("C:\\Fonts\\Vazir.ttf", await Runtime.GetStringAsync(SettingKeys.BrandingPdfFontPath));
         Assert.Equal("45", await Runtime.GetStringAsync(SettingKeys.MinimumGapMinutes));
+        Assert.Equal("7", await Runtime.GetStringAsync(SettingKeys.BackdateRequestDays));
         Assert.Equal("90", await Runtime.GetStringAsync(SettingKeys.SmsReminderMinutes));
         Assert.Equal("360", await Runtime.GetStringAsync(SettingKeys.SessionAbsoluteMinutes));
         Assert.Equal("سرناوگان", await Runtime.GetStringAsync(SettingKeys.MissionOrderHeader));
@@ -324,7 +325,7 @@ public class SetupWizardTests : MissionTestBase
             BindPassword: BindSecret),
         Sms: FullSms,
         Operations: new UpdateOperationsSettingsDto("Warning", "C:\\Fonts\\Vazir.ttf", "A5"),
-        Rules: new MissionRulesDto(45, 20, 12, 90),
+        Rules: new MissionRulesDto(45, 20, 12, 90, 7),
         Session: new SessionPolicyDto(360, 60),
         Template: new MissionOrderTemplateDto("سرناوگان", "پاورقی آزمون", true));
 

@@ -71,7 +71,8 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
                     row.VehiclePlate,
                     row.item.SplitReason,
                     row.item.RelatedMissionId,
-                    row.item.RequesterUsername == currentUser.Username))
+                    row.item.RequesterUsername == currentUser.Username,
+                    row.item.IsBackdated))
                 .ToList();
         }
 

@@ -8,6 +8,7 @@ public static class SettingKeys
 
     public const string MinimumGapMinutes = "missions.minimum-gap-minutes";
     public const string FutureRequestDays = "missions.future-request-days";
+    public const string BackdateRequestDays = "missions.backdate-request-days";
     public const string WithdrawalAutoCloseHours = "missions.withdrawal-auto-close-hours";
 
     public const string SessionAbsoluteMinutes = "session.absolute-minutes";

@@ -218,6 +218,19 @@ function RulesTab() {
             onChange={(v) => setRules({ ...rules, futureRequestDays: v })}
             hint="ثبت مأموریت بیش از این بازه مجاز نیست."
           />
+          <div>
+            <label className="label" htmlFor="backdate-mode">بازه مجاز ثبت مأموریت گذشته</label>
+            <select id="backdate-mode" className="input" value={rules.backdateRequestDays === null ? 'unlimited' : 'limited'} onChange={(e) => setRules({ ...rules, backdateRequestDays: e.target.value === 'unlimited' ? null : 30 })}>
+              <option value="unlimited">نامحدود</option>
+              <option value="limited">تعداد روز مشخص</option>
+            </select>
+            <p className="mt-1 text-[11px] text-slate-500">مأموریت گذشته با اخطار ثبت می‌شود و نیازمند تأیید مدیر ناوگان است.</p>
+          </div>
+          {rules.backdateRequestDays !== null && <div>
+            <label className="label" htmlFor="backdate-days">حداکثر روزهای گذشته برای ثبت</label>
+            <input id="backdate-days" className="input num" type="number" min={1} step={1} value={rules.backdateRequestDays} onChange={(e) => setRules({ ...rules, backdateRequestDays: Number(e.target.value) })} />
+            <p className="mt-1 text-[11px] text-slate-500">بر اساس روز تقویمی تهران؛ مثلاً ۱ روز یعنی تمام ساعات دیروز مجاز است.</p>
+          </div>}
           <NumberField
             label="بستن خودکار انصراف (ساعت)"
             value={rules.withdrawalAutoCloseHours}

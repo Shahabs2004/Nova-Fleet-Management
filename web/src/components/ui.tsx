@@ -1,12 +1,15 @@
 import { type ReactNode, useEffect } from 'react'
 import { MISSION_STATUS } from '../lib/labels'
 
-export function StatusBadge({ status }: { status: number }) {
+export function StatusBadge({ status, isBackdated = false }: { status: number; isBackdated?: boolean }) {
   const meta = MISSION_STATUS[status] ?? { title: 'نامشخص', badge: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' }
   return (
-    <span className={`badge ring-1 ${meta.badge}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
-      {meta.title}
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <span className={`badge ring-1 ${meta.badge}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+        {meta.title}
+      </span>
+      {isBackdated && <span className="badge bg-amber-50 text-amber-900 ring-1 ring-amber-200">ثبت با تاریخ گذشته</span>}
     </span>
   )
 }

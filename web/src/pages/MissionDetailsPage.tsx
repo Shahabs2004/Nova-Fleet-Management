@@ -189,7 +189,7 @@ export function MissionDetailsPage() {
         <div className="card lg:col-span-2">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <h2 className="text-sm font-bold text-emerald-950">مشخصات مأموریت</h2>
-            <StatusBadge status={m.status} />
+            <StatusBadge status={m.status} isBackdated={m.isBackdated} />
           </div>
           <div className="grid gap-x-8 px-5 py-2 sm:grid-cols-2">
             <InfoRow label="نوع" value={MISSION_TYPE[m.type]} />
@@ -258,6 +258,9 @@ export function MissionDetailsPage() {
       </div>
 
       <Modal open={action === 'approve'} title="تأیید و تخصیص منابع" onClose={closeModal}>
+        {m.isBackdated && <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          این درخواست با تاریخ گذشته ثبت شده است. اگر زمان پایان گذشته باشد، پس از تأیید در چرخه خودکار تکمیل می‌شود.
+        </p>}
         <div className="space-y-4">
           <div>
             <label className="label">راننده</label>

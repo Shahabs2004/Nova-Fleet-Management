@@ -148,7 +148,7 @@ export function DashboardPage() {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  <StatusBadge status={m.status} />
+                  <StatusBadge status={m.status} isBackdated={m.isBackdated} />
                   <span className="text-[11px] text-slate-400">{formatFaDateTime(m.plannedStartAtUtc)}</span>
                 </div>
               </Link>

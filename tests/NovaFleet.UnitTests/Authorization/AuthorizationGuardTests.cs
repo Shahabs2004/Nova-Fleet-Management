@@ -81,6 +81,37 @@ public class AuthorizationGuardTests : MissionTestBase
     }
 
     [Fact]
+    public async Task SettingsService_BackdateWindowDefaultsUnlimitedAndCanBeChangedBackToUnlimited()
+    {
+        var service = SettingsFor(SystemManager());
+        Assert.Null((await service.GetBundleAsync()).MissionRules.BackdateRequestDays);
+        await service.UpdateMissionRulesAsync(new MissionRulesDto(30, 30, 24, 60, 7));
+        Assert.Equal(7, (await service.GetBundleAsync()).MissionRules.BackdateRequestDays);
+        Assert.Equal("7", await service.GetValueAsync(SettingKeys.BackdateRequestDays));
+        await service.UpdateMissionRulesAsync(new MissionRulesDto(30, 30, 24, 60, null));
+        Assert.Null((await service.GetBundleAsync()).MissionRules.BackdateRequestDays);
+        Assert.Equal(string.Empty, await service.GetValueAsync(SettingKeys.BackdateRequestDays));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task SettingsService_RejectsNonpositiveBackdateLimitWithoutChangingOtherRules(int days)
+    {
+        var service = SettingsFor(SystemManager());
+        await Assert.ThrowsAsync<ValidationAppException>(() => service.UpdateMissionRulesAsync(new MissionRulesDto(45, 21, 12, 90, days)));
+        Assert.Null(await service.GetValueAsync(SettingKeys.MinimumGapMinutes));
+        Assert.Null(await service.GetValueAsync(SettingKeys.BackdateRequestDays));
+    }
+
+    [Fact]
+    public async Task SettingsService_BackdateWindowRequiresSystemManager()
+    {
+        await Assert.ThrowsAsync<ForbiddenAppException>(() => SettingsFor(MissionAdmin()).UpdateMissionRulesAsync(new MissionRulesDto(30, 30, 24, 60, 1)));
+        Assert.Null(await Runtime.GetStringAsync(SettingKeys.BackdateRequestDays));
+    }
+
+    [Fact]
     public async Task SettingsService_SessionPolicyNeedsItsOwnPermission()
     {
         await Assert.ThrowsAsync<ForbiddenAppException>(

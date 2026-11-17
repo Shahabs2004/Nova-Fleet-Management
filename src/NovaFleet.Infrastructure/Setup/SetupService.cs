@@ -370,7 +370,8 @@ public sealed class SetupService(
                 rules.MinimumGapMinutes,
                 rules.FutureRequestDays,
                 rules.WithdrawalAutoCloseHours,
-                rules.StartReminderMinutes
+                rules.StartReminderMinutes,
+                rules.BackdateRequestDays
             };
         }
 

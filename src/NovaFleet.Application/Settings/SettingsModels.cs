@@ -6,7 +6,8 @@ public sealed record MissionRulesDto(
     int MinimumGapMinutes,
     int FutureRequestDays,
     int WithdrawalAutoCloseHours,
-    int StartReminderMinutes);
+    int StartReminderMinutes,
+    int? BackdateRequestDays = null);
 
 public sealed record SessionPolicyDto(int AbsoluteMinutes, int IdleMinutes);
 

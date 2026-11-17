@@ -35,7 +35,8 @@ public sealed record MissionListItemDto(
     string? VehiclePlate,
     string? SplitReason,
     Guid? RelatedMissionId,
-    bool IsOwn);
+    bool IsOwn,
+    bool IsBackdated);
 
 public sealed record MissionRequestInput(
     string Title,
@@ -137,7 +138,8 @@ public sealed record MissionDetailsDto(
     DateTimeOffset UpdatedAtUtc,
     string RowVersion,
     bool IsOwn,
-    IReadOnlyList<MissionChangeRequestDto> ChangeRequests);
+    IReadOnlyList<MissionChangeRequestDto> ChangeRequests,
+    bool IsBackdated);
 
 public sealed record MissionApprovalRequest(Guid DriverId, Guid VehicleId, string? Note);
 

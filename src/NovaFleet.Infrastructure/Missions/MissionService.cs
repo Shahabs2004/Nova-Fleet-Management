@@ -122,7 +122,8 @@ public sealed class MissionService(
             row.VehiclePlate,
             row.item.SplitReason,
             row.item.RelatedMissionId,
-            row.item.RequesterUsername == currentUser.Username)).ToList();
+            row.item.RequesterUsername == currentUser.Username,
+            row.item.IsBackdated)).ToList();
 
         return new PagedResult<MissionListItemDto>(items, total, safePage, safeSize);
     }
@@ -140,7 +141,8 @@ public sealed class MissionService(
         currentUser.Require(PermissionCatalog.Missions.Create);
         var now = clock.UtcNow;
         var futureDays = await GetFutureDaysAsync(cancellationToken);
-        ValidateRequestWindow(input.PlannedStartAtUtc, input.PlannedEndAtUtc, now, futureDays);
+        var pastDays = await GetBackdateDaysAsync(cancellationToken);
+        ValidateRequestWindow(input.PlannedStartAtUtc, input.PlannedEndAtUtc, now, futureDays, pastDays);
 
         var user = await db.Users.AsNoTracking()
             .Where(item => item.Username == currentUser.Username)
@@ -181,7 +183,8 @@ public sealed class MissionService(
             input.MissionOrderDate,
             input.CargoDescription,
             input.ConsigneeName,
-            input.PassengerNames));
+            input.PassengerNames,
+            isBackdated: input.PlannedStartAtUtc < now));
         db.Missions.Add(mission);
         await SaveAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -211,7 +214,8 @@ public sealed class MissionService(
 
         var now = clock.UtcNow;
         var futureDays = await GetFutureDaysAsync(cancellationToken);
-        ValidateRequestWindow(input.PlannedStartAtUtc, input.PlannedEndAtUtc, now, futureDays);
+        var pastDays = await GetBackdateDaysAsync(cancellationToken);
+        ValidateRequestWindow(input.PlannedStartAtUtc, input.PlannedEndAtUtc, now, futureDays, pastDays);
 
         var before = new { mission.Title, mission.PlannedStartAtUtc, mission.PlannedEndAtUtc, mission.Origin, mission.Destination };
         Run(() => mission.EditPendingRequest(new MissionRequestChanges(
@@ -291,7 +295,8 @@ public sealed class MissionService(
         await audit.WriteAsync(new AuditRecord("ApproveMission", "Mission", id.ToString(), "Success", Reason: request.Note, After: new { mission.MissionNumber, Driver = driver.DisplayName, Vehicle = vehicle.PlateDisplay }), cancellationToken);
         await NotifyRequesterAsync(mission, "مأموریت تأیید شد", $"مأموریت «{mission.Title}» با شماره {mission.MissionNumber} تأیید و راننده/خودرو تخصیص یافت.", "mission.approved", cancellationToken);
         await sms.QueueForMissionAsync(id, SmsEventType.MissionApproved, request.Note, cancellationToken);
-        await sms.QueueForMissionAsync(id, SmsEventType.MissionStartReminder, null, cancellationToken);
+        if (mission.PlannedStartAtUtc > now)
+            await sms.QueueForMissionAsync(id, SmsEventType.MissionStartReminder, null, cancellationToken);
         return await ToDetailsAsync(mission, cancellationToken);
     }
 
@@ -744,6 +749,12 @@ public sealed class MissionService(
         return int.TryParse(value, out var days) && days > 0 ? days : SettingKeys.DefaultFutureRequestDays;
     }
 
+    private async Task<int?> GetBackdateDaysAsync(CancellationToken cancellationToken)
+    {
+        var value = await settings.GetValueAsync(SettingKeys.BackdateRequestDays, cancellationToken);
+        return int.TryParse(value, out var days) && days > 0 ? days : null;
+    }
+
     private async Task<string> NextMissionNumberAsync(DateTimeOffset nowUtc, CancellationToken cancellationToken)
     {
         var year = JalaliDate.YearOf(nowUtc);
@@ -769,7 +780,7 @@ public sealed class MissionService(
         var pad = TimeSpan.FromMinutes(gapMinutes);
         return await db.Missions
             .Where(item => item.Id != excludeMissionId
-                && (item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running || item.Status == MissionStatus.WithdrawalPending)
+                && (item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running || item.Status == MissionStatus.WithdrawalPending || item.Status == MissionStatus.Completed)
                 && (item.DriverId == driverId || item.VehicleId == vehicleId)
                 && item.PlannedStartAtUtc <= endAtUtc + pad
                 && item.PlannedEndAtUtc >= startAtUtc - pad)
@@ -777,11 +788,12 @@ public sealed class MissionService(
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    private static void ValidateRequestWindow(DateTimeOffset startAtUtc, DateTimeOffset endAtUtc, DateTimeOffset nowUtc, int futureDays)
+    private static void ValidateRequestWindow(DateTimeOffset startAtUtc, DateTimeOffset endAtUtc, DateTimeOffset nowUtc, int futureDays, int? pastDays)
     {
-        if (startAtUtc < nowUtc.AddHours(-1))
+        var elapsedDays = (JalaliDate.ToTehranDateTime(nowUtc).Date - JalaliDate.ToTehranDateTime(startAtUtc).Date).TotalDays;
+        if (pastDays.HasValue && elapsedDays > pastDays.Value)
         {
-            throw new ValidationAppException("زمان شروع مأموریت نمی‌تواند در گذشته باشد.");
+            throw new ValidationAppException($"ثبت مأموریت حداکثر تا {pastDays.Value} روز گذشته مجاز است.");
         }
 
         if (startAtUtc > nowUtc.AddDays(futureDays) || endAtUtc > nowUtc.AddDays(futureDays))
@@ -898,7 +910,8 @@ public sealed class MissionService(
             mission.UpdatedAtUtc,
             mission.RowVersion.ToRowVersionString(),
             mission.RequesterUsername == currentUser.Username,
-            changeDtos);
+            changeDtos,
+            mission.IsBackdated);
     }
 
     private static void Run(Action action)

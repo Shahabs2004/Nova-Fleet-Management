@@ -62,6 +62,8 @@ public sealed class Mission : Entity
 
     public MissionStatus Status { get; private set; } = MissionStatus.Pending;
 
+    public bool IsBackdated { get; private set; }
+
     public DateTimeOffset? ReviewStartedAtUtc { get; private set; }
 
     public string? ApprovedBy { get; private set; }
@@ -120,7 +122,8 @@ public sealed class Mission : Entity
         DateOnly? missionOrderDate = null,
         string? cargoDescription = null,
         string? consigneeName = null,
-        string? passengerNames = null)
+        string? passengerNames = null,
+        bool isBackdated = false)
     {
         MissionNumber = Required(missionNumber, 20, nameof(missionNumber));
         Title = Required(title, 200, nameof(title));
@@ -156,6 +159,7 @@ public sealed class Mission : Entity
         CargoDescription = Optional(cargoDescription, 500);
         ConsigneeName = Optional(consigneeName, 200);
         PassengerNames = Optional(passengerNames, 1000);
+        IsBackdated = isBackdated;
         Status = MissionStatus.Pending;
     }
 
@@ -386,7 +390,9 @@ public sealed class Mission : Entity
     {
         ArgumentNullException.ThrowIfNull(changes);
         EnsureStatus(MissionStatus.Pending);
+        var datesChanged = PlannedStartAtUtc != changes.PlannedStartAtUtc || PlannedEndAtUtc != changes.PlannedEndAtUtc;
         ApplyRequestFields(changes);
+        if (datesChanged) IsBackdated = PlannedStartAtUtc < nowUtc;
         UpdatedAtUtc = nowUtc;
     }
 

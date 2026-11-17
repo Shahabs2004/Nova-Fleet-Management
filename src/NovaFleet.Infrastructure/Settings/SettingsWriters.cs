@@ -185,6 +185,11 @@ public static class SettingsWriters
             throw new ValidationAppException("حداکثر بازه آینده درخواست باید بین ۱ تا ۳۶۵ روز باشد.");
         }
 
+        if (rules.BackdateRequestDays is < 1)
+        {
+            throw new ValidationAppException("بازه ثبت در گذشته باید نامحدود یا تعداد روز مثبت باشد.");
+        }
+
         if (rules.WithdrawalAutoCloseHours is < 1 or > 168)
         {
             throw new ValidationAppException("مهلت بسته‌شدن خودکار انصراف باید بین ۱ تا ۱۶۸ ساعت باشد.");
@@ -205,6 +210,7 @@ public static class SettingsWriters
 
         await settings.SetAsync(SettingKeys.MinimumGapMinutes, rules.MinimumGapMinutes.ToString(), cancellationToken);
         await settings.SetAsync(SettingKeys.FutureRequestDays, rules.FutureRequestDays.ToString(), cancellationToken);
+        await settings.SetAsync(SettingKeys.BackdateRequestDays, rules.BackdateRequestDays?.ToString() ?? string.Empty, cancellationToken);
         await settings.SetAsync(SettingKeys.WithdrawalAutoCloseHours, rules.WithdrawalAutoCloseHours.ToString(), cancellationToken);
         await settings.SetAsync(SettingKeys.SmsReminderMinutes, rules.StartReminderMinutes.ToString(), cancellationToken);
     }

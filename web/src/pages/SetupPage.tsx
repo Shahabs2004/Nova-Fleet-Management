@@ -58,6 +58,7 @@ const initialForm = {
 
   minimumGapMinutes: 30,
   futureRequestDays: 30,
+  backdateRequestDays: null as number | null,
   withdrawalAutoCloseHours: 24,
   startReminderMinutes: 60,
   sessionAbsoluteMinutes: 480,
@@ -576,6 +577,15 @@ function PolicyStep({ form, set }: { form: Form; set: Setter }) {
           <Field label="حداکثر بازه آینده درخواست (روز)">
             <input className="input" type="number" dir="ltr" value={form.futureRequestDays} onChange={(e) => set('futureRequestDays')(Number(e.target.value))} />
           </Field>
+          <Field label="بازه مجاز ثبت در گذشته" hint="ثبت با اخطار و در انتظار تأیید مدیر ناوگان؛ تعداد روز بر اساس تقویم تهران.">
+            <select aria-label="بازه مجاز ثبت در گذشته" className="input" value={form.backdateRequestDays === null ? 'unlimited' : 'limited'} onChange={(e) => set('backdateRequestDays')(e.target.value === 'unlimited' ? null : 30)}>
+              <option value="unlimited">نامحدود</option>
+              <option value="limited">تعداد روز مشخص</option>
+            </select>
+          </Field>
+          {form.backdateRequestDays !== null && <Field label="حداکثر روزهای گذشته">
+            <input aria-label="حداکثر روزهای گذشته" className="input" type="number" min={1} step={1} dir="ltr" value={form.backdateRequestDays} onChange={(e) => set('backdateRequestDays')(Number(e.target.value))} />
+          </Field>}
           <Field label="مهلت بسته‌شدن خودکار انصراف (ساعت)">
             <input className="input" type="number" dir="ltr" value={form.withdrawalAutoCloseHours} onChange={(e) => set('withdrawalAutoCloseHours')(Number(e.target.value))} />
           </Field>
@@ -670,6 +680,7 @@ function SummaryStep({ form }: { form: Form }) {
       <section>
         <h3 className="mb-1 text-sm font-bold text-emerald-950">قواعد و ظاهر</h3>
         <Row label="فاصله مأموریت / بازه آینده" value={`${form.minimumGapMinutes} دقیقه / ${form.futureRequestDays} روز`} />
+        <Row label="بازه ثبت در گذشته" value={form.backdateRequestDays === null ? 'نامحدود' : `${form.backdateRequestDays} روز`} />
         <Row label="نشست" value={`${form.sessionAbsoluteMinutes} دقیقه عمر، ${form.sessionIdleMinutes} دقیقه بی‌فعالیتی`} />
         <Row label="کاغذ گزارش / سطح لاگ" value={`${form.reportPaperSize} / ${form.logLevel}`} />
       </section>
@@ -723,6 +734,7 @@ function buildPayload(form: Form) {
     rules: {
       minimumGapMinutes: form.minimumGapMinutes,
       futureRequestDays: form.futureRequestDays,
+      backdateRequestDays: form.backdateRequestDays,
       withdrawalAutoCloseHours: form.withdrawalAutoCloseHours,
       startReminderMinutes: form.startReminderMinutes,
     },

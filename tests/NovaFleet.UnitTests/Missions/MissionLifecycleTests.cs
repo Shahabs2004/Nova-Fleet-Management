@@ -101,14 +101,124 @@ public sealed class MissionLifecycleTests : MissionTestBase
         Assert.Equal("1405-0002", second.MissionNumber);
     }
 
-    [Fact]
-    public async Task CreateAsync_RejectsStartFarInThePast()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-800)]
+    public async Task CreateAsync_AllowsUnlimitedPastAndStoresPendingBadge(int day)
     {
         var service = ServiceFor(MissionAdmin());
+        var created = await service.CreateAsync(Request(Hour(day, 6), Hour(day, 9)));
 
-        var error = await Assert.ThrowsAsync<ValidationAppException>(
-            () => service.CreateAsync(Request(Hour(0, 6), Hour(0, 9))));
-        Assert.Contains("گذشته", error.Message);
+        Assert.Equal(MissionStatus.Pending, created.Status);
+        Assert.True(created.IsBackdated);
+        Assert.True(Reload(created.Id).IsBackdated);
+        Assert.Null(created.ApprovedAtUtc);
+        Assert.Null(created.ActualEndAtUtc);
+        var list = await service.SearchAsync(new MissionQuery(null, null, null, null, null, null, null, null, false, 1, 20));
+        Assert.True(Assert.Single(list.Items).IsBackdated);
+    }
+
+    [Theory]
+    [InlineData(-1, 0, true)]
+    [InlineData(-1, 23, true)]
+    [InlineData(-2, 23, false)]
+    public async Task CreateAsync_UsesInclusiveTehranCalendarDayLimit(int day, int hour, bool allowed)
+    {
+        Settings.Values[SettingKeys.BackdateRequestDays] = "1";
+        var start = Hour(day, hour);
+        var service = ServiceFor(MissionAdmin());
+        if (allowed)
+        {
+            var created = await service.CreateAsync(Request(start, start.AddHours(1)));
+            Assert.True(created.IsBackdated);
+        }
+        else
+        {
+            var error = await Assert.ThrowsAsync<ValidationAppException>(() => service.CreateAsync(Request(start, start.AddHours(1))));
+            Assert.Contains("1 روز گذشته", error.Message);
+            Assert.Empty(Db.Missions);
+        }
+    }
+
+    [Fact]
+    public async Task CreateAsync_AllowsStartedButNotYetEndedMission()
+    {
+        var created = await ServiceFor(MissionAdmin()).CreateAsync(Request(Hour(0, 6), Hour(0, 12)));
+        Assert.True(created.IsBackdated);
+        Assert.Equal(MissionStatus.Pending, created.Status);
+    }
+
+    [Fact]
+    public async Task CreateAsync_FutureMissionDoesNotAcquireBadgeAsTimePasses()
+    {
+        var created = await CreatePendingAsync();
+        Clock.NowUtc = Hour(2, 8);
+        var service = ServiceFor(MissionAdmin());
+        var details = await service.GetAsync(created.Id);
+        Assert.False(details.IsBackdated);
+        var edited = await service.UpdatePendingAsync(created.Id, ValidRequest() with { Title = "عنوان اصلاح‌شده" });
+        Assert.False(edited.IsBackdated);
+    }
+
+    [Fact]
+    public async Task UpdatePendingAsync_RecomputesBadgeWhenDatesChangeAndEnforcesLimit()
+    {
+        var created = await CreatePendingAsync();
+        var service = ServiceFor(MissionAdmin());
+        var past = await service.UpdatePendingAsync(created.Id, Request(Hour(-1, 6), Hour(-1, 9)));
+        Assert.True(past.IsBackdated);
+        Assert.Equal(MissionStatus.Pending, past.Status);
+        Assert.True(Reload(created.Id).IsBackdated);
+        Settings.Values[SettingKeys.BackdateRequestDays] = "1";
+        await Assert.ThrowsAsync<ValidationAppException>(() => service.UpdatePendingAsync(created.Id, Request(Hour(-2, 6), Hour(-2, 9))));
+        Assert.Equal(Hour(-1, 6), Reload(created.Id).PlannedStartAtUtc);
+        var future = await service.UpdatePendingAsync(created.Id, ValidRequest());
+        Assert.False(future.IsBackdated);
+    }
+
+    [Fact]
+    public async Task BackdatedMission_RequiresApprovalBeforeAutomaticLifecycle()
+    {
+        var requester = ServiceFor(User(RequesterUsername, PermissionCatalog.Missions.Create));
+        var created = await requester.CreateAsync(Request(Hour(-1, 6), Hour(-1, 9)));
+        var (driver, vehicle) = SaveReadyResources();
+        await Assert.ThrowsAsync<ForbiddenAppException>(() => requester.ApproveAsync(created.Id, new MissionApprovalRequest(driver.Id, vehicle.Id, null)));
+        var entity = await Db.Missions.SingleAsync(m => m.Id == created.Id);
+        Assert.Throws<InvalidOperationException>(() => entity.StartAutomatically(Clock.UtcNow));
+        var approved = await ServiceFor(User(ApproverUsername, PermissionCatalog.Missions.Approve))
+            .ApproveAsync(created.Id, new MissionApprovalRequest(driver.Id, vehicle.Id, null));
+        Assert.Equal(MissionStatus.Confirmed, approved.Status);
+        Assert.True(approved.IsBackdated);
+        Assert.Equal(ApproverUsername, approved.ApprovedBy);
+        Assert.False(Sms.QueuedFor(created.Id, SmsEventType.MissionStartReminder));
+        entity.StartAutomatically(Clock.UtcNow);
+        entity.CompleteAutomatically(Clock.UtcNow);
+        await Db.SaveChangesAsync();
+        var completed = Reload(created.Id);
+        Assert.Equal(MissionStatus.Completed, completed.Status);
+        Assert.True(completed.IsBackdated);
+        Assert.Equal(Hour(-1, 6), completed.ActualStartAtUtc);
+        Assert.Equal(Hour(-1, 9), completed.ActualEndAtUtc);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ApproveAsync_RejectsHistoricalOverlapWithCompletedDriverOrVehicle(bool sameDriver)
+    {
+        var resources = SaveReadyResources();
+        var prior = await ConfirmAsync(resources, Hour(-1, 10), Hour(-1, 14));
+        var entity = await Db.Missions.SingleAsync(m => m.Id == prior.Id);
+        entity.StartAutomatically(Clock.UtcNow);
+        entity.CompleteAutomatically(Clock.UtcNow);
+        await Db.SaveChangesAsync();
+        var other = SaveReadyResources();
+        var service = ServiceFor(MissionAdmin());
+        var created = await service.CreateAsync(Request(Hour(-1, 11), Hour(-1, 13)));
+        await Assert.ThrowsAsync<ConflictAppException>(() => service.ApproveAsync(created.Id, new MissionApprovalRequest(
+            sameDriver ? resources.Driver.Id : other.Driver.Id,
+            sameDriver ? other.Vehicle.Id : resources.Vehicle.Id, null)));
+        Assert.Equal(MissionStatus.Pending, Reload(created.Id).Status);
     }
 
     [Fact]
