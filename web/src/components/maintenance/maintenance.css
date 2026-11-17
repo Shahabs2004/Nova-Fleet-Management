@@ -23,12 +23,13 @@
 .maintenance .m-button-primary:hover:not(:disabled) { background: var(--m-blue); color: var(--m-bg); }
 .maintenance .m-button-danger { color: var(--m-danger); }
 .maintenance .m-header, .maintenance .m-toolbar, .maintenance .m-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.maintenance .m-header > *, .maintenance .m-row > * { min-width: 0; }
 .maintenance .m-header { margin-bottom: 24px; }
 .maintenance .m-toolbar { justify-content: flex-start; margin: 16px 0; }
 .maintenance .m-toolbar > input { flex: 1; min-width: 180px; }
 .maintenance .m-toolbar > select { width: auto; }
 .maintenance .m-kicker { font-size: 11px; letter-spacing: .08em; color: var(--m-cyan); margin-bottom: 8px; }
-.maintenance .m-panel { background: var(--m-panel); border: 1px solid var(--m-line); border-radius: 14px; padding: 20px; }
+.maintenance .m-panel { background: var(--m-panel); border: 1px solid var(--m-line); border-radius: 14px; padding: 20px; overflow-wrap: anywhere; }
 .maintenance .m-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
 .maintenance .m-stat { border: 1px solid var(--m-line); border-radius: 12px; padding: 16px; background: var(--m-panel); }
 .maintenance .m-stat span { color: var(--m-muted); font-size: 12px; }
