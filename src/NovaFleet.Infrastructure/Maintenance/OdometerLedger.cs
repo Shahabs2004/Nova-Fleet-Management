@@ -105,7 +105,11 @@ internal static class OdometerLedger
         {
             var min = group.MinBy(r => r.Kilometers)!;
             var max = group.MaxBy(r => r.Kilometers)!;
-            if (min.Kilometers != max.Kilometers)
+            // Service readings carry a date-only timestamp (the time of service is irrelevant), so
+            // several visits sharing a timestamp are a km-ordered progression, not simultaneous
+            // conflicting readings. Only a real-time reading anchors a genuine instant where differing
+            // km is a true conflict. Cross-timestamp backwards detection below is unchanged.
+            if (min.Kilometers != max.Kilometers && group.Any(r => r.SourceKind != "maintenance"))
             {
                 severity += (decimal)max.Kilometers - min.Kilometers;
                 foreach (var reading in group) conflicts.Add(reading.Id);

@@ -221,6 +221,29 @@ public sealed class MaintenanceServiceTests : MissionTestBase
             new OdometerInput(Guid.NewGuid(), Clock.UtcNow.AddDays(1), 1000, 0, null), Ct));
     }
 
+    [Fact]
+    public async Task SameDayServicesWithIncreasingMileageAreNotFalseConflicts()
+    {
+        var (vehicle, template) = await SetupAsync();
+        // Two services on the same day whose date-only timestamps collide (service time is irrelevant).
+        // Increasing mileage is a valid progression, not a simultaneous-reading conflict.
+        await Manager.SaveRecordAsync(vehicle, null, Input(template, 1000), Ct);
+        await Manager.SaveRecordAsync(vehicle, null, Input(template, 1050), Ct);
+        var summary = await Manager.OdometerAsync(vehicle, Ct);
+        Assert.False(summary.HasConflicts);
+        Assert.Equal(1050L, summary.CurrentKm);
+    }
+
+    [Fact]
+    public async Task SameDayServiceBelowEarlierReadingStillFlagsBackwardsConflict()
+    {
+        var (vehicle, template) = await SetupAsync();
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-10, 8), 2000, 0, null), Ct);
+        // A later-dated service whose mileage is below the earlier reading is a genuine backwards conflict.
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.SaveRecordAsync(vehicle, null,
+            Input(template, 1500) with { PerformedAtUtc = Hour(-5, 8) }, Ct));
+    }
+
     [Theory]
     [InlineData(1403, 6, 31, 1, "1403/07/30")]
     [InlineData(1403, 6, 31, 6, "1403/12/30")]

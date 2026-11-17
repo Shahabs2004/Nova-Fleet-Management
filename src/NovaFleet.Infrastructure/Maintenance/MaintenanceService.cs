@@ -70,7 +70,7 @@ public sealed partial class MaintenanceService(NovaFleetDbContext db, ICurrentUs
             .OrderByDescending(r => r.ObservedAtUtc).ThenByDescending(r => r.Kilometers).FirstOrDefault();
         return new OdometerSummary(conflicts.Count == 0 ? latest?.Kilometers : null, latest?.ObservedAtUtc,
             latest?.IsTimeEstimated ?? false, conflicts.Count > 0,
-            readings.OrderByDescending(r => r.ObservedAtUtc).Select(r => ToOdometer(r, conflicts.Contains(r.Id))).ToList());
+            readings.OrderByDescending(r => r.ObservedAtUtc).ThenByDescending(r => r.Kilometers).Select(r => ToOdometer(r, conflicts.Contains(r.Id))).ToList());
     }
 
     private static OdometerDto ToOdometer(VehicleOdometerReading r, bool conflict = false) =>
