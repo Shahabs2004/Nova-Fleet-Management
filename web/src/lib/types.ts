@@ -161,7 +161,7 @@ export interface DashboardStats {
   failedSms: number
   missionsThisMonth: number
   distanceThisMonthKm: number
-  missionsByDay: { label: string; value: number }[]
+  missionsByDay: { label: string; value: number; isToday: boolean }[]
   driverWorkload: { name: string; value: number }[]
   vehicleStatuses: { label: string; value: number }[]
   upcomingMissions: MissionListItem[]

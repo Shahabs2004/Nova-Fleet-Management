@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { faNumber, formatFaDateTime, toFa } from '../lib/date'
@@ -16,6 +16,8 @@ export function DashboardPage() {
 
   if (isLoading) return <Spinner />
   if (!data) return null
+
+  const today = data.missionsByDay.find((point) => point.isToday)
 
   return (
     <div>
@@ -77,10 +79,10 @@ export function DashboardPage() {
       <div className="mt-5 grid gap-5 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-emerald-950">مأموریت‌های دو هفته گذشته و آینده</h2>
+            <h2 className="text-sm font-bold text-emerald-950">مأموریت‌های یک هفته گذشته و یک هفته آینده</h2>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={data.missionsByDay} margin={{ top: 4, right: 8, left: 8, bottom: 0 }}>
+            <AreaChart data={data.missionsByDay} margin={{ top: 24, right: 8, left: 8, bottom: 0 }}>
               <defs>
                 <linearGradient id="missionGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#14B8A6" stopOpacity={0.35} />
@@ -88,13 +90,18 @@ export function DashboardPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-              <XAxis dataKey="label" tickFormatter={(v: string) => toFa(v)} tick={{ fontSize: 10, fill: '#94A3B8' }} reversed axisLine={false} tickLine={false} />
+              <XAxis dataKey="label" tickFormatter={(v: string) => toFa(v.slice(5))} tick={{ fontSize: 10, fill: '#94A3B8', direction: 'ltr' }} reversed axisLine={false} tickLine={false} />
               <YAxis orientation="right" tickFormatter={(v: number) => toFa(v)} tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={false} width={34} />
               <Tooltip
                 contentStyle={{ direction: 'rtl', borderRadius: 12, border: '1px solid #E2E8F0', fontSize: 12 }}
                 labelStyle={{ fontWeight: 700 }}
+                labelFormatter={(label) => <span dir="ltr">{toFa(String(label))}</span>}
+                formatter={(value) => [faNumber(Number(value)), 'مأموریت']}
               />
               <Area type="monotone" dataKey="value" name="مأموریت" stroke="#0F766E" strokeWidth={2.5} fill="url(#missionGradient)" />
+              {today && (
+                <ReferenceLine x={today.label} stroke="#D97706" strokeWidth={2} strokeDasharray="5 4" label={{ value: 'امروز', position: 'top', fill: '#92400E', fontSize: 12 }} />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>

@@ -4,6 +4,8 @@ namespace NovaFleet.Application.Dashboard;
 
 public sealed record DashboardChartPointDto(string Label, double Value);
 
+public sealed record DashboardMissionDayDto(string Label, double Value, bool IsToday);
+
 public sealed record DashboardWorkloadDto(string Name, double Value);
 
 public sealed record DashboardStatsDto(
@@ -16,7 +18,7 @@ public sealed record DashboardStatsDto(
     int FailedSms,
     int MissionsThisMonth,
     long DistanceThisMonthKm,
-    IReadOnlyList<DashboardChartPointDto> MissionsByDay,
+    IReadOnlyList<DashboardMissionDayDto> MissionsByDay,
     IReadOnlyList<DashboardWorkloadDto> DriverWorkload,
     IReadOnlyList<DashboardChartPointDto> VehicleStatuses,
     IReadOnlyList<MissionListItemDto> UpcomingMissions);

@@ -120,19 +120,22 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
             failedSms = await db.SmsQueueItems.CountAsync(item => item.Status == SmsQueueStatus.Failed || item.Status == SmsQueueStatus.PermanentFailure, cancellationToken);
         }
 
-        var missionsByDay = new List<DashboardChartPointDto>();
+        var missionsByDay = new List<DashboardMissionDayDto>();
         if (currentUser.Has(PermissionCatalog.Missions.View) || currentUser.Has(PermissionCatalog.Missions.ViewOwn))
         {
-            var windowStart = JalaliDate.StartOfTehranDayUtc(JalaliDate.YearOf(now), JalaliDate.MonthOf(now), JalaliDate.DayOf(now)).AddDays(-13);
-            var byDay = await db.Missions.AsNoTracking()
-                .Where(item => item.PlannedStartAtUtc >= windowStart)
+            var today = JalaliDate.StartOfTehranDayUtc(JalaliDate.YearOf(now), JalaliDate.MonthOf(now), JalaliDate.DayOf(now));
+            var windowStart = today.AddDays(-7);
+            var windowEnd = today.AddDays(8);
+            var starts = await db.Missions.AsNoTracking()
+                .Where(item => item.PlannedStartAtUtc >= windowStart && item.PlannedStartAtUtc < windowEnd)
+                .Select(item => item.PlannedStartAtUtc)
                 .ToListAsync(cancellationToken);
-            for (var day = 0; day < 14; day++)
+            for (var day = 0; day < 15; day++)
             {
                 var dayStart = windowStart.AddDays(day);
                 var dayEnd = dayStart.AddDays(1);
-                var label = JalaliDate.FormatDate(dayStart)[^5..];
-                missionsByDay.Add(new DashboardChartPointDto(label, byDay.Count(item => item.PlannedStartAtUtc >= dayStart && item.PlannedStartAtUtc < dayEnd)));
+                missionsByDay.Add(new DashboardMissionDayDto(JalaliDate.FormatDate(dayStart),
+                    starts.Count(start => start >= dayStart && start < dayEnd), dayStart == today));
             }
         }
 
