@@ -22,7 +22,7 @@ function ReadingEditor({ vehicleId, reading, onClose, onSaved }: { vehicleId: st
   const [busy, setBusy] = useState(false)
   return <MaintenanceDialog title={reading ? 'اصلاح قرائت کیلومتر' : 'ثبت کیلومتر فعلی'} onClose={onClose}>
     <form className="m-form" onSubmit={async e => {
-      e.preventDefault(); setError(''); if (!date) { setError('زمان قرائت الزامی است.'); return }
+      e.preventDefault(); setError(''); if (!date) { setError('تاریخ قرائت الزامی است.'); return }
       setBusy(true)
       try {
         const body = { requestId, observedAtUtc: date, kilometers: Number(km), version: reading?.version ?? 0, reason: reading ? reason : null }
@@ -31,7 +31,7 @@ function ReadingEditor({ vehicleId, reading, onClose, onSaved }: { vehicleId: st
         await onSaved(); onClose()
       } catch (err) { setError(err instanceof Error ? err.message : 'ذخیره ناموفق بود.') } finally { setBusy(false) }
     }}>
-      <DateField label="زمان قرائت" value={date} onChange={setDate} disabled={!!reading?.sourceKind.startsWith('mission-')} />
+      <DateField label="تاریخ قرائت" value={date} onChange={setDate} withTime={false} disabled={!!reading?.sourceKind.startsWith('mission-')} />
       <Field label="کیلومتر شمارنده"><input required type="number" min={0} max={999999999} value={km} onChange={e => setKm(e.target.value)} /></Field>
       {reading && <Field label="دلیل اصلاح"><textarea required maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></Field>}
       <Notice>کیلومتر با تمام سوابق قبل و بعد کنترل می‌شود. تعویض یا صفرشدن شمارنده در این نسخه پشتیبانی نمی‌شود.</Notice>

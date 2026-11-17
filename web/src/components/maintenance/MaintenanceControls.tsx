@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { JalaliDateField, type JalaliDateValue } from '../JalaliDateField'
-import { jalaliHourToUtcUtc, jalaliOf, tehranHour, todayJalali, toFa } from '../../lib/date'
+import { faNumber, jalaliHourToUtcUtc, jalaliOf, tehranHour, todayJalali, toFa } from '../../lib/date'
 import { stateLabels } from '../../lib/maintenance'
 
 export function MaintenanceDialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
@@ -14,6 +14,16 @@ export function MaintenanceDialog({ title, onClose, children }: { title: string;
 }
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return <label className="m-field"><span>{label}</span>{children}{hint && <small>{hint}</small>}</label>
+}
+const FA = '۰۱۲۳۴۵۶۷۸۹'
+const AR = '٠١٢٣٤٥٦٧٨٩'
+export function MoneyInput({ value, onChange, required = false, max = 999999999999, label }: { value: number; onChange: (value: number) => void; required?: boolean; max?: number; label?: string }) {
+  return <input type="text" inputMode="numeric" required={required} aria-label={label} value={faNumber(value)}
+    onFocus={e => e.target.select()}
+    onChange={e => {
+      const digits = e.target.value.replace(/[۰-۹]/g, d => String(FA.indexOf(d))).replace(/[٠-٩]/g, d => String(AR.indexOf(d))).replace(/\D/g, '')
+      onChange(digits === '' ? 0 : Math.min(max, Number(digits)))
+    }} />
 }
 export function DateField({ label, value, onChange, withTime = true, disabled = false }: { label: string; value: string | null; onChange: (value: string | null) => void; withTime?: boolean; disabled?: boolean }) {
   const parts = value ? jalaliOf(new Date(value)) : null

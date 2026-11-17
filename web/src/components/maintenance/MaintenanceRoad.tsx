@@ -39,7 +39,7 @@ export function MaintenanceRoad({ vehicle, records, onRecord, onSchedule, hasMor
         <img className="m-pixel m-road-sign" src={pixelAsset('road-sign', 'scenery')} width={48} height={72} alt="" />
         {breaks.map(b => <div className="m-axis-break" key={b.high} style={{ top: b.y }}>شکست مقیاس · {faNumber(b.low)} تا {faNumber(b.high)} کیلومتر</div>)}
         {positioned.map(({ event: e, side, y: top }) => <button key={e.id} className="m-road-event" data-side={side} data-future={!!e.schedule} style={{ top }} onClick={() => e.record ? onRecord(e.record.id) : onSchedule(e.schedule!)}>
-          <img className="m-pixel" src={pixelAsset(e.asset)} alt="" /><strong>{e.title}</strong><span>{faNumber(e.km)} کیلومتر</span><small>{e.date ? formatFaDate(e.date) : 'بدون موعد زمانی'}</small>{e.schedule && <StateBadge state={e.schedule.state} />}
+          <img className="m-icon" src={pixelAsset(e.asset)} alt="" /><strong>{e.title}</strong><span>{faNumber(e.km)} کیلومتر</span><small>{e.date ? formatFaDate(e.date) : 'بدون موعد زمانی'}</small>{e.schedule && <StateBadge state={e.schedule.state} />}
         </button>)}
         {vehicle.currentKm !== null && <div className="m-road-current" ref={car} style={{ top: positions.get(vehicle.currentKm) }}><img className="m-pixel" src={pixelAsset('vehicle-top', 'vehicles')} alt="موقعیت فعلی خودرو" /><span>{faNumber(vehicle.currentKm)} کیلومتر</span></div>}
         {kilometers.length === 0 && <div className="m-road-empty"><img className="m-pixel" src={pixelAsset('vehicle-top', 'vehicles')} width={64} height={128} alt="" /><p>برای شروع مسیر، کیلومتر یا سرویس ثبت کنید.</p></div>}

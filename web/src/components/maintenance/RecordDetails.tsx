@@ -19,7 +19,7 @@ export function RecordDetails({ vehicleId, id, onClose, onEdit, onSaved }: { veh
     {query.isLoading && <Notice>در حال دریافت سرویس…</Notice>}{query.error && <Notice error>{query.error.message}</Notice>}
     {r && <div className="m-form"><div className="m-row"><strong>{formatFaDate(r.performedAtUtc)}</strong><span>{faNumber(r.odometerKm)} کیلومتر</span>{r.isVoided && <span className="m-state m-state-due">باطل‌شده</span>}</div>
       <p>تعمیرگاه: {r.workshop || 'ثبت نشده'} · ثبت‌کننده: {r.createdBy}</p>
-      {r.items.map((item, i) => <section className="m-panel" key={item.id ?? i}><div className="m-row"><h3>{item.name}</h3><img className="m-pixel" src={pixelAsset(item.assetKey ?? 'general-service')} width={48} height={48} alt="" /></div>
+      {r.items.map((item, i) => <section className="m-panel" key={item.id ?? i}><div className="m-row"><h3>{item.name}</h3><img className="m-icon" src={pixelAsset(item.assetKey ?? 'general-service')} width={48} height={48} alt="" /></div>
         <p>اجرت: {faNumber(item.laborCostToman)} تومان</p>
         <div className="m-table-wrap"><table><thead><tr><th>قطعه / مشخصات</th><th>تعداد</th><th>قیمت واحد</th><th>ضمانت تا</th></tr></thead><tbody>{item.parts.map((p, pi) => <tr key={p.id ?? pi}><td>{p.name}<small className="block">{p.specification}</small></td><td>{faNumber(p.quantity)}</td><td>{faNumber(p.unitCostToman)} تومان</td><td>{p.warrantyUntil ? formatFaDate(`${p.warrantyUntil}T08:00:00Z`) : '—'}</td></tr>)}</tbody></table></div>
       </section>)}

@@ -1,6 +1,14 @@
 {
-  "status": "provisional",
+  "status": "mixed",
   "sourceSha256": "a3d3176f2e0ed15d181db2b60021b7f3ef588090cc5edc43ea2a62c328391944",
+  "sourceSha256Scope": "pixel-art assets only (vehicles, scenery, road); service icons come from the pack below",
+  "serviceIconPack": {
+    "name": "Car Parts Service",
+    "source": "Flaticon (free license)",
+    "nativeSize": 128,
+    "license": "docs/licenses/flaticon-car-parts-service-license.html",
+    "attribution": "Service icons from Flaticon (www.flaticon.com), free license requiring attribution"
+  },
   "assets": [
     {
       "name": "vehicle-top",
@@ -29,186 +37,972 @@
       ]
     },
     {
-      "name": "oil-can",
-      "path": "maintenance/oil-can.png",
-      "width": 32,
-      "height": 32,
+      "name": "001-spare-parts",
+      "path": "maintenance/001-spare-parts.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        52,
-        299,
-        218,
-        485
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "oil-spill",
-      "path": "maintenance/oil-spill.png",
-      "width": 48,
-      "height": 32,
+      "name": "002-spare-parts-1",
+      "path": "maintenance/002-spare-parts-1.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        255,
-        315,
-        476,
-        480
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "oil-filter",
-      "path": "maintenance/oil-filter.png",
-      "width": 32,
-      "height": 32,
+      "name": "003-brake",
+      "path": "maintenance/003-brake.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        520,
-        307,
-        664,
-        485
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "air-filter",
-      "path": "maintenance/air-filter.png",
-      "width": 32,
-      "height": 32,
+      "name": "004-damper",
+      "path": "maintenance/004-damper.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        707,
-        304,
-        943,
-        485
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "old-tire",
-      "path": "maintenance/old-tire.png",
-      "width": 32,
-      "height": 32,
+      "name": "005-service",
+      "path": "maintenance/005-service.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        980,
-        300,
-        1205,
-        491
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "old-brake-pad",
-      "path": "maintenance/old-brake-pad.png",
-      "width": 32,
-      "height": 32,
+      "name": "006-disc-brake",
+      "path": "maintenance/006-disc-brake.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        1250,
-        304,
-        1475,
-        497
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "old-battery",
-      "path": "maintenance/old-battery.png",
-      "width": 32,
-      "height": 32,
+      "name": "007-spare-part",
+      "path": "maintenance/007-spare-part.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        32,
-        525,
-        217,
-        710
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "timing-belt",
-      "path": "maintenance/timing-belt.png",
-      "width": 32,
-      "height": 32,
+      "name": "008-mechanic",
+      "path": "maintenance/008-mechanic.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        232,
-        540,
-        416,
-        710
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "engine",
-      "path": "maintenance/engine.png",
-      "width": 48,
-      "height": 48,
+      "name": "009-clutch-disc",
+      "path": "maintenance/009-clutch-disc.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        425,
-        508,
-        618,
-        720
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "transmission",
-      "path": "maintenance/transmission.png",
-      "width": 48,
-      "height": 32,
+      "name": "010-engine",
+      "path": "maintenance/010-engine.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        620,
-        548,
-        842,
-        708
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "radiator",
-      "path": "maintenance/radiator.png",
-      "width": 32,
-      "height": 32,
+      "name": "011-car-suspension",
+      "path": "maintenance/011-car-suspension.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        848,
-        533,
-        1017,
-        710
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "electrical",
-      "path": "maintenance/electrical.png",
-      "width": 32,
-      "height": 32,
+      "name": "012-grid",
+      "path": "maintenance/012-grid.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        1025,
-        529,
-        1198,
-        710
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "inspection",
-      "path": "maintenance/inspection.png",
-      "width": 32,
-      "height": 32,
+      "name": "013-machine",
+      "path": "maintenance/013-machine.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        1207,
-        532,
-        1335,
-        710
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
-      "name": "general-service",
-      "path": "maintenance/general-service.png",
-      "width": 32,
-      "height": 32,
+      "name": "014-door",
+      "path": "maintenance/014-door.png",
+      "width": 128,
+      "height": 128,
       "transparent": true,
-      "sourceCrop": [
-        1354,
-        545,
-        1508,
-        710
-      ]
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "015-car-engine",
+      "path": "maintenance/015-car-engine.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "016-transportation",
+      "path": "maintenance/016-transportation.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "017-battery",
+      "path": "maintenance/017-battery.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "018-battery-1",
+      "path": "maintenance/018-battery-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "019-spare-part-1",
+      "path": "maintenance/019-spare-part-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "020-service-1",
+      "path": "maintenance/020-service-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "021-car-battery",
+      "path": "maintenance/021-car-battery.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "022-car-lights",
+      "path": "maintenance/022-car-lights.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "023-spare-part-2",
+      "path": "maintenance/023-spare-part-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "024-disc-brake-1",
+      "path": "maintenance/024-disc-brake-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "025-steering-wheel",
+      "path": "maintenance/025-steering-wheel.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "026-engine-1",
+      "path": "maintenance/026-engine-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "027-piston",
+      "path": "maintenance/027-piston.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "028-rudder",
+      "path": "maintenance/028-rudder.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "029-car-parts",
+      "path": "maintenance/029-car-parts.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "030-tools",
+      "path": "maintenance/030-tools.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "031-piston-1",
+      "path": "maintenance/031-piston-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "032-car-engine-1",
+      "path": "maintenance/032-car-engine-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "033-motor",
+      "path": "maintenance/033-motor.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "034-engine-2",
+      "path": "maintenance/034-engine-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "035-brake-1",
+      "path": "maintenance/035-brake-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "036-car-parts-1",
+      "path": "maintenance/036-car-parts-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "037-air-conditioner",
+      "path": "maintenance/037-air-conditioner.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "038-car-parts-2",
+      "path": "maintenance/038-car-parts-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "039-car-parts-3",
+      "path": "maintenance/039-car-parts-3.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "040-car-parts-4",
+      "path": "maintenance/040-car-parts-4.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "041-multimeter",
+      "path": "maintenance/041-multimeter.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "042-motor-1",
+      "path": "maintenance/042-motor-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "043-filter",
+      "path": "maintenance/043-filter.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "044-drive",
+      "path": "maintenance/044-drive.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "045-motor-2",
+      "path": "maintenance/045-motor-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "046-safety-seat",
+      "path": "maintenance/046-safety-seat.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "047-engine-3",
+      "path": "maintenance/047-engine-3.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "048-wheel",
+      "path": "maintenance/048-wheel.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "049-gearbox",
+      "path": "maintenance/049-gearbox.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "050-filter-1",
+      "path": "maintenance/050-filter-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "051-suspension",
+      "path": "maintenance/051-suspension.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "052-gas-tank",
+      "path": "maintenance/052-gas-tank.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "053-car-door",
+      "path": "maintenance/053-car-door.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "054-side-mirror",
+      "path": "maintenance/054-side-mirror.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "055-manual-transmission",
+      "path": "maintenance/055-manual-transmission.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "056-battery-2",
+      "path": "maintenance/056-battery-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "057-windshield",
+      "path": "maintenance/057-windshield.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "058-headlights",
+      "path": "maintenance/058-headlights.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "059-gas-station",
+      "path": "maintenance/059-gas-station.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "060-fender",
+      "path": "maintenance/060-fender.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "061-spring",
+      "path": "maintenance/061-spring.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "062-clutch",
+      "path": "maintenance/062-clutch.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "063-exhaust-pipe",
+      "path": "maintenance/063-exhaust-pipe.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "064-car-seat",
+      "path": "maintenance/064-car-seat.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "065-fuel",
+      "path": "maintenance/065-fuel.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "066-washer",
+      "path": "maintenance/066-washer.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "067-car",
+      "path": "maintenance/067-car.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "068-car-key",
+      "path": "maintenance/068-car-key.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "069-brake-pad",
+      "path": "maintenance/069-brake-pad.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "070-car-parts-5",
+      "path": "maintenance/070-car-parts-5.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "071-car-door-1",
+      "path": "maintenance/071-car-door-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "072-car-mirror",
+      "path": "maintenance/072-car-mirror.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "073-car-radiator",
+      "path": "maintenance/073-car-radiator.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "074-car-1",
+      "path": "maintenance/074-car-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "075-bumper-car",
+      "path": "maintenance/075-bumper-car.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "076-wheel-alignment",
+      "path": "maintenance/076-wheel-alignment.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "077-bearing",
+      "path": "maintenance/077-bearing.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "078-car-door-2",
+      "path": "maintenance/078-car-door-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "079-key",
+      "path": "maintenance/079-key.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "080-sound",
+      "path": "maintenance/080-sound.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "081-side-mirror-1",
+      "path": "maintenance/081-side-mirror-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "082-headlight",
+      "path": "maintenance/082-headlight.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "083-cogwheel",
+      "path": "maintenance/083-cogwheel.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "084-oil-filter",
+      "path": "maintenance/084-oil-filter.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "085-fuel-1",
+      "path": "maintenance/085-fuel-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "086-fuel-2",
+      "path": "maintenance/086-fuel-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "087-automotive",
+      "path": "maintenance/087-automotive.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "088-vehicle",
+      "path": "maintenance/088-vehicle.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "089-automotive-1",
+      "path": "maintenance/089-automotive-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "090-automotive-2",
+      "path": "maintenance/090-automotive-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "091-automotive-3",
+      "path": "maintenance/091-automotive-3.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "092-automotive-4",
+      "path": "maintenance/092-automotive-4.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "093-service-2",
+      "path": "maintenance/093-service-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "094-car-light-bulb",
+      "path": "maintenance/094-car-light-bulb.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "095-exhaust-pipe-1",
+      "path": "maintenance/095-exhaust-pipe-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "096-chain",
+      "path": "maintenance/096-chain.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "097-automotive-5",
+      "path": "maintenance/097-automotive-5.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "098-battery-3",
+      "path": "maintenance/098-battery-3.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "099-battery-4",
+      "path": "maintenance/099-battery-4.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "100-dashboard-interface",
+      "path": "maintenance/100-dashboard-interface.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "101-cooling-fan",
+      "path": "maintenance/101-cooling-fan.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "102-throttle-plate",
+      "path": "maintenance/102-throttle-plate.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "103-spark-plug",
+      "path": "maintenance/103-spark-plug.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "104-disc-brake-2",
+      "path": "maintenance/104-disc-brake-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "105-mechanic-1",
+      "path": "maintenance/105-mechanic-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "106-engine-4",
+      "path": "maintenance/106-engine-4.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "107-wheel-alignment-1",
+      "path": "maintenance/107-wheel-alignment-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "108-mechanic-2",
+      "path": "maintenance/108-mechanic-2.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "109-abs-light",
+      "path": "maintenance/109-abs-light.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "110-engine-5",
+      "path": "maintenance/110-engine-5.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "111-headlight-1",
+      "path": "maintenance/111-headlight-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "112-gasoline",
+      "path": "maintenance/112-gasoline.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "113-safety-belt",
+      "path": "maintenance/113-safety-belt.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "114-transport",
+      "path": "maintenance/114-transport.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "115-car-wash",
+      "path": "maintenance/115-car-wash.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "116-mechanic-3",
+      "path": "maintenance/116-mechanic-3.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "117-car-wash-1",
+      "path": "maintenance/117-car-wash-1.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "118-washing",
+      "path": "maintenance/118-washing.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "119-mechanic-4",
+      "path": "maintenance/119-mechanic-4.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "120-car-lift",
+      "path": "maintenance/120-car-lift.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
+    },
+    {
+      "name": "121-car-painting",
+      "path": "maintenance/121-car-painting.png",
+      "width": 128,
+      "height": 128,
+      "transparent": true,
+      "processing": "Car Parts Service pack (Flaticon), smooth 128x128"
     },
     {
       "name": "tree",

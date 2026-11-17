@@ -12,6 +12,12 @@
 .maintenance p { line-height: 1.9; }
 .maintenance small, .maintenance .m-muted { color: var(--m-muted); }
 .maintenance img.m-pixel, .maintenance .m-road { image-rendering: pixelated; }
+.maintenance img.m-icon { image-rendering: auto; }
+.maintenance .m-icon-search { margin-bottom: 8px; }
+.maintenance .m-icon-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; padding: 6px; border: 1px solid var(--m-line); border-radius: 10px; background: var(--m-bg); scrollbar-width: thin; scrollbar-color: var(--m-line) var(--m-bg); }
+.maintenance .m-icon-option { display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid var(--m-line); border-radius: 8px; background: var(--m-raised); cursor: pointer; }
+.maintenance .m-icon-option[aria-pressed="true"] { border-color: var(--m-cyan); box-shadow: 0 0 0 2px var(--m-cyan); }
+.maintenance .m-icon-option img { width: 40px; height: 40px; object-fit: contain; }
 .maintenance :is(button, a, input, select, textarea):focus-visible { outline: 3px solid var(--m-cyan); outline-offset: 3px; }
 .maintenance :is(input:not([type=checkbox]), select, textarea) { border: 1px solid var(--m-line); border-radius: 8px; background: var(--m-bg); color: var(--m-text); padding: 10px 12px; width: 100%; min-width: 0; font: inherit; font-size: 13px; }
 .maintenance input[type=checkbox] { accent-color: var(--m-cyan); width: 18px; height: 18px; }
