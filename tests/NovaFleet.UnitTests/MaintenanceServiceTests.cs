@@ -136,6 +136,43 @@ public sealed class MaintenanceServiceTests : MissionTestBase
     }
 
     [Fact]
+    public async Task FleetUnknownFilterPaginatesAcrossEvaluationBatches()
+    {
+        for (var i = 0; i < 51; i++) NewVehicle();
+        await Db.SaveChangesAsync();
+        var first = await Manager.FleetAsync(null, "unknown", 1, 12, Ct);
+        Assert.Equal(51, first.TotalCount);
+        Assert.Equal(12, first.Items.Count);
+        var ids = new List<Guid>();
+        for (var p = 1; p <= 5; p++)
+            ids.AddRange((await Manager.FleetAsync(null, "unknown", p, 12, Ct)).Items.Select(v => v.VehicleId));
+        Assert.Equal(51, ids.Count);
+        Assert.Equal(51, ids.Distinct().Count());
+        Assert.Equal(0, (await Manager.FleetAsync(null, "due", 1, 12, Ct)).TotalCount);
+        Assert.Equal(0, (await Manager.FleetAsync(null, "healthy", 1, 12, Ct)).TotalCount);
+    }
+
+    [Fact]
+    public async Task FleetStateFilterSeparatesDueHealthyAndUnknown()
+    {
+        var template = await Manager.SaveTemplateAsync(null, new TemplateInput("روغن", "روغن", "oil-can", 1000, null, 100, 30, true, 0), Ct);
+        async Task<Guid> VehicleWithKm(long? km)
+        {
+            var vehicle = NewVehicle();
+            await Db.SaveChangesAsync();
+            await Manager.SaveScheduleAsync(vehicle.Id, null, new ScheduleInput(template.Id, "روغن", 1000, null, 100, 30, 0L, Hour(-10, 8), true, 0), Ct);
+            if (km.HasValue) await Manager.SaveOdometerAsync(vehicle.Id, null, new OdometerInput(Guid.NewGuid(), Hour(-1, 8), km.Value, 0, null), Ct);
+            return vehicle.Id;
+        }
+        var due = await VehicleWithKm(2000);
+        var healthy = await VehicleWithKm(500);
+        var unknown = await VehicleWithKm(null);
+        Assert.Equal(due, (await Manager.FleetAsync(null, "due", 1, 12, Ct)).Items.Single().VehicleId);
+        Assert.Equal(healthy, (await Manager.FleetAsync(null, "healthy", 1, 12, Ct)).Items.Single().VehicleId);
+        Assert.Equal(unknown, (await Manager.FleetAsync(null, "unknown", 1, 12, Ct)).Items.Single().VehicleId);
+    }
+
+    [Fact]
     public async Task OperatorCannotCorrectOrManageTemplates()
     {
         var (vehicle, template) = await SetupAsync();

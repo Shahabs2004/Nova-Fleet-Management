@@ -117,10 +117,15 @@ public sealed partial class MaintenanceService
             var vehicles = await query.OrderBy(v => v.Brand).ThenBy(v => v.Id).Skip((p-1)*size).Take(size).ToListAsync(ct);
             return new PagedResult<MaintenanceVehicleDto>(await BuildVehiclesAsync(vehicles, ct), count, p, size);
         }
-        var filtered = (await BuildVehiclesAsync(await query.OrderBy(v => v.Brand).ThenBy(v => v.Id).ToListAsync(ct), ct))
-            .Where(v => state == "unknown" ? v.HasOdometerConflicts || v.CurrentKm is null || v.Schedules.Any(s => s.IsActive && s.State == "unknown")
+        var candidates = await query.OrderBy(v => v.Brand).ThenBy(v => v.Id).ToListAsync(ct);
+        var filtered = new List<MaintenanceVehicleDto>();
+        // تشخیص تعارض به تاریخچهٔ کامل هر خودرو نیاز دارد؛ ارزیابی دسته‌ای، اوج حافظه و
+        // اندازهٔ کوئری را به یک دسته محدود می‌کند، نه کل ناوگان منطبق با فیلتر.
+        foreach (var batch in candidates.Chunk(50))
+            filtered.AddRange((await BuildVehiclesAsync(batch, ct)).Where(v =>
+                state == "unknown" ? v.HasOdometerConflicts || v.CurrentKm is null || v.Schedules.Any(s => s.IsActive && s.State == "unknown")
                 : state == "healthy" ? !v.HasOdometerConflicts && v.CurrentKm.HasValue && v.DueCount == 0 && v.ApproachingCount == 0
-                : v.Schedules.Any(s => s.IsActive && s.State == state)).ToList();
+                : v.Schedules.Any(s => s.IsActive && s.State == state)));
         return new PagedResult<MaintenanceVehicleDto>(filtered.Skip((p-1)*size).Take(size).ToList(), filtered.Count, p, size);
     }
 
