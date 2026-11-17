@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { api } from '../../lib/api'
+import { useAuth } from '../../auth/AuthContext'
 import { faNumber } from '../../lib/date'
 import { maintenancePath, type Part, type Schedule, type ServiceItem, type ServiceRecord, type Template } from '../../lib/maintenance'
 import { DateField, Field, MaintenanceDialog, Notice } from './MaintenanceControls'
 
 const emptyItem = (): ServiceItem => ({ templateId: '', scheduleId: null, laborCostToman: 0, parts: [] })
 export function RecordEditor({ vehicleId, record, templates, schedules, onClose, onSaved }: { vehicleId: string; record?: ServiceRecord; templates: Template[]; schedules: Schedule[]; onClose: () => void; onSaved: (record: ServiceRecord) => Promise<void> }) {
+  const { can } = useAuth()
+  const canEditMileage = !record || can('maintenance.odometer.correct')
   const [requestId] = useState(() => crypto.randomUUID())
   const [date, setDate] = useState<string | null>(record?.performedAtUtc ?? new Date().toISOString())
   const [km, setKm] = useState(record?.odometerKm?.toString() ?? '')
@@ -31,8 +34,9 @@ export function RecordEditor({ vehicleId, record, templates, schedules, onClose,
         await onSaved(saved)
       } catch (err) { setError(err instanceof Error ? err.message : 'ثبت سرویس ناموفق بود.') } finally { setBusy(false) }
     }}>
-      <DateField label="تاریخ انجام سرویس" value={date} onChange={setDate} withTime={false} />
-      <div className="m-form-grid"><Field label="کیلومتر هنگام سرویس" hint="نامعلوم را خالی بگذارید؛ صفر یک مقدار واقعی است."><input type="number" min={0} max={999999999} value={km} onChange={e => setKm(e.target.value)} /></Field>
+      <DateField label="تاریخ انجام سرویس" value={date} onChange={setDate} withTime={false} disabled={!canEditMileage && record?.odometerKm != null} />
+      {!canEditMileage && <Notice>تغییر کیلومتر یا تاریخ قرائت ثبت‌شده، به مجوز اصلاح کیلومتر تاریخی نیاز دارد؛ هزینه و سایر جزئیات قابل اصلاح‌اند.</Notice>}
+      <div className="m-form-grid"><Field label="کیلومتر هنگام سرویس" hint="نامعلوم را خالی بگذارید؛ صفر یک مقدار واقعی است."><input type="number" min={0} max={999999999} value={km} disabled={!canEditMileage} onChange={e => setKm(e.target.value)} /></Field>
         <Field label="تعمیرگاه (اختیاری)"><input maxLength={200} value={workshop} onChange={e => setWorkshop(e.target.value)} /></Field></div>
       {items.map((item, index) => <section className="m-panel m-form" key={index} aria-label={`عملیات ${index + 1}`}>
         <div className="m-row"><h3>عملیات {faNumber(index + 1)}</h3><button type="button" className="m-button m-button-danger" disabled={items.length === 1} onClick={() => setItems(all => all.filter((_, i) => i !== index))}>حذف عملیات</button></div>

@@ -37,9 +37,15 @@ public sealed partial class MaintenanceService
     {
         var ids = records.Select(r => r.Id).ToArray();
         var readings = await db.VehicleOdometerReadings.AsNoTracking().Where(r => r.SourceKind == "maintenance" && ids.Contains(r.SourceId) && !r.IsVoided).ToDictionaryAsync(r => r.SourceId, ct);
+        var voidedIds = records.Where(r => r.IsVoided).Select(r => r.Id).ToArray();
+        var beforeVoid = await (from revision in db.MaintenanceRevisions.AsNoTracking()
+            join record in db.MaintenanceRecords.AsNoTracking() on revision.EntityId equals record.Id
+            where voidedIds.Contains(record.Id) && revision.EntityKind == "record" && revision.Version == record.Version - 1
+            select new { record.Id, revision.BeforeJson }).ToDictionaryAsync(r => r.Id, r => r.BeforeJson, ct);
         var attachments = await db.MaintenanceAttachments.AsNoTracking().Where(a => ids.Contains(a.RecordId))
             .Select(a => new { a.RecordId, Dto = new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Content.Length, a.UploadedBy, a.CreatedAtUtc) }).ToListAsync(ct);
-        return records.Select(r => new RecordDto(r.Id, r.VehicleId, r.PerformedAtUtc, readings.GetValueOrDefault(r.Id)?.Kilometers,
+        return records.Select(r => new RecordDto(r.Id, r.VehicleId, r.PerformedAtUtc,
+            r.IsVoided ? JsonSerializer.Deserialize<RecordDto>(beforeVoid[r.Id], Json)!.OdometerKm : readings.GetValueOrDefault(r.Id)?.Kilometers,
             r.Workshop, r.Notes, r.OtherCostToman, Total(r), r.IsVoided, r.CreatedBy, r.Version,
             r.Items.Select(i => new ItemDto(i.Id, i.TemplateId, i.ScheduleId, i.Name, i.Category, i.AssetKey, i.LaborCostToman,
                 i.Parts.Select(p => new PartDto(p.Id, p.Name, p.Specification, p.Quantity, p.UnitCostToman, p.WarrantyUntil)).ToList())).ToList(),
@@ -77,6 +83,11 @@ public sealed partial class MaintenanceService
             ?? throw new NotFoundAppException("سابقهٔ سرویس پیدا نشد.")
             : new MaintenanceRecord { VehicleId = vehicleId, CreatedBy = user.Username, RequestId = input.RequestId, RequestHash = hash };
         if (record.IsVoided) throw new ValidationAppException("سابقهٔ باطل‌شده قابل ویرایش نیست.");
+        var reading = await db.VehicleOdometerReadings.SingleOrDefaultAsync(r => r.SourceKind == "maintenance" && r.SourceId == record.Id, ct);
+        var previousKm = reading is { IsVoided: false } ? (long?)reading.Kilometers : null;
+        var readingChanged = input.OdometerKm != previousKm
+            || input.OdometerKm.HasValue && reading?.ObservedAtUtc != input.PerformedAtUtc;
+        if (id.HasValue && readingChanged) user.Require(PermissionCatalog.Maintenance.OdometerCorrect);
         if (id.HasValue)
         {
             Version(record.Version, input.Version);
@@ -114,14 +125,13 @@ public sealed partial class MaintenanceService
             db.MaintenanceRecordItems.Add(entity);
         }
         MaintenanceRules.Money(Total(record));
-        var reading = await db.VehicleOdometerReadings.SingleOrDefaultAsync(r => r.SourceKind == "maintenance" && r.SourceId == record.Id, ct);
-        if (reading is not null)
+        if (readingChanged && reading is not null)
         {
             Revision("odometer", reading.Id, vehicleId, reading.Version, ToOdometer(reading), input.Reason ?? "اصلاح سابقهٔ سرویس");
             reading.Version++;
             reading.IsVoided = !input.OdometerKm.HasValue;
         }
-        else if (input.OdometerKm.HasValue)
+        else if (readingChanged && input.OdometerKm.HasValue)
         {
             reading = new VehicleOdometerReading { VehicleId = vehicleId, SourceId = record.Id, SourceKind = "maintenance", RecordedBy = user.Username };
             db.VehicleOdometerReadings.Add(reading);
@@ -146,10 +156,11 @@ public sealed partial class MaintenanceService
             ?? throw new NotFoundAppException("سابقه پیدا نشد.");
         Version(record.Version, input.Version);
         if (record.IsVoided) throw new ValidationAppException("این سابقه قبلاً باطل شده است.");
+        var reading = await db.VehicleOdometerReadings.SingleOrDefaultAsync(r => r.SourceKind == "maintenance" && r.SourceId == id, ct);
+        if (reading is { IsVoided: false }) user.Require(PermissionCatalog.Maintenance.OdometerCorrect);
         Revision("record", record.Id, vehicleId, record.Version, (await ToRecordsAsync([record], ct))[0], input.Reason);
         record.IsVoided = true;
         record.Version++;
-        var reading = await db.VehicleOdometerReadings.SingleOrDefaultAsync(r => r.SourceKind == "maintenance" && r.SourceId == id, ct);
         if (reading is not null && !reading.IsVoided)
         {
             Revision("odometer", reading.Id, vehicleId, reading.Version, ToOdometer(reading), input.Reason);

@@ -32,7 +32,7 @@ export function RecordDetails({ vehicleId, id, onClose, onEdit, onSaved }: { veh
           try { await api.upload(`${maintenancePath(vehicleId)}/records/${id}/attachments`, file); await onSaved() } catch (err) { setError(err instanceof Error ? err.message : 'بارگذاری ناموفق بود.') } finally { setBusy(false) }
         }} /></Field>}
       </section>
-      {can('maintenance.correct') && !r.isVoided && <div className="m-toolbar"><button className="m-button" disabled={busy} onClick={() => onEdit(r)}>اصلاح با حفظ سابقه</button><button className="m-button m-button-danger" disabled={busy} onClick={() => setVoiding(!voiding)}>باطل‌کردن سرویس</button></div>}
+      {can('maintenance.correct') && !r.isVoided && <div className="m-toolbar"><button className="m-button" disabled={busy} onClick={() => onEdit(r)}>اصلاح با حفظ سابقه</button><button className="m-button m-button-danger" disabled={busy || (r.odometerKm != null && !can('maintenance.odometer.correct'))} title={r.odometerKm != null && !can('maintenance.odometer.correct') ? 'ابطال این قرائت به مجوز اصلاح کیلومتر تاریخی نیاز دارد.' : undefined} onClick={() => setVoiding(!voiding)}>باطل‌کردن سرویس</button></div>}
       {voiding && <form className="m-form" onSubmit={async e => {
         e.preventDefault(); setError(''); setBusy(true)
         try { await api.post(`${maintenancePath(vehicleId)}/records/${id}/void`, { version: r.version, reason }); await onSaved(); setVoiding(false) } catch (err) { setError(err instanceof Error ? err.message : 'ابطال ناموفق بود.') } finally { setBusy(false) }

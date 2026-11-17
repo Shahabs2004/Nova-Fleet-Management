@@ -36,7 +36,15 @@ public static class MaintenanceEndpoints
             if (!context.Request.HasFormContentType) throw new ValidationAppException("فایل را به‌صورت فرم ارسال کنید.");
             var sizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
             if (sizeFeature is { IsReadOnly: false }) sizeFeature.MaxRequestBodySize = 6*1024*1024;
-            var form = await context.Request.ReadFormAsync(new FormOptions { MultipartBodyLengthLimit = 6*1024*1024 }, ct);
+            IFormCollection form;
+            try
+            {
+                form = await context.Request.ReadFormAsync(new FormOptions { MultipartBodyLengthLimit = 6*1024*1024 }, ct);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or IOException && !ct.IsCancellationRequested)
+            {
+                throw new ValidationAppException("ساختار فرم پیوست معتبر نیست یا حجم آن بیش از حد مجاز است.");
+            }
             if (form.Files.Count != 1 || form.Files[0].Length > 5*1024*1024)
                 throw new ValidationAppException("یک فایل با حجم حداکثر ۵ مگابایت انتخاب کنید.");
             var file = form.Files[0];

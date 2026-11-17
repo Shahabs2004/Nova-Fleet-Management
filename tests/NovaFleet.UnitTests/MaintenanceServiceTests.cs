@@ -4,6 +4,8 @@ using NovaFleet.Application.Common;
 using NovaFleet.Application.Maintenance;
 using NovaFleet.Domain.Common;
 using NovaFleet.Domain.Maintenance;
+using NovaFleet.Domain.Identity;
+using NovaFleet.Infrastructure.Security;
 using NovaFleet.Infrastructure.Maintenance;
 using NovaFleet.UnitTests.Missions;
 
@@ -140,6 +142,139 @@ public sealed class MaintenanceServiceTests : MissionTestBase
         Assert.Equal(pdf, (await Manager.DownloadAsync(vehicle, record.Id, file.Id, Ct)).Content);
         await Assert.ThrowsAsync<NotFoundAppException>(() => Manager.DownloadAsync(Guid.NewGuid(), record.Id, file.Id, Ct));
         await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "invoice.png", pdf, Ct));
+    }
+
+    [Fact]
+    public async Task LegacyConflictCanBeRepairedInStepsWithoutInventingCurrentMileage()
+    {
+        var (vehicle, _) = await SetupAsync();
+        var first = await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-3, 8), 1000, 0, null), Ct);
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-2, 8), 2000, 0, null), Ct);
+        await Db.VehicleOdometerReadings.Where(r => r.Id == first.Id).ExecuteUpdateAsync(s => s.SetProperty(r => r.Kilometers, 5000L));
+        Db.ChangeTracker.Clear();
+        var before = await Manager.OdometerAsync(vehicle, Ct);
+        Assert.True(before.HasConflicts);
+        Assert.Null(before.CurrentKm);
+        var partial = await Manager.SaveOdometerAsync(vehicle, first.Id, new OdometerInput(Guid.NewGuid(), Hour(-3, 8), 3000, 1, "کاهش خطای سابقه"), Ct);
+        var intermediate = await Manager.OdometerAsync(vehicle, Ct);
+        Assert.True(intermediate.HasConflicts);
+        Assert.Equal(before.Readings.Count(r => r.HasConflict), intermediate.Readings.Count(r => r.HasConflict));
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-1, 8), 6000, 0, null), Ct);
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.SaveOdometerAsync(vehicle, first.Id,
+            new OdometerInput(Guid.NewGuid(), Hour(-3, 8), 4000, partial.Version, "افزایش ناسازگاری"), Ct));
+        Db.ChangeTracker.Clear();
+        await Manager.SaveOdometerAsync(vehicle, first.Id, new OdometerInput(Guid.NewGuid(), Hour(-3, 8), 1000, partial.Version, "اصلاح نهایی"), Ct);
+        var final = await Manager.OdometerAsync(vehicle, Ct);
+        Assert.False(final.HasConflicts);
+        Assert.Equal(6000L, final.CurrentKm);
+        Assert.Equal(2, (await Manager.RevisionsAsync(vehicle, first.Id, Ct)).Count);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task VoidedRecordShowsItsLastKnownMileageWithoutResurrectingRemovedReading(bool removeMileage)
+    {
+        var (vehicle, template) = await SetupAsync();
+        var input = Input(template);
+        var record = await Manager.SaveRecordAsync(vehicle, null, input, Ct);
+        if (removeMileage)
+            record = await Manager.SaveRecordAsync(vehicle, record.Id, input with { OdometerKm = null, Version = record.Version, Reason = "کیلومتر نامعلوم" }, Ct);
+        await Manager.VoidRecordAsync(vehicle, record.Id, new RevisionInput(record.Version, "ابطال آزمون"), Ct);
+        var saved = await Manager.RecordAsync(vehicle, record.Id, Ct);
+        Assert.True(saved.IsVoided);
+        Assert.Equal(removeMileage ? (long?)null : 1000L, saved.OdometerKm);
+        Assert.Null((await Manager.OdometerAsync(vehicle, Ct)).CurrentKm);
+    }
+
+    [Fact]
+    public async Task DeniedHistoricalMileagePermissionCannotBeBypassedThroughServiceCorrection()
+    {
+        var (vehicle, template) = await SetupAsync();
+        var input = Input(template);
+        var record = await Manager.SaveRecordAsync(vehicle, null, input, Ct);
+        var limited = new MaintenanceService(Db, new FakeCurrentUser(OtherUsername, OtherUsername,
+            EffectivePermissionSet.Build([(PermissionCatalog.Maintenance.All, PermissionEffect.Grant),
+                (PermissionCatalog.Maintenance.OdometerCorrect, PermissionEffect.Deny)])), Clock);
+        record = await limited.SaveRecordAsync(vehicle, record.Id, input with { OtherCostToman = 75, Version = record.Version, Reason = "فقط هزینه" }, Ct);
+        Assert.Equal(775m, record.TotalCostToman);
+        var reading = await Db.VehicleOdometerReadings.SingleAsync();
+        Assert.Equal(1, reading.Version);
+        await Assert.ThrowsAsync<ForbiddenAppException>(() => limited.SaveRecordAsync(vehicle, record.Id,
+            input with { OdometerKm = 1100, Version = record.Version, Reason = "تغییر نامجاز" }, Ct));
+        await Assert.ThrowsAsync<ForbiddenAppException>(() => limited.SaveRecordAsync(vehicle, record.Id,
+            input with { PerformedAtUtc = Hour(-9, 8), Version = record.Version, Reason = "تاریخ نامجاز" }, Ct));
+        await Assert.ThrowsAsync<ForbiddenAppException>(() => limited.VoidRecordAsync(vehicle, record.Id, new RevisionInput(record.Version, "ابطال نامجاز"), Ct));
+        Assert.False((await Manager.RecordAsync(vehicle, record.Id, Ct)).IsVoided);
+        Assert.Single(await Manager.RevisionsAsync(vehicle, record.Id, Ct));
+    }
+
+    [Fact]
+    public async Task EqualMileageAllowsDistinctVisitsAndRejectsFutureReadings()
+    {
+        var (vehicle, template) = await SetupAsync();
+        await Manager.SaveRecordAsync(vehicle, null, Input(template), Ct);
+        await Manager.SaveRecordAsync(vehicle, null, Input(template), Ct);
+        Assert.Equal(2, await Db.MaintenanceRecords.CountAsync());
+        Assert.False((await Manager.OdometerAsync(vehicle, Ct)).HasConflicts);
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.SaveOdometerAsync(vehicle, null,
+            new OdometerInput(Guid.NewGuid(), Clock.UtcNow.AddDays(1), 1000, 0, null), Ct));
+    }
+
+    [Theory]
+    [InlineData(1403, 6, 31, 1, "1403/07/30")]
+    [InlineData(1403, 6, 31, 6, "1403/12/30")]
+    [InlineData(1404, 6, 31, 6, "1404/12/29")]
+    [InlineData(1403, 12, 30, 12, "1404/12/29")]
+    public void JalaliIntervalsClampToActualLastDay(int year, int month, int day, int interval, string expected)
+    {
+        var date = JalaliDate.StartOfTehranDayUtc(year, month, day).AddHours(13);
+        var result = JalaliDate.AddMonths(date, interval);
+        Assert.Equal(expected, JalaliDate.FormatDate(result));
+        Assert.Equal(13, JalaliDate.ToTehranDateTime(result).Hour);
+    }
+
+    [Fact]
+    public async Task RemindersRequireBothPermissionsAndSendEachStageOncePerCycle()
+    {
+        var (vehicle, template) = await SetupAsync();
+        var users = await Db.Users.ToListAsync();
+        foreach (var account in users)
+            Db.UserPermissions.Add(new UserPermission(account.Id, PermissionCatalog.Maintenance.Manage, PermissionEffect.Grant));
+        Db.UserPermissions.Add(new UserPermission(users.Single(u => u.Username == RequesterUsername).Id, PermissionCatalog.Maintenance.View, PermissionEffect.Grant));
+        Db.UserPermissions.Add(new UserPermission(users.Single(u => u.Username == ApproverUsername).Id, PermissionCatalog.Maintenance.View, PermissionEffect.Deny));
+        await Db.SaveChangesAsync();
+        var schedule = await Manager.SaveScheduleAsync(vehicle, null, new ScheduleInput(template, "روغن", 1000, null, 100, 30, 0, Hour(-10, 8), true, 0), Ct);
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-3, 8), 900, 0, null), Ct);
+        var reminders = new MaintenanceReminders(Db, new PermissionResolver(Db), Clock);
+        Assert.Equal(1, await reminders.SendAsync(Ct));
+        Assert.Equal(0, await reminders.SendAsync(Ct));
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-2, 8), 1000, 0, null), Ct);
+        Assert.Equal(1, await reminders.SendAsync(Ct));
+        Assert.Equal(0, await reminders.SendAsync(Ct));
+        var record = await Manager.SaveRecordAsync(vehicle, null, Input(template, 1000, schedule.Id) with { PerformedAtUtc = Hour(-1, 8) }, Ct);
+        Assert.Equal(0, await reminders.SendAsync(Ct));
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(0, 7), 2000, 0, null), Ct);
+        Assert.Equal(1, await reminders.SendAsync(Ct));
+        Assert.Equal(0, await reminders.SendAsync(Ct));
+        Assert.All(await Db.MaintenanceReminderDeliveries.ToListAsync(), d => Assert.Equal(RequesterUsername, d.Recipient));
+        Assert.Equal(3, await Db.UserNotifications.CountAsync(n => n.ReferenceType == "maintenance"));
+        await Manager.VoidRecordAsync(vehicle, record.Id, new RevisionInput(record.Version, "آزمون بازگشت دوره"), Ct);
+        Assert.Equal(0, await reminders.SendAsync(Ct));
+    }
+
+    [Fact]
+    public async Task ArchiveSuppressesRemindersAndNewRecords()
+    {
+        var (vehicle, template) = await SetupAsync();
+        var account = await Db.Users.SingleAsync(u => u.Username == RequesterUsername);
+        Db.UserPermissions.Add(new UserPermission(account.Id, PermissionCatalog.Maintenance.All, PermissionEffect.Grant));
+        await Manager.SaveScheduleAsync(vehicle, null, new ScheduleInput(template, "روغن", 1000, null, 100, 30, 0, Hour(-10, 8), true, 0), Ct);
+        await Manager.SaveOdometerAsync(vehicle, null, new OdometerInput(Guid.NewGuid(), Hour(-1, 8), 1000, 0, null), Ct);
+        (await Db.Vehicles.SingleAsync(v => v.Id == vehicle)).Archive();
+        await Db.SaveChangesAsync();
+        Assert.Equal(0, await new MaintenanceReminders(Db, new PermissionResolver(Db), Clock).SendAsync(Ct));
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.SaveRecordAsync(vehicle, null, Input(template), Ct));
     }
 
     [Theory]
