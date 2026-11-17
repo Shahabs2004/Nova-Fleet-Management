@@ -123,6 +123,19 @@ public sealed class MaintenanceServiceTests : MissionTestBase
     }
 
     [Fact]
+    public async Task DuplicateTemplateNameIsRejectedOnCreateAndRename()
+    {
+        await SetupAsync();
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.SaveTemplateAsync(null,
+            new TemplateInput("روغن موتور", "روغن", "oil-can", 5000, 6, 1000, 30, true, 0), Ct));
+        var other = await Manager.SaveTemplateAsync(null,
+            new TemplateInput("فیلتر هوا", "فیلتر", "engine", 10000, 12, 500, 15, true, 0), Ct);
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.SaveTemplateAsync(other.Id,
+            new TemplateInput("روغن موتور", "فیلتر", "engine", 10000, 12, 500, 15, true, other.Version), Ct));
+        Assert.Equal(2, await Db.MaintenanceTemplates.CountAsync());
+    }
+
+    [Fact]
     public async Task OperatorCannotCorrectOrManageTemplates()
     {
         var (vehicle, template) = await SetupAsync();

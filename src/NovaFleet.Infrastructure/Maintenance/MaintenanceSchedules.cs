@@ -43,7 +43,19 @@ public sealed partial class MaintenanceService
         template.WarningKm = input.WarningKm;
         template.WarningDays = input.WarningDays;
         template.IsActive = input.IsActive;
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (ex is not DbUpdateConcurrencyException)
+        {
+            // دو ذخیرهٔ هم‌زمان می‌توانند هر دو از بررسی نام عبور کنند؛ شاخص یکتای نام،
+            // بازنده را رد می‌کند. اگر نام اکنون گرفته شده، همان خطای اعتبارسنجی فارسی را
+            // نشان بده تا رقابت به ۵۰۰ نگاشت نشود.
+            if (await db.MaintenanceTemplates.AnyAsync(t => t.Name == name && t.Id != id, ct))
+                throw new ValidationAppException("الگویی با این نام وجود دارد.");
+            throw;
+        }
         return ToTemplate(template);
     }
 

@@ -100,6 +100,29 @@ public sealed class MaintenanceSqlServerTests
     }
 
     [MaintenanceSqlFact]
+    public async Task ConcurrentDuplicateTemplateNameSurfacesValidationNotServerError()
+    {
+        await using var setup = Open();
+        Assert.Empty(await setup.Database.GetPendingMigrationsAsync(Ct));
+        var name = "SQL-NAME-" + Guid.NewGuid().ToString("N");
+        var outcomes = await Task.WhenAll(Enumerable.Range(0, 4).Select(async _ =>
+        {
+            await using var db = Open();
+            try
+            {
+                await Service(db).SaveTemplateAsync(null,
+                    new TemplateInput(name, "آزمون", "oil-can", 5000, null, 1000, 30, true, 0), Ct);
+                return (Exception?)null;
+            }
+            catch (ValidationAppException ex) { return ex; }
+        }));
+        Assert.Equal(1, outcomes.Count(e => e is null));
+        Assert.Equal(3, outcomes.Count(e => e is ValidationAppException));
+        await using var check = Open();
+        Assert.Equal(1, await check.MaintenanceTemplates.CountAsync(t => t.Name == name, Ct));
+    }
+
+    [MaintenanceSqlFact]
     public async Task RejectedHistoricalReadingLeavesNoRecordOrRevision()
     {
         var (vehicle, template) = await SetupAsync();
