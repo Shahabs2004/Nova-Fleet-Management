@@ -7,7 +7,8 @@
     "source": "Flaticon (free license)",
     "nativeSize": 128,
     "license": "docs/licenses/flaticon-car-parts-service-license.html",
-    "attribution": "Service icons from Flaticon (www.flaticon.com), free license requiring attribution"
+    "attribution": "Service icons from Flaticon (www.flaticon.com), free license requiring attribution",
+    "discovery": "runtime source of the service-icon picker: to add an icon, drop a PNG under maintenance/ and add one assets entry here; no code change or rebuild needed"
   },
   "assets": [
     {

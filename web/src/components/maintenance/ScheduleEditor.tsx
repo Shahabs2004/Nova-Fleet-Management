@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
-import { assetKeys, maintenancePath, normalizeAssetKey, pixelAsset, type Schedule, type Template } from '../../lib/maintenance'
+import { loadServiceIconKeys, maintenancePath, normalizeAssetKey, pixelAsset, type Schedule, type Template } from '../../lib/maintenance'
 import { DateField, Field, MaintenanceDialog, Notice } from './MaintenanceControls'
 
 type Period = { intervalKm: number | null; intervalMonths: number | null; warningKm: number; warningDays: number }
@@ -44,6 +44,8 @@ export function ScheduleEditor({ vehicleId, templates, schedule, onClose, onSave
 export function TemplateEditor({ template, onClose, onSaved }: { template?: Template; onClose: () => void; onSaved: () => Promise<void> }) {
   const [form, setForm] = useState(() => template ? { ...template, assetKey: normalizeAssetKey(template.assetKey) } : { name: '', category: '', assetKey: '030-tools', intervalKm: null as number | null, intervalMonths: null as number | null, warningKm: 1000, warningDays: 30, isActive: true, version: 0 })
   const [iconQuery, setIconQuery] = useState('')
+  const [icons, setIcons] = useState<string[]>([])
+  useEffect(() => { let on = true; loadServiceIconKeys().then(k => { if (on) setIcons(k) }).catch(() => {}); return () => { on = false } }, [])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const patch = (value: Partial<typeof form>) => setForm(f => ({ ...f, ...value }))
@@ -59,7 +61,7 @@ export function TemplateEditor({ template, onClose, onSaved }: { template?: Temp
         <Field label="دسته"><input required maxLength={100} value={form.category} onChange={e => patch({ category: e.target.value })} /></Field></div>
       <fieldset><legend>تصویر سرویس</legend>
         <input className="m-icon-search" aria-label="جست‌وجوی آیکن" placeholder="جست‌وجوی آیکن…" value={iconQuery} onChange={e => setIconQuery(e.target.value)} />
-        <div className="m-icon-picker" aria-label="آیکن‌های سرویس">{assetKeys.filter(k => k.includes(iconQuery.trim().toLowerCase())).map(key => <button key={key} type="button" className="m-icon-option" title={key} aria-label={`تصویر ${key}`} aria-pressed={form.assetKey === key} onClick={() => patch({ assetKey: key })}><img className="m-icon" src={pixelAsset(key)} width={40} height={40} alt="" /></button>)}</div>
+        <div className="m-icon-picker" aria-label="آیکن‌های سرویس">{icons.length === 0 && <small className="m-muted">در حال بارگذاری آیکن‌ها…</small>}{icons.filter(k => k.includes(iconQuery.trim().toLowerCase())).map(key => <button key={key} type="button" className="m-icon-option" title={key} aria-label={`تصویر ${key}`} aria-pressed={form.assetKey === key} onClick={() => patch({ assetKey: key })}><img className="m-icon" src={pixelAsset(key)} width={40} height={40} alt="" /></button>)}</div>
       </fieldset>
       <PeriodFields value={form} onChange={patch} />
       <label className="m-check"><input type="checkbox" checked={form.isActive} onChange={e => patch({ isActive: e.target.checked })} />الگو فعال است</label>
