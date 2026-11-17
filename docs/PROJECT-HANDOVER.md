@@ -102,7 +102,7 @@
 - [ ] تأیید حفظ اسکرول جاده در تغییر تب و ذخیرهٔ نسبت پس از reload.
 - [x] بررسی سابقهٔ طولانی، صفحه‌بندی، تعداد query و حجم دادهٔ دفترچه. (شاخهٔ فیلتردار ناوگان دسته‌ای ۵۰تایی شد؛ سابقهٔ سرویس افزایشی pageSize=50؛ دفترچهٔ کیلومتر تک‌خودرو با تاریخچهٔ کامل برای تشخیص تعارض — جزئیات و شواهد در بخش ۶؛ کل واحد ۳۱۹ سبز.)
 - [x] بازبینی امنیت محلی ورودی‌ها، پیوست، خطاها و اطلاعات حساس پیش از انتشار. (جزئیات و شواهد در بخش ۶؛ ۳۲۲ تست واحد + ۸ تست middleware سبز؛ آزمون HTTP واقعی multipart به گذر مرورگری/Integration موکول شد.)
-- [ ] اجرای نهایی build و تست‌ها و ثبت نتیجهٔ دقیق در این سند.
+- [x] اجرای نهایی build و تست‌ها و ثبت نتیجهٔ دقیق در این سند. (۱۴۰۵/۰۸/۲۶: build بک‌اند Release **۰ خطا / ۰ هشدار**؛ build وب ✓ **۴۷۹ ماژول** → `dist/` (فقط هشدار اطلاع‌رسانی اندازهٔ chunk)؛ کل واحد Release **۳۲۲ Passed / ۰ Failed / ۰ Skipped**؛ Integration Release **۸ Passed / ۰ Failed / ۵ Skipped** — پنج تست SQL به‌دلیل نبود SQL Server localhost رد شدند (بخش ۸). آزمون مرورگری (موارد ۹۹/۱۰۱/۱۰۲) و Integration SQL همچنان به محیط زندهٔ مجزا نیاز دارند.)
 - [ ] پذیرش نهایی کاربر و برنامهٔ انتشار عملیاتی — خارج از صرف push کد.
 
 ## ۵. تصمیم‌های قطعی محصول
@@ -214,6 +214,7 @@ npm run build
 | رفع رقابت نام تکراری الگو | try/catch در `SaveTemplateAsync` + بازبررسی نام → ۴۰۰ فارسی (Concurrency همچنان ۴۰۹)؛ تست واحد ایجاد/تغییرنام تکراری `DuplicateTemplateNameIsRejectedOnCreateAndRename`؛ کل واحد **۳۱۷ سبز**؛ build بک‌اند و Integration ۰ خطا/۰ هشدار؛ تست رقابت SQL `ConcurrentDuplicateTemplateNameSurfacesValidationNotServerError` نوشته/کامپایل شد ولی اجرا به‌دلیل نبود SQL Server localhost در این محیط ممکن نیست (۱۴۰۵/۰۸/۲۶) |
 | محدودسازی کوئری ناوگان | ارزیابی دسته‌ای ۵۰تایی در شاخهٔ فیلتردار `FleetAsync` (`candidates.Chunk(50)`)؛ ۲ تست جدید `FleetUnknownFilterPaginatesAcrossEvaluationBatches` (۵۱ خودرو فراتر از دسته) و `FleetStateFilterSeparatesDueHealthyAndUnknown`؛ کل واحد **۳۱۹ سبز**؛ build ۰ خطا/۰ هشدار؛ دفترچهٔ تک‌خودرو عمداً تمام‌تاریخچه برای تشخیص تعارض (بخش ۶) (۱۴۰۵/۰۸/۲۶) |
 | بازبینی امنیت پیوست/ورودی/خطا | پاک‌سازی نام فایل (traversal/control-char)، تطابق امضا/پسوند، دانلود octet-stream+sandbox+nosniff+no-store، مالکیت/سقف ۲۰/منع باطل‌شده، نگاشت امن خطا بدون نشت (بدون DeveloperExceptionPage)؛ ۳ تست واحد پیوست + ۴ تست middleware؛ واحد **۳۲۲** و middleware **۸** سبز؛ multipart HTTP واقعی موکول به گذر زنده (۱۴۰۵/۰۸/۲۶) |
+| اجرای نهایی build/تست (بدون DB زنده) | build بک‌اند Release **۰ خطا/۰ هشدار**؛ build وب ✓ **۴۷۹ ماژول**؛ واحد Release **۳۲۲ سبز**؛ Integration Release **۸ سبز + ۵ SQL ردشده** (نبود localhost SQL Server، guard تضعیف نشد)؛ شواهد در بخش ۴ و ۸؛ آزمون مرورگری و Integration SQL به محیط زندهٔ مجزا موکول (۱۴۰۵/۰۸/۲۶) |
 
 ## ۱۰. متن شروع برای دستیار بعدی
 
