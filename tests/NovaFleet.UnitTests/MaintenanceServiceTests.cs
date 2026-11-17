@@ -195,6 +195,51 @@ public sealed class MaintenanceServiceTests : MissionTestBase
     }
 
     [Fact]
+    public async Task AttachmentValidationRejectsOversizeDisguisedAndMismatchedFiles()
+    {
+        var (vehicle, template) = await SetupAsync();
+        var record = await Manager.SaveRecordAsync(vehicle, null, Input(template), Ct);
+        var pdf = "%PDF-1.4\nsynthetic fixture\n%%EOF"u8.ToArray();
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "big.pdf", new byte[5242881], Ct));
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "tiny.pdf", new byte[4], Ct));
+        var mz = new byte[] { 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00 };
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "evil.pdf", mz, Ct));
+        var png = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10, 0, 0 };
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "image.jpg", png, Ct));
+        var truncatedJpeg = new byte[] { 0xFF, 0xD8, 0xFF, 0xE0, 0, 0, 0, 0 };
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "photo.jpg", truncatedJpeg, Ct));
+        var noEofPdf = "%PDF-1.4\nno eof marker here"u8.ToArray();
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "doc.pdf", noEofPdf, Ct));
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "bad\u0001name.pdf", pdf, Ct));
+        var saved = await Manager.AddAttachmentAsync(vehicle, record.Id, "../../invoice.pdf", pdf, Ct);
+        Assert.Equal("invoice.pdf", saved.FileName);
+        Assert.Single(await Db.MaintenanceAttachments.ToListAsync());
+    }
+
+    [Fact]
+    public async Task AttachmentCountIsCappedAtTwenty()
+    {
+        var (vehicle, template) = await SetupAsync();
+        var record = await Manager.SaveRecordAsync(vehicle, null, Input(template), Ct);
+        var pdf = "%PDF-1.4\nfixture\n%%EOF"u8.ToArray();
+        for (var i = 0; i < 20; i++)
+            await Manager.AddAttachmentAsync(vehicle, record.Id, $"f{i}.pdf", pdf, Ct);
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "extra.pdf", pdf, Ct));
+        Assert.Equal(20, await Db.MaintenanceAttachments.CountAsync(a => a.RecordId == record.Id));
+    }
+
+    [Fact]
+    public async Task AttachmentRejectedOnVoidedRecord()
+    {
+        var (vehicle, template) = await SetupAsync();
+        var record = await Manager.SaveRecordAsync(vehicle, null, Input(template), Ct);
+        await Manager.VoidRecordAsync(vehicle, record.Id, new RevisionInput(record.Version, "ابطال آزمون"), Ct);
+        var pdf = "%PDF-1.4\nfixture\n%%EOF"u8.ToArray();
+        await Assert.ThrowsAsync<ValidationAppException>(() => Manager.AddAttachmentAsync(vehicle, record.Id, "late.pdf", pdf, Ct));
+        Assert.Empty(await Db.MaintenanceAttachments.ToListAsync());
+    }
+
+    [Fact]
     public async Task LegacyConflictCanBeRepairedInStepsWithoutInventingCurrentMileage()
     {
         var (vehicle, _) = await SetupAsync();

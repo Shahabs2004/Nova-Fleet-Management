@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NovaFleet.Api.Middleware;
 using NovaFleet.Application.Common;
@@ -40,6 +41,42 @@ public sealed class ApiExceptionHandlerMiddlewareTests
         var (status, message) = await InvokeAsync(new InvalidOperationException("boom"));
         Assert.Equal(StatusCodes.Status500InternalServerError, status);
         Assert.Equal("خطای غیرمنتظره‌ای رخ داد. اگر مشکل تکرار شد با پشتیبان سامانه تماس بگیرید.", message);
+    }
+
+    [Fact]
+    public async Task DbUpdateException_stays_generic_500_without_leaking_details()
+    {
+        var (status, message) = await InvokeAsync(new DbUpdateException("Confidential SQL detail: connection and constraint text"));
+        Assert.Equal(StatusCodes.Status500InternalServerError, status);
+        Assert.Equal("خطای غیرمنتظره‌ای رخ داد. اگر مشکل تکرار شد با پشتیبان سامانه تماس بگیرید.", message);
+        Assert.DoesNotContain("Confidential", message);
+    }
+
+    [Fact]
+    public async Task Concurrency_exception_becomes_409()
+    {
+        var (status, message) = await InvokeAsync(new DbUpdateConcurrencyException("stale row"));
+        Assert.Equal(StatusCodes.Status409Conflict, status);
+        Assert.Equal("این رکورد هم‌زمان توسط کاربر دیگری تغییر کرده است؛ صفحه را تازه‌سازی کنید.", message);
+    }
+
+    [Fact]
+    public async Task App_exceptions_map_to_their_status_with_persian_message()
+    {
+        Assert.Equal(StatusCodes.Status401Unauthorized, (await InvokeAsync(new UnauthorizedAppException("وارد شوید."))).Status);
+        Assert.Equal(StatusCodes.Status403Forbidden, (await InvokeAsync(new ForbiddenAppException("اجازه ندارید."))).Status);
+        Assert.Equal(StatusCodes.Status404NotFound, (await InvokeAsync(new NotFoundAppException("پیدا نشد."))).Status);
+        var conflict = await InvokeAsync(new ConflictAppException("تکراری است."));
+        Assert.Equal(StatusCodes.Status409Conflict, conflict.Status);
+        Assert.Equal("تکراری است.", conflict.Message);
+    }
+
+    [Fact]
+    public async Task BadHttpRequest_becomes_generic_400()
+    {
+        var (status, message) = await InvokeAsync(new BadHttpRequestException("Malformed multipart body"));
+        Assert.Equal(StatusCodes.Status400BadRequest, status);
+        Assert.Equal("بدنه درخواست معتبر نیست.", message);
     }
 
     private static async Task<(int Status, string Message)> InvokeAsync(Exception exception)
