@@ -21,6 +21,10 @@ const icon = (d: string) => (
   </svg>
 )
 
+const menuIcon = (name: string) => (
+  <img src={`/icons/menu/${name}.png`} alt="" aria-hidden="true" className="h-16 w-16 shrink-0 object-contain" />
+)
+
 const DEFAULT_ORGANIZATION_NAME = 'ناوگان نوین'
 
 const ROLE_TITLES: Record<string, string> = {
@@ -36,26 +40,26 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'عملیات',
     items: [
-      { to: '/dashboard', title: 'داشبورد', permission: 'dashboard.view', icon: icon('M3 12h7V3H3v9Zm11 9h7v-9h-7v9ZM3 21h7v-6H3v6Zm11-12h7V3h-7v6Z') },
-      { to: '/missions', title: 'مأموریت‌ها', permission: 'missions.view.own', icon: icon('M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 5h6m-8 8h10M12 11v4') },
-      { to: '/maintenance', title: 'سرویس و نگهداری', permission: 'maintenance.view', icon: icon('m14 6 4-4 4 4-4 4M18 2v8M14 10 4 20l-2-2L12 8') },
-      { to: '/timeline', title: 'تایم‌لاین', permission: 'missions.timeline.view', icon: icon('M3 6h18M6 12h12M10 18h4') },
-      { to: '/drivers', title: 'رانندگان', permission: 'drivers.view', icon: icon('M16 21v-2a4 4 0 0 0-8 0v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z') },
-      { to: '/vehicles', title: 'خودروها', permission: 'vehicles.view', icon: icon('M5 17h14M7 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm14 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM3 13l1.5-5A2 2 0 0 1 6.4 6.5h11.2a2 2 0 0 1 1.9 1.5L21 13v4H3v-4Z') },
+      { to: '/dashboard', title: 'داشبورد', permission: 'dashboard.view', icon: menuIcon('dashboard') },
+      { to: '/missions', title: 'مأموریت‌ها', permission: 'missions.view.own', icon: menuIcon('missions') },
+      { to: '/maintenance', title: 'سرویس و نگهداری', permission: 'maintenance.view', icon: menuIcon('maintenance') },
+      { to: '/timeline', title: 'تایم‌لاین', permission: 'missions.timeline.view', icon: menuIcon('timeline') },
+      { to: '/drivers', title: 'رانندگان', permission: 'drivers.view', icon: menuIcon('drivers') },
+      { to: '/vehicles', title: 'خودروها', permission: 'vehicles.view', icon: menuIcon('vehicles') },
     ],
   },
   {
     title: 'گزارش‌ها',
     items: [
-      { to: '/reports', title: 'گزارش‌ها', permission: 'reports.view', icon: icon('M3 3v18h18M7 15l4-6 4 3 5-8') },
-      { to: '/sms', title: 'پیامک‌ها', permission: 'notifications.sms.view', icon: icon('M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10Z') },
+      { to: '/reports', title: 'گزارش‌ها', permission: 'reports.view', icon: menuIcon('reports') },
+      { to: '/sms', title: 'پیامک‌ها', permission: 'notifications.sms.view', icon: menuIcon('sms') },
     ],
   },
   {
     title: 'مدیریت',
     items: [
-      { to: '/security', title: 'امنیت و کاربران', permission: 'security.audit.view', icon: icon('M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Z') },
-      { to: '/settings', title: 'تنظیمات', permission: 'settings.system.manage', icon: icon('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.4 7.4 0 0 0-2-1.2L14.5 3h-5l-.4 2.6a7.4 7.4 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7.4 7.4 0 0 0 2 1.2l.4 2.6h5l.4-2.6a7.4 7.4 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2Z') },
+      { to: '/security', title: 'امنیت و کاربران', permission: 'security.audit.view', icon: menuIcon('security') },
+      { to: '/settings', title: 'تنظیمات', permission: 'settings.system.manage', icon: menuIcon('settings') },
     ],
   },
 ]
