@@ -22,7 +22,7 @@ const icon = (d: string) => (
 )
 
 const menuIcon = (name: string) => (
-  <img src={`/icons/menu/${name}.png`} alt="" aria-hidden="true" className="h-16 w-16 shrink-0 object-contain" />
+  <img src={`/icons/menu/${name}.png`} alt="" aria-hidden="true" className="h-8 w-8 shrink-0 object-contain" />
 )
 
 const DEFAULT_ORGANIZATION_NAME = 'ناوگان نوین'
@@ -124,8 +124,7 @@ function NotificationBell() {
 export function AppLayout() {
   const { user, logout, can } = useAuth()
   const navigate = useNavigate()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [labelsOpen, setLabelsOpen] = useState(false)
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: () => api.get<SettingsBundle>('/api/settings'),
@@ -135,14 +134,15 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen">
-      {sidebarOpen && <button className="fixed inset-0 z-20 bg-emerald-950/30 lg:hidden" onClick={() => setSidebarOpen(false)} aria-label="بستن منو" />}
+      {labelsOpen && <button className="fixed inset-0 z-20 bg-emerald-950/30 lg:hidden" onClick={() => setLabelsOpen(false)} aria-label="بستن منو" />}
       <aside
-        className={`fixed inset-y-0 right-0 z-30 flex w-64 flex-col bg-emerald-950 text-emerald-100 transition-transform lg:static lg:translate-x-0 ${sidebarCollapsed ? 'lg:hidden' : ''} ${
-          sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
+        className={`fixed inset-y-0 right-0 z-30 flex flex-col bg-emerald-950 text-emerald-100 transition-[width] duration-200 lg:static ${
+          labelsOpen ? 'w-64 shadow-2xl lg:shadow-none' : 'w-20'
         }`}
+        aria-label="منوی اصلی"
       >
-        <div className="flex items-center gap-3 px-5 py-5">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-emerald-900/60 ring-1 ring-gold-500/40">
+        <div className={`flex items-center gap-3 py-5 ${labelsOpen ? 'px-5' : 'justify-center px-2'}`}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-900/60 ring-1 ring-gold-500/40">
             {organizationLogo ? (
               <img src={organizationLogo} alt={organizationName} className="h-full w-full object-contain" />
             ) : (
@@ -154,26 +154,34 @@ export function AppLayout() {
               </svg>
             )}
           </div>
-          <div>
-            <p className="text-sm font-extrabold text-white">{organizationName}</p>
-            <p className="text-[10px] text-emerald-400">سامانه مدیریت ناوگان</p>
-          </div>
+          {labelsOpen && (
+            <div className="min-w-0">
+              <p className="truncate text-sm font-extrabold text-white">{organizationName}</p>
+              <p className="text-[10px] text-emerald-400">سامانه مدیریت ناوگان</p>
+            </div>
+          )}
         </div>
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+        <nav className={`sidebar-nav flex-1 space-y-4 overflow-y-auto pb-4 ${labelsOpen ? 'px-3' : 'px-2'}`}>
           {NAV_GROUPS.map((group) => {
             const items = group.items.filter((item) => can(item.permission))
             if (items.length === 0) return null
             return (
               <div key={group.title}>
-                <p className="mb-1.5 px-3 text-[10px] font-semibold tracking-wide text-emerald-500/70">{group.title}</p>
+                {labelsOpen
+                  ? <p className="mb-1.5 px-3 text-[11px] font-semibold tracking-wide text-emerald-500/70">{group.title}</p>
+                  : <div className="mx-3 mb-2 border-t border-emerald-900/60" aria-hidden="true" />}
                 <div className="space-y-1">
                   {items.map((item) => (
                     <NavLink
                       key={item.to}
                       to={item.to}
-                      onClick={() => setSidebarOpen(false)}
+                      title={labelsOpen ? undefined : item.title}
+                      aria-label={item.title}
+                      onClick={() => { if (!window.matchMedia('(min-width: 1024px)').matches) setLabelsOpen(false) }}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors ${
+                        `flex items-center rounded-xl py-2 text-[15px] font-medium transition-colors ${
+                          labelsOpen ? 'gap-3 px-3' : 'justify-center px-0'
+                        } ${
                           isActive
                             ? 'bg-emerald-800/60 text-white shadow-inner'
                             : 'text-emerald-200/80 hover:bg-emerald-900/50 hover:text-white'
@@ -181,7 +189,7 @@ export function AppLayout() {
                       }
                     >
                       {item.icon}
-                      {item.title}
+                      {labelsOpen && <span className="truncate">{item.title}</span>}
                     </NavLink>
                   ))}
                 </div>
@@ -189,18 +197,29 @@ export function AppLayout() {
             )
           })}
         </nav>
-        <div className="border-t border-emerald-900/60 px-5 py-3 text-center text-[10px] text-emerald-500/60">
-          طراحی و توسعه — شهاب صادقی
+        <div className="border-t border-emerald-900/60 px-2 py-2">
+          <button
+            onClick={() => setLabelsOpen(v => !v)}
+            aria-expanded={labelsOpen}
+            aria-label={labelsOpen ? 'نمایش فقط آیکن‌ها' : 'نمایش متن منوها'}
+            title={labelsOpen ? 'نمایش فقط آیکن‌ها' : 'نمایش متن منوها'}
+            className={`flex w-full items-center rounded-xl py-2 text-emerald-300/80 transition-colors hover:bg-emerald-900/50 hover:text-white ${labelsOpen ? 'justify-between px-3' : 'justify-center px-0'}`}
+          >
+            {labelsOpen && <span className="text-[13px] font-medium">جمع‌کردن منو</span>}
+            {icon(labelsOpen ? 'M9 18l6-6-6-6' : 'M4 6h16M4 12h16M4 18h16')}
+          </button>
+          {labelsOpen && (
+            <p className="mt-1 px-3 pb-1 text-center text-[10px] text-emerald-500/60">طراحی و توسعه — شهاب صادقی</p>
+          )}
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="mr-20 flex min-w-0 flex-1 flex-col lg:mr-0">
         <header className="sticky top-0 z-10 border-b border-slate-200/70 bg-surface/90 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-4 py-3 lg:px-8">
-            <button className="rounded-xl p-2 text-slate-500 hover:bg-emerald-50 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="منو">
+            <button className="rounded-xl p-2 text-slate-500 hover:bg-emerald-50 lg:hidden" onClick={() => setLabelsOpen(v => !v)} aria-expanded={labelsOpen} aria-label={labelsOpen ? 'بستن منو' : 'نمایش متن منوها'}>
               {icon('M4 6h16M4 12h16M4 18h16')}
             </button>
-            <button className="hidden rounded-xl p-2 text-slate-500 hover:bg-emerald-50 lg:block" onClick={() => setSidebarCollapsed(v => !v)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? 'بازکردن منوی کناری' : 'جمع‌کردن منوی کناری'}>{icon('M4 6h16M4 12h16M4 18h16')}</button>
             <p className="hidden text-sm text-slate-400 lg:block">به سامانه {organizationName} خوش آمدید</p>
             <div className="flex items-center gap-2">
               <NotificationBell />

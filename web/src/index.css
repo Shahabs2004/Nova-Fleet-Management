@@ -139,3 +139,25 @@
 .num {
   font-variant-numeric: tabular-nums;
 }
+
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: #115e59 transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #115e59;
+  border-radius: 999px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #0d9488;
+}
