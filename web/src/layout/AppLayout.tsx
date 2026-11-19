@@ -41,11 +41,11 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     title: 'عملیات',
     items: [
       { to: '/dashboard', title: 'داشبورد', permission: 'dashboard.view', icon: menuIcon('dashboard') },
-      { to: '/missions', title: 'مأموریت‌ها', permission: 'missions.view.own', icon: menuIcon('missions') },
-      { to: '/maintenance', title: 'سرویس و نگهداری', permission: 'maintenance.view', icon: menuIcon('maintenance') },
       { to: '/timeline', title: 'تایم‌لاین', permission: 'missions.timeline.view', icon: menuIcon('timeline') },
+      { to: '/missions', title: 'مأموریت‌ها', permission: 'missions.view.own', icon: menuIcon('missions') },
       { to: '/drivers', title: 'رانندگان', permission: 'drivers.view', icon: menuIcon('drivers') },
       { to: '/vehicles', title: 'خودروها', permission: 'vehicles.view', icon: menuIcon('vehicles') },
+      { to: '/maintenance', title: 'سرویس و نگهداری', permission: 'maintenance.view', icon: menuIcon('maintenance') },
     ],
   },
   {
