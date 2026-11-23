@@ -1,4 +1,6 @@
 using System.Data.Common;
+using System.Globalization;
+using System.Text;
 using ClosedXML.Excel;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +31,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
 
 namespace NovaFleet.IntegrationTests;
 
@@ -106,6 +109,7 @@ public sealed class MissionVisibilityIntegrationTests
         var otherText = ExtractPdfText(otherPdf);
         Assert.Contains("OTHER-ONLY", otherText, StringComparison.Ordinal);
         Assert.True(ContainsPdfTokens(otherText, fixture.OtherVehicle.PlateDisplay), otherText);
+        Assert.True(ContainsPdfToken(otherText, "11"), otherText);
     }
 
     [Fact]
@@ -178,35 +182,52 @@ public sealed class MissionVisibilityIntegrationTests
 
         Assert.NotEmpty(excel);
         Assert.NotEmpty(pdf);
-        using var stream = new MemoryStream(excel);
-        using var workbook = new XLWorkbook(stream);
-        var text = string.Join("\n", workbook.Worksheets.SelectMany(sheet =>
-            sheet.RowsUsed().CellsUsed().Select(cell => cell.GetFormattedString())));
-        Assert.DoesNotContain("OTHER-ONLY", text, StringComparison.Ordinal);
-        Assert.DoesNotContain(fixture.OtherVehicle.PlateDisplay, text, StringComparison.Ordinal);
-
-        string[] visibleMarkers = key switch
+        if (key != "mission-status")
         {
-            "missions" => [fixture.OwnApproved.Title, fixture.OwnVehicle.PlateDisplay],
-            "missions-distance" or "vehicle-usage" => [fixture.OwnVehicle.PlateDisplay],
-            "driver-activity" => [fixture.OwnDriver.DisplayName],
-            "org-unit" => ["OWN-ONLY unit"],
-            "mission-status" => ["1"],
-            _ => throw new ArgumentOutOfRangeException(nameof(key)),
-        };
-        AssertOwnOnlyPdf(pdf, fixture, visibleMarkers);
+            using var stream = new MemoryStream(excel);
+            using var workbook = new XLWorkbook(stream);
+            var text = string.Join("\n", workbook.Worksheets.SelectMany(sheet =>
+                sheet.RowsUsed().CellsUsed().Select(cell => cell.GetFormattedString())));
+            Assert.DoesNotContain("OTHER-ONLY", text, StringComparison.Ordinal);
+            Assert.DoesNotContain(fixture.OtherVehicle.PlateDisplay, text, StringComparison.Ordinal);
+        }
+
+        if (key == "mission-status")
+        {
+            AssertMissionStatusPdf(pdf, pendingCount: 1, approvedCount: 1, totalCount: 2);
+        }
+        else
+        {
+            string[] visibleMarkers = key switch
+            {
+                "missions" => [fixture.OwnApproved.Title, fixture.OwnVehicle.PlateDisplay],
+                "missions-distance" or "vehicle-usage" => [fixture.OwnVehicle.PlateDisplay],
+                "driver-activity" => [fixture.OwnDriver.DisplayName],
+                "org-unit" => ["OWN-ONLY unit"],
+                _ => throw new ArgumentOutOfRangeException(nameof(key)),
+            };
+            AssertOwnOnlyPdf(pdf, fixture, visibleMarkers);
+        }
 
         var allPdf = await new ReportService(fixture.Db, fixture.AllUser).ExportPdfAsync(key, ReportQuery);
         var allText = ExtractPdfText(allPdf);
-        string[] hiddenMarkers = key switch
+        if (key == "mission-status")
         {
-            "missions" => ["OTHER-ONLY", fixture.OtherVehicle.PlateDisplay],
-            "missions-distance" or "vehicle-usage" => [fixture.OtherVehicle.PlateDisplay],
-            "driver-activity" or "org-unit" => ["OTHER-ONLY"],
-            "mission-status" => ["4"],
-            _ => throw new ArgumentOutOfRangeException(nameof(key)),
-        };
-        Assert.All(hiddenMarkers, marker => Assert.True(ContainsPdfTokens(allText, marker), allText));
+            AssertMissionStatusPdf(allPdf, pendingCount: 2, approvedCount: 2, totalCount: 4);
+        }
+        else
+        {
+            string[] hiddenMarkers = key switch
+            {
+                "missions" => ["OTHER-ONLY", fixture.OtherVehicle.PlateDisplay],
+                "missions-distance" or "vehicle-usage" => [fixture.OtherVehicle.PlateDisplay],
+                "driver-activity" or "org-unit" => ["OTHER-ONLY"],
+                _ => throw new ArgumentOutOfRangeException(nameof(key)),
+            };
+            Assert.All(hiddenMarkers, marker => Assert.True(ContainsPdfTokens(allText, marker), allText));
+            if (key is "missions" or "missions-distance" or "vehicle-usage")
+                Assert.True(ContainsPdfToken(allText, "11"), allText);
+        }
     }
 
     private static void AssertOwnOnlyPdf(byte[] pdf, Fixture fixture, params string[] visibleMarkers)
@@ -216,8 +237,8 @@ public sealed class MissionVisibilityIntegrationTests
         Assert.NotEmpty(text);
         Assert.DoesNotContain("OTHER-ONLY", text, StringComparison.Ordinal);
         Assert.DoesNotContain(fixture.OtherVehicle.PlateDisplay, text, StringComparison.Ordinal);
-        Assert.False(ContainsPdfTokens(text, fixture.OtherVehicle.PlateDisplay),
-            $"Unexpected other vehicle plate in PDF: {fixture.OtherVehicle.PlateDisplay}\n{text}");
+        Assert.False(ContainsPdfToken(text, "11"),
+            $"Unexpected distinctive token for other vehicle plate in PDF: 11\n{text}");
         Assert.All(visibleMarkers, marker => Assert.True(ContainsPdfTokens(text, marker), text));
     }
 
@@ -234,6 +255,58 @@ public sealed class MissionVisibilityIntegrationTests
         return expected.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
             .All(token => tokens.Contains(token, StringComparer.Ordinal));
     }
+
+    private static bool ContainsPdfToken(string text, string expected) =>
+        text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .Contains(expected, StringComparer.Ordinal);
+
+    private static void AssertMissionStatusPdf(byte[] pdf, int pendingCount, int approvedCount, int totalCount)
+    {
+        Assert.NotEmpty(pdf);
+        using var document = PdfDocument.Open(pdf);
+        var page = Assert.Single(document.GetPages());
+        var words = page.GetWords().ToList();
+        var numericWords = words.Where(IsIntegerWord).ToList();
+        var bodyCounts = numericWords
+            .Where(word => word.BoundingBox.Bottom > page.Height / 2)
+            .OrderByDescending(word => word.BoundingBox.Bottom)
+            .ToList();
+        var totalWord = Assert.Single(numericWords, word => word.BoundingBox.Bottom <= page.Height / 2);
+        (string Label, int Count)[] expectedRows =
+        [
+            ("در انتظار بررسی", pendingCount),
+            ("تأییدشده", approvedCount)
+        ];
+
+        Assert.Equal(expectedRows.Length, bodyCounts.Count);
+        for (var index = 0; index < expectedRows.Length; index++)
+        {
+            var countWord = bodyCounts[index];
+            Assert.Equal(expectedRows[index].Count, ParseInteger(countWord));
+            var label = ReconstructedRtlLabel(words.Where(word =>
+                !IsIntegerWord(word) && SameBaseline(word, countWord) && word.BoundingBox.Left > page.Width / 2));
+            Assert.Equal(expectedRows[index].Label, label);
+        }
+
+        Assert.Equal(totalCount, ParseInteger(totalWord));
+        var totalLabel = ReconstructedRtlLabel(words.Where(word =>
+            !IsIntegerWord(word) && SameBaseline(word, totalWord)));
+        Assert.Equal("مجموع:", totalLabel);
+    }
+
+    private static bool IsIntegerWord(Word word) =>
+        int.TryParse(word.Text, NumberStyles.None, CultureInfo.InvariantCulture, out _);
+
+    private static int ParseInteger(Word word) =>
+        int.Parse(word.Text, NumberStyles.None, CultureInfo.InvariantCulture);
+
+    private static bool SameBaseline(Word first, Word second) =>
+        Math.Abs(first.BoundingBox.Bottom - second.BoundingBox.Bottom) < 0.5;
+
+    private static string ReconstructedRtlLabel(IEnumerable<Word> words) =>
+        string.Join(" ", words
+            .OrderByDescending(word => word.BoundingBox.Left)
+            .Select(word => new string(word.Text.Normalize(NormalizationForm.FormKC).Reverse().ToArray())));
 
     private static void AssertNoOtherRequesterData(ReportTableDto table)
     {

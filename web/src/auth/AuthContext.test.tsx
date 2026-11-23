@@ -94,6 +94,11 @@ async function waitForUser(username: string) {
   await waitFor(() => expect(screen.getByTestId('user')).toHaveTextContent(username))
 }
 
+function expectOnlyRequests(...paths: string[]) {
+  expect(fetch).toHaveBeenCalledTimes(paths.length)
+  expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toEqual(paths)
+}
+
 describe('AuthContext cache isolation', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
@@ -142,10 +147,12 @@ describe('AuthContext cache isolation', () => {
     const { queryClient, order } = setup()
     await waitForUser(firstUser.username)
     queryClient.setQueryData(['drivers', 'page=1'], ['legacy-private'])
+    vi.mocked(fetch).mockClear()
     vi.mocked(fetch).mockResolvedValueOnce(response(200, secondUser))
 
     await act(async () => { await auth.refresh() })
 
+    expectOnlyRequests('/api/auth/me')
     expect(screen.getByTestId('user')).toHaveTextContent(secondUser.username)
     expect(order).toEqual(['cancel', 'clear'])
     expect(queryClient.getQueryCache().getAll()).toEqual([])
@@ -155,10 +162,12 @@ describe('AuthContext cache isolation', () => {
     vi.mocked(fetch).mockResolvedValueOnce(response(200, firstUser))
     const { queryClient, order } = setup()
     await waitForUser(firstUser.username)
+    vi.mocked(fetch).mockClear()
     vi.mocked(fetch).mockResolvedValueOnce(response(200, { ...firstUser, displayName: 'کاربر به‌روزشده' }))
 
     await act(async () => { await auth.refresh() })
 
+    expectOnlyRequests('/api/auth/me')
     expect(screen.getByTestId('user')).toHaveTextContent(firstUser.username)
     expect(order).toEqual([])
     expect(queryClient.getQueryData(['notifications', firstUser.username])).toEqual(['private'])
@@ -170,10 +179,12 @@ describe('AuthContext cache isolation', () => {
     vi.mocked(fetch).mockResolvedValueOnce(response(200, firstUser))
     const { queryClient, order } = setup()
     await waitForUser(firstUser.username)
+    vi.mocked(fetch).mockClear()
     vi.mocked(fetch).mockResolvedValueOnce(response(204))
 
     await act(async () => { await auth.logout() })
 
+    expectOnlyRequests('/api/auth/logout')
     expect(screen.getByTestId('user')).toHaveTextContent('anonymous')
     expect(order).toEqual(['cancel', 'clear'])
     expect(queryClient.getQueryCache().getAll()).toEqual([])
@@ -183,10 +194,12 @@ describe('AuthContext cache isolation', () => {
     vi.mocked(fetch).mockResolvedValueOnce(response(200, firstUser))
     const { queryClient, order } = setup()
     await waitForUser(firstUser.username)
+    vi.mocked(fetch).mockClear()
     vi.mocked(fetch).mockResolvedValueOnce(response(200, secondUser))
 
     await act(async () => { await auth.loginLocal(secondUser.username, 'test-password') })
 
+    expectOnlyRequests('/api/auth/login-local')
     expect(screen.getByTestId('user')).toHaveTextContent(secondUser.username)
     expect(order).toEqual(['cancel', 'clear'])
     expect(queryClient.getQueryCache().getAll()).toEqual([])
