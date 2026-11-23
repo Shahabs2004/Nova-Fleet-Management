@@ -60,10 +60,12 @@ function ErrorBox({ error }: { error: unknown }) {
 }
 
 function useSettings() {
-  return useQuery({ queryKey: ['settings'], queryFn: () => api.get<SettingsBundle>('/api/settings') })
+  const { user } = useAuth()
+  return useQuery({ queryKey: ['settings', user?.username], queryFn: () => api.get<SettingsBundle>('/api/settings') })
 }
 
 function OrganizationTab() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const settings = useSettings()
   const [name, setName] = useState('')
@@ -73,6 +75,7 @@ function OrganizationTab() {
 
   useEffect(() => {
     if (settings.data) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Hydrate organization fields after the async read.
       setName(settings.data.organization.name)
       setLogo(settings.data.organization.logoDataUrl)
     }
@@ -80,7 +83,7 @@ function OrganizationTab() {
 
   const save = useMutation({
     mutationFn: () => api.put('/api/settings/organization', { name: name.trim(), logoDataUrl: logo }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings', user?.username] }),
     onError: (e: unknown) => setError((e as Error).message),
   })
 
@@ -173,6 +176,7 @@ function NumberField({
 }
 
 function RulesTab() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const settings = useSettings()
   const [rules, setRules] = useState<SettingsBundle['missionRules'] | null>(null)
@@ -181,6 +185,7 @@ function RulesTab() {
 
   useEffect(() => {
     if (settings.data) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Hydrate editable rules after the async read.
       setRules(settings.data.missionRules)
       setPolicy(settings.data.sessionPolicy)
     }
@@ -188,13 +193,13 @@ function RulesTab() {
 
   const saveRules = useMutation({
     mutationFn: () => api.put('/api/settings/mission-rules', rules),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings', user?.username] }),
     onError: (e: unknown) => setError((e as Error).message),
   })
 
   const savePolicy = useMutation({
     mutationFn: () => api.put('/api/settings/session-policy', policy),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings', user?.username] }),
     onError: (e: unknown) => setError((e as Error).message),
   })
 
@@ -279,18 +284,20 @@ function RulesTab() {
 }
 
 function TemplateTab() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const settings = useSettings()
   const [template, setTemplate] = useState<SettingsBundle['missionOrderTemplate'] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable template after the async read.
     if (settings.data) setTemplate(settings.data.missionOrderTemplate)
   }, [settings.data])
 
   const save = useMutation({
     mutationFn: () => api.put('/api/settings/mission-order-template', template),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['settings', user?.username] }),
     onError: (e: unknown) => setError((e as Error).message),
   })
 
@@ -346,16 +353,17 @@ interface SplitReason {
 }
 
 function SplitReasonsTab() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const reasons = useQuery({
-    queryKey: ['split-reasons'],
+    queryKey: ['split-reasons', user?.username],
     queryFn: () => api.get<SplitReason[]>('/api/settings/split-reasons?includeInactive=true'),
   })
 
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['split-reasons'] })
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['split-reasons', user?.username] })
 
   const create = useMutation({
     mutationFn: () => api.post('/api/settings/split-reasons', { name: draft.trim() }),
@@ -450,12 +458,13 @@ function SplitReasonsTab() {
 }
 
 function OrgUnitsTab() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const units = useQuery({ queryKey: ['org-units'], queryFn: () => api.get<OrgUnitDto[]>('/api/organization-units') })
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['org-units'] })
+  const units = useQuery({ queryKey: ['org-units', user?.username], queryFn: () => api.get<OrgUnitDto[]>('/api/organization-units') })
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['org-units', user?.username] })
 
   const create = useMutation({
     mutationFn: () => api.post('/api/organization-units', { name: draft.trim() }),
@@ -539,6 +548,7 @@ function OrgUnitsTab() {
 }
 
 function LocationsTab() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
@@ -550,11 +560,11 @@ function LocationsTab() {
   if (search) params.set('q', search)
 
   const locations = useQuery({
-    queryKey: ['locations', status, search],
+    queryKey: ['locations', user?.username, status, search],
     queryFn: () => api.get<LocationDto[]>(`/api/locations?${params.toString()}`),
   })
 
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['locations'] })
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: ['locations', user?.username] })
 
   const approve = useMutation({
     mutationFn: (id: string) => api.post(`/api/locations/${id}/approve`),

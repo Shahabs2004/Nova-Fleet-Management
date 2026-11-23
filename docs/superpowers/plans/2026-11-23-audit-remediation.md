@@ -332,19 +332,25 @@ public sealed record ReportTableDto(
 - Consumes: `ICurrentUser`, existing mission queries, React Query client.
 - Produces: `MissionVisibility.Apply(IQueryable<Mission>, bool canViewAll, string username)`; keys involving private data include `user?.username`; only an HTTP 401 clears authentication.
 
-- [ ] **Step 1: Write failing backend visibility tests.** Seed missions for two requesters. A user with only `missions.view.own` must see only their own rows and counts in search, dashboard, weekly chart, each report, timeline, detail, and export. A user with `missions.view` sees all.
-- [ ] **Step 2: Run tests and observe failure.** Expected: own-only user currently receives other requesters' data.
-- [ ] **Step 3: Add and apply the shared predicate.** Implement `source.Where(item => item.RequesterUsername == username)` when `canViewAll` is false. Apply before counts, grouping, chart aggregation, paging, exports, and detail lookup. Keep server-side `canViewAll` derived from permissions, never a client flag.
-- [ ] **Step 4: Add the frontend test runner and write failing auth/cache tests.** From `web/`, run `npm install --save-dev vitest @testing-library/react @testing-library/jest-dom jsdom`; add `test: vitest run` to `package.json`, configure the `jsdom` environment and `src/test/setup.ts` in `vite.config.ts`. Simulate `/api/auth/me` returning network error and 500: existing user remains. Simulate 401: user clears and cache cleanup runs. Simulate logout and account switch: no cached notifications or private queries remain.
-- [ ] **Step 5: Fix auth/cache handling.** Distinguish 401 from other failures. On logout, 401, and login as a different username, call `queryClient.cancelQueries()` followed by `queryClient.clear()`. Scope notification keys as `['notifications', user?.username]`; include the username in private keys for `dashboard`, `missions`, `mission`, `reports`, `timeline`, `sms`, `sms-summary`, `sms-templates`, `users`, `sessions`, `audit`, `settings`, `connections-*`, `profile`, and `maintenance`. Public `setup-status` stays unscoped. Update matching invalidations in the same files.
-- [ ] **Step 6: Verify.** Run filtered backend tests, full backend tests, frontend tests/lint/build, and available integration tests. If browser access is available without logging in as the user, verify login/401 surfaces only; do not enter credentials.
-- [ ] **Step 7: Report and wait.**
+- [x] **Step 1: Write failing backend visibility tests.** Seed missions for two requesters. A user with only `missions.view.own` must see only their own rows and counts in search, dashboard, weekly chart, each report, timeline, detail, and export. A user with `missions.view` sees all.
+- [x] **Step 2: Run tests and observe failure.** Expected: own-only user currently receives other requesters' data.
+- [x] **Step 3: Add and apply the shared predicate.** Implement `source.Where(item => item.RequesterUsername == username)` when `canViewAll` is false. Apply before counts, grouping, chart aggregation, paging, exports, and detail lookup. Keep server-side `canViewAll` derived from permissions, never a client flag.
+- [x] **Step 4: Add the frontend test runner and write failing auth/cache tests.** From `web/`, run `npm install --save-dev vitest @testing-library/react @testing-library/jest-dom jsdom`; add `test: vitest run` to `package.json`, configure the `jsdom` environment and `src/test/setup.ts` in `vite.config.ts`. Simulate `/api/auth/me` returning network error and 500: existing user remains. Simulate 401: user clears and cache cleanup runs. Simulate logout and account switch: no cached notifications or private queries remain.
+- [x] **Step 5: Fix auth/cache handling.** Distinguish 401 from other failures. On logout, 401, and login as a different username, call `queryClient.cancelQueries()` followed by `queryClient.clear()`. Scope notification keys as `['notifications', user?.username]`; include the username in private keys for `dashboard`, `missions`, `mission`, `reports`, `timeline`, `sms`, `sms-summary`, `sms-templates`, `users`, `sessions`, `audit`, `settings`, `connections-*`, `profile`, and `maintenance`. Public `setup-status` stays unscoped. Update matching invalidations in the same files.
+- [x] **Step 6: Verify.** Run filtered backend tests, full backend tests, frontend tests/lint/build, and available integration tests. If browser access is available without logging in as the user, verify login/401 surfaces only; do not enter credentials.
+- [x] **Step 7: Report and wait.**
 
 **Acceptance criteria:** Own-only visibility is consistent across every mission surface; switching accounts cannot reveal prior cached data; transient `/me` failures do not log users out.
 
 **Risk:** Shared dashboard/report query code must be updated together; missing one export path is a security failure. Stage 10 continues date/totals work in `ReportService` and must preserve this predicate.
 
 **Dependencies:** None. Stage 10 consumes `MissionVisibility.Apply`.
+
+**تأیید مرحله ۳ (۲۰۲۶-۱۱-۲۴):**
+- شواهد RED به‌ارث‌رسیده شامل ۱۴ شکست انتظار شده برای دسترسی own-only و یک regression داشبورد (Expected `0`، Actual `1`) بود؛ پس از اصلاح، تست‌های متمرکز visibility و رگرسیون GREEN شدند.
+- ساخت Debug و Release با SDK نصب‌شده `11.0.100` بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۴۲۸ تست واحد و ۷۶ تست یکپارچه گذشت و ۱۰ تست به‌علت نبود متغیرهای SQL محیطی skip شدند.
+- `npm test` در `web/` با ۱۵/۱۵ تست سبز شد. lint کامل ۰ خطا و ۶ هشدار موجود و نامرتبط داشت؛ ۲۲ فایل تغییرکرده Stage 3 با lint بر اساس فهرست صریح، ۰ هشدار/۰ خطا داشتند. `npm run build` موفق بود و فقط هشدار قبلی chunk بزرگ را نشان داد.
+- فقط HTTP 401 پاک‌سازی احراز هویت را فعال می‌کند؛ خطای شبکه/403/500 کاربر را حفظ می‌کند. خروج، 401 و تغییر حساب پس از `cancelQueries()` کش را `clear()` می‌کنند و `setup-status` بدون scope عمومی باقی ماند. هیچ ورود واقعی، SMS واقعی، دیتابیس production یا IIS زنده استفاده نشد.
 
 ## Stage 4 — Atomic Service Settings and Recipient Semantics
 

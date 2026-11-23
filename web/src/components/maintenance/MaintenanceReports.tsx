@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { useAuth } from '../../auth/AuthContext'
 import { api } from '../../lib/api'
 import { faNumber, formatFaDate, toFa } from '../../lib/date'
 import { maintenancePath, type MaintenanceReport } from '../../lib/maintenance'
 import { DateField, Notice } from './MaintenanceControls'
 
 export function MaintenanceReports({ vehicleId }: { vehicleId: string }) {
+  const { user } = useAuth()
   const [from, setFrom] = useState<string | null>(() => new Date(Date.now() - 365 * 86400000).toISOString())
   const [to, setTo] = useState<string | null>(() => new Date().toISOString())
   const [range, setRange] = useState({ from, to })
-  const query = useQuery({ queryKey: ['maintenance', vehicleId, 'report', range], queryFn: () => api.get<MaintenanceReport>(`${maintenancePath(vehicleId)}/report?${new URLSearchParams({ from: range.from!, to: range.to! })}`), enabled: !!range.from && !!range.to })
+  const query = useQuery({ queryKey: ['maintenance', user?.username, vehicleId, 'report', range], queryFn: () => api.get<MaintenanceReport>(`${maintenancePath(vehicleId)}/report?${new URLSearchParams({ from: range.from!, to: range.to! })}`), enabled: !!range.from && !!range.to })
   const report = query.data
   return <section className="m-list"><h2>هزینه و کارکرد</h2><form className="m-form" onSubmit={e => { e.preventDefault(); if (from && to) setRange({ from, to }) }}><div className="m-form-grid"><DateField label="از تاریخ" value={from} onChange={setFrom} /><DateField label="تا تاریخ" value={to} onChange={setTo} /></div><button className="m-button" disabled={!from || !to}>نمایش گزارش</button></form>
     {query.isLoading && <Notice>در حال محاسبه…</Notice>}{query.error && <Notice error>{query.error.message}</Notice>}

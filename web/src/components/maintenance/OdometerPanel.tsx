@@ -8,14 +8,15 @@ import { DateField, Field, MaintenanceDialog, Notice } from './MaintenanceContro
 
 const sources: Record<string, string> = { manual: 'قرائت دستی', maintenance: 'سرویس', 'mission-start': 'شروع مأموریت', 'mission-end': 'پایان مأموریت' }
 export function RevisionHistory({ vehicleId, entityId }: { vehicleId: string; entityId: string }) {
-  const query = useQuery({ queryKey: ['maintenance', vehicleId, 'revisions', entityId], queryFn: () => api.get<Revision[]>(`${maintenancePath(vehicleId)}/revisions/${entityId}`) })
+  const { user } = useAuth()
+  const query = useQuery({ queryKey: ['maintenance', user?.username, vehicleId, 'revisions', entityId], queryFn: () => api.get<Revision[]>(`${maintenancePath(vehicleId)}/revisions/${entityId}`) })
   return <section className="m-list"><h3>سابقهٔ اصلاحات</h3>{query.isLoading && <Notice>در حال دریافت…</Notice>}{query.error && <Notice error>{query.error.message}</Notice>}
     {query.data?.length === 0 && <Notice>اصلاحی ثبت نشده است.</Notice>}{query.data?.map(r => <details className="m-panel" key={r.id}><summary>نسخهٔ {faNumber(r.version)} — {r.reason}</summary><p>{r.actor} · {formatFaDateTime(r.createdAtUtc)}</p><pre className="m-revision" dir="ltr">{JSON.stringify(JSON.parse(r.beforeJson), null, 2)}</pre></details>)}
   </section>
 }
 function ReadingEditor({ vehicleId, reading, onClose, onSaved }: { vehicleId: string; reading?: Reading; onClose: () => void; onSaved: () => Promise<void> }) {
   const [requestId] = useState(() => crypto.randomUUID())
-  const [date, setDate] = useState<string | null>(reading?.observedAtUtc ?? new Date().toISOString())
+  const [date, setDate] = useState<string | null>(() => reading?.observedAtUtc ?? new Date().toISOString())
   const [km, setKm] = useState(reading?.kilometers.toString() ?? '')
   const [reason, setReason] = useState('')
   const [error, setError] = useState('')
@@ -41,10 +42,10 @@ function ReadingEditor({ vehicleId, reading, onClose, onSaved }: { vehicleId: st
   </MaintenanceDialog>
 }
 export function OdometerPanel({ vehicleId, archived, onSaved, onRecord }: { vehicleId: string; archived: boolean; onSaved: () => Promise<void>; onRecord: (id: string) => void }) {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const [edit, setEdit] = useState<Reading | 'new' | null>(null)
   const [history, setHistory] = useState<string | null>(null)
-  const query = useQuery({ queryKey: ['maintenance', vehicleId, 'odometer'], queryFn: () => api.get<OdometerSummary>(`${maintenancePath(vehicleId)}/odometer`) })
+  const query = useQuery({ queryKey: ['maintenance', user?.username, vehicleId, 'odometer'], queryFn: () => api.get<OdometerSummary>(`${maintenancePath(vehicleId)}/odometer`) })
   return <div className="m-list"><div className="m-row"><h2>دفترچهٔ مشترک کیلومتر</h2>{can('maintenance.odometer.create') && !archived && <button className="m-button" onClick={() => setEdit('new')}>ثبت کیلومتر</button>}</div>
     {query.isLoading && <Notice>در حال دریافت قرائت‌ها…</Notice>}{query.error && <Notice error>{query.error.message}</Notice>}
     {query.data?.hasConflicts && <Notice error>سوابق ناسازگار وجود دارد؛ محاسبات کیلومتری تا اصلاح مدیر معتبر نیستند.</Notice>}

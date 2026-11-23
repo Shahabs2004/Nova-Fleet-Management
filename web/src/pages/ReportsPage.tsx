@@ -36,7 +36,7 @@ function jalaliValue(offsetDays: number): JalaliDateValue {
 }
 
 export function ReportsPage() {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const [selected, setSelected] = useState<string | null>(null)
   const [from, setFrom] = useState<JalaliDateValue | null>(() => jalaliValue(-30))
   const [to, setTo] = useState<JalaliDateValue | null>(() => jalaliValue(0))
@@ -46,15 +46,16 @@ export function ReportsPage() {
   const [orgUnit, setOrgUnit] = useState('')
   const [status, setStatus] = useState('')
   const [exportError, setExportError] = useState<string | null>(null)
+  const [startYear] = useState(() => new Date().getFullYear() - 621)
 
   const { data: definitions, isLoading } = useQuery({
-    queryKey: ['reports'],
+    queryKey: ['reports', user?.username],
     queryFn: () => api.get<ReportDefinition[]>('/api/reports'),
   })
-  const { data: drivers } = useQuery({ queryKey: ['driver-options'], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options'], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
+  const { data: drivers } = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
   const { data: orgUnits } = useQuery({
-    queryKey: ['organization-units'],
+    queryKey: ['organization-units', user?.username],
     queryFn: () => api.get<{ id: string; name: string; isActive: boolean }[]>('/api/organization-units'),
   })
 
@@ -135,11 +136,11 @@ export function ReportsPage() {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <label className="label">از تاریخ</label>
-            <JalaliDateField value={from} onChange={setFrom} startYear={new Date().getFullYear() - 621} yearsBack={4} />
+            <JalaliDateField value={from} onChange={setFrom} startYear={startYear} yearsBack={4} />
           </div>
           <div>
             <label className="label">تا تاریخ</label>
-            <JalaliDateField value={to} onChange={setTo} startYear={new Date().getFullYear() - 621} yearsBack={4} />
+            <JalaliDateField value={to} onChange={setTo} startYear={startYear} yearsBack={4} />
           </div>
           <div>
             <label className="label">راننده</label>

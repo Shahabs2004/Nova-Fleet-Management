@@ -69,8 +69,8 @@ function ProfileForm({ profile, loading }: { profile: ProfileDetails; loading: b
       queryClient.setQueryData(['profile', user?.username], saved)
       await Promise.all([
         refresh(),
-        queryClient.invalidateQueries({ queryKey: ['users'] }),
-        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['users', user?.username] }),
+        queryClient.invalidateQueries({ queryKey: ['profile', user?.username] }),
       ])
       setNotice(saved.avatarDataUrl ? 'تصویر پروفایل با موفقیت ذخیره شد.' : 'تصویر پروفایل با موفقیت حذف شد.')
     } catch (e) {

@@ -97,7 +97,7 @@ function addJalaliDays(value: JalaliDateValue, days: number): JalaliDateValue {
 }
 
 export function TimelinePage() {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [year] = todayJalali()
@@ -109,6 +109,7 @@ export function TimelinePage() {
   const [onlyBusyDrivers, setOnlyBusyDrivers] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tip, setTip] = useState<{ mission: TimelineMission; x: number; y: number; below: boolean } | null>(null)
+  const [now] = useState(() => Date.now())
 
   const showTip = (el: HTMLElement, mission: TimelineMission) => {
     const r = el.getBoundingClientRect()
@@ -120,8 +121,8 @@ export function TimelinePage() {
   const fromUtc = jalaliValueToUtc(from, 0)
   const toUtc = jalaliValueToUtc(to, 23)
 
-  const drivers = useQuery({ queryKey: ['driver-options'], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
-  const vehicles = useQuery({ queryKey: ['vehicle-options'], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
+  const drivers = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
+  const vehicles = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
 
   const params = new URLSearchParams()
   if (fromUtc) params.set('fromUtc', fromUtc)
@@ -131,7 +132,7 @@ export function TimelinePage() {
   const enabled = Boolean(fromUtc && toUtc)
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['timeline', fromUtc, toUtc, driverId, vehicleId],
+    queryKey: ['timeline', user?.username, fromUtc, toUtc, driverId, vehicleId],
     queryFn: () => api.get<TimelineMission[]>(`/api/timeline?${params.toString()}`),
     enabled,
   })
@@ -159,7 +160,7 @@ export function TimelinePage() {
     const empty = { cells: [] as TimeCell[], bands: [] as MonthBand[] }
     if (!enabled || rangeEnd <= rangeStart) return empty
 
-    const today = jalaliOf(new Date())
+    const today = todayJalali()
     const list: TimeCell[] = []
     for (let cursor = rangeStart; cursor < rangeEnd; cursor += cellHours * HOUR_MS) {
       const iso = new Date(cursor).toISOString()
@@ -249,11 +250,11 @@ export function TimelinePage() {
   }, [data, drivers.data, onlyBusyDrivers])
 
   const totalMissions = data?.length ?? 0
-  const todayOffset = ((Date.now() - rangeStart) / HOUR_MS) * pxPerHour * scale
+  const todayOffset = ((now - rangeStart) / HOUR_MS) * pxPerHour * scale
   const showToday = hasGrid && todayOffset >= 0 && todayOffset <= trackWidth
 
   const selected = useQuery({
-    queryKey: ['mission', selectedId],
+    queryKey: ['mission', user?.username, selectedId],
     queryFn: () => api.get<MissionDetails>(`/api/missions/${selectedId}`),
     enabled: Boolean(selectedId),
   })
@@ -586,8 +587,8 @@ export function TimelinePage() {
             mission={selected.data}
             editable={canEdit}
             onSaved={() => {
-              queryClient.invalidateQueries({ queryKey: ['timeline'] })
-              queryClient.invalidateQueries({ queryKey: ['mission', selected.data.id] })
+              queryClient.invalidateQueries({ queryKey: ['timeline', user?.username] })
+              queryClient.invalidateQueries({ queryKey: ['mission', user?.username, selected.data.id] })
             }}
             onOpenFull={() => navigate(`/missions/${selected.data.id}`)}
           />

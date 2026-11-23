@@ -22,7 +22,7 @@ function SmsStatusBadge({ status }: { status: number }) {
 }
 
 export function SmsPage() {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<'queue' | 'templates'>('queue')
   const [search, setSearch] = useState('')
@@ -31,7 +31,7 @@ export function SmsPage() {
   const pageSize = 20
   const [testOpen, setTestOpen] = useState(false)
 
-  const summary = useQuery({ queryKey: ['sms-summary'], queryFn: () => api.get<SmsSummary>('/api/sms/summary') })
+  const summary = useQuery({ queryKey: ['sms-summary', user?.username], queryFn: () => api.get<SmsSummary>('/api/sms/summary') })
 
   const params = new URLSearchParams()
   if (search) params.set('q', search)
@@ -40,7 +40,7 @@ export function SmsPage() {
   params.set('pageSize', String(pageSize))
 
   const queue = useQuery({
-    queryKey: ['sms', search, status, page],
+    queryKey: ['sms', user?.username, search, status, page],
     queryFn: () => api.get<PagedResult<SmsItem>>(`/api/sms?${params.toString()}`),
     enabled: tab === 'queue',
   })
@@ -48,16 +48,16 @@ export function SmsPage() {
   const retry = useMutation({
     mutationFn: (id: string) => api.post(`/api/sms/${id}/retry`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['sms'] })
-      void queryClient.invalidateQueries({ queryKey: ['sms-summary'] })
+      void queryClient.invalidateQueries({ queryKey: ['sms', user?.username] })
+      void queryClient.invalidateQueries({ queryKey: ['sms-summary', user?.username] })
     },
   })
 
   const cancel = useMutation({
     mutationFn: (id: string) => api.post(`/api/sms/${id}/cancel`),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['sms'] })
-      void queryClient.invalidateQueries({ queryKey: ['sms-summary'] })
+      void queryClient.invalidateQueries({ queryKey: ['sms', user?.username] })
+      void queryClient.invalidateQueries({ queryKey: ['sms-summary', user?.username] })
     },
   })
 
@@ -212,8 +212,8 @@ export function SmsPage() {
         open={testOpen}
         onClose={() => setTestOpen(false)}
         onSent={() => {
-          void queryClient.invalidateQueries({ queryKey: ['sms'] })
-          void queryClient.invalidateQueries({ queryKey: ['sms-summary'] })
+          void queryClient.invalidateQueries({ queryKey: ['sms', user?.username] })
+          void queryClient.invalidateQueries({ queryKey: ['sms-summary', user?.username] })
         }}
       />
     </div>
@@ -229,10 +229,11 @@ function icon(d: string) {
 }
 
 function TemplatesTab({ canEdit }: { canEdit: boolean }) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<SmsTemplate | null>(null)
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['sms-templates'],
+    queryKey: ['sms-templates', user?.username],
     queryFn: () => api.get<SmsTemplate[]>('/api/sms/templates'),
   })
 
@@ -269,7 +270,7 @@ function TemplatesTab({ canEdit }: { canEdit: boolean }) {
             template={editing}
             onDone={async () => {
               setEditing(null)
-              await queryClient.invalidateQueries({ queryKey: ['sms-templates'] })
+              await queryClient.invalidateQueries({ queryKey: ['sms-templates', user?.username] })
             }}
           />
         )}

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
 using NovaFleet.Application.Common;
+using NovaFleet.Application.Missions;
 using NovaFleet.Application.Reports;
 using NovaFleet.Domain.Common;
 using NovaFleet.Domain.Missions;
@@ -271,7 +272,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
     private async Task<ReportTableDto> DriverActivityReport(ReportQuery query, CancellationToken cancellationToken)
     {
-        currentUser.Require(PermissionCatalog.Missions.View);
+        currentUser.RequireAny(PermissionCatalog.Missions.View, PermissionCatalog.Missions.ViewOwn);
         var missions = await LoadRowsAsync(query, cancellationToken);
         var rows = missions
             .Where(item => item.DriverName is not null)
@@ -302,7 +303,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
     private async Task<ReportTableDto> VehicleUsageReport(ReportQuery query, CancellationToken cancellationToken)
     {
-        currentUser.Require(PermissionCatalog.Missions.View);
+        currentUser.RequireAny(PermissionCatalog.Missions.View, PermissionCatalog.Missions.ViewOwn);
         var missions = await LoadRowsAsync(query, cancellationToken);
         var rangeDays = Math.Max(1, (int)Math.Ceiling(((query.ToUtc ?? DateTimeOffset.UtcNow) - (query.FromUtc ?? DateTimeOffset.UtcNow.AddMonths(-1))).TotalDays));
         var rows = missions
@@ -334,7 +335,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
     private async Task<ReportTableDto> OrgUnitReport(ReportQuery query, CancellationToken cancellationToken)
     {
-        currentUser.Require(PermissionCatalog.Missions.View);
+        currentUser.RequireAny(PermissionCatalog.Missions.View, PermissionCatalog.Missions.ViewOwn);
         var missions = await LoadRowsAsync(query, cancellationToken);
         var rows = missions
             .GroupBy(item => string.IsNullOrWhiteSpace(item.OrganizationalUnit) ? "بدون واحد" : item.OrganizationalUnit)
@@ -471,7 +472,10 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
     private IQueryable<Mission> Filtered(ReportQuery query)
     {
-        var source = db.Missions.AsNoTracking();
+        var source = MissionVisibility.Apply(
+            db.Missions.AsNoTracking(),
+            currentUser.Has(PermissionCatalog.Missions.View),
+            currentUser.Username);
 
         if (query.FromUtc.HasValue)
         {

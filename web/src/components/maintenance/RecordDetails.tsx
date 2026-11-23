@@ -8,8 +8,8 @@ import { Field, MaintenanceDialog, Notice } from './MaintenanceControls'
 import { RevisionHistory } from './OdometerPanel'
 
 export function RecordDetails({ vehicleId, id, onClose, onEdit, onSaved }: { vehicleId: string; id: string; onClose: () => void; onEdit: (r: ServiceRecord) => void; onSaved: () => Promise<void> }) {
-  const { can } = useAuth()
-  const query = useQuery({ queryKey: ['maintenance', vehicleId, 'record', id], queryFn: () => api.get<ServiceRecord>(`${maintenancePath(vehicleId)}/records/${id}`) })
+  const { can, user } = useAuth()
+  const query = useQuery({ queryKey: ['maintenance', user?.username, vehicleId, 'record', id], queryFn: () => api.get<ServiceRecord>(`${maintenancePath(vehicleId)}/records/${id}`) })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [voiding, setVoiding] = useState(false)

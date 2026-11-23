@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import type {
   ConnectionTestResult,
@@ -203,8 +204,9 @@ function Busy({ text }: { text: string }) {
 }
 
 function DatabaseCard() {
+  const { user } = useAuth()
   const query = useQuery({
-    queryKey: ['connections-database'],
+    queryKey: ['connections-database', user?.username],
     queryFn: () => api.get<DatabaseSettings>('/api/settings/connections/database'),
   })
   const [value, setValue] = useState('')
@@ -213,6 +215,7 @@ function DatabaseCard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable value after the async read.
     if (query.data?.connectionString) setValue(query.data.connectionString)
   }, [query.data])
 
@@ -263,8 +266,9 @@ function DatabaseCard() {
 }
 
 function DirectoryCard() {
+  const { user } = useAuth()
   const query = useQuery({
-    queryKey: ['connections-directory'],
+    queryKey: ['connections-directory', user?.username],
     queryFn: () => api.get<DirectorySettings>('/api/settings/connections/directory'),
   })
   const [draft, setDraft] = useState<DirectorySettings>(EMPTY_DIRECTORY)
@@ -275,6 +279,7 @@ function DirectoryCard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable draft after the async read.
     if (query.data) setDraft(query.data)
   }, [query.data])
 
@@ -355,8 +360,9 @@ function DirectoryCard() {
 
 function SmsCard() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const query = useQuery({
-    queryKey: ['connections-sms'],
+    queryKey: ['connections-sms', user?.username],
     queryFn: () => api.get<SmsConnectionSettings>('/api/settings/connections/sms'),
   })
   const [draft, setDraft] = useState<SmsConnectionSettings>(EMPTY_SMS)
@@ -368,6 +374,7 @@ function SmsCard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable draft after the async read.
     if (query.data) setDraft(query.data)
   }, [query.data])
 
@@ -393,8 +400,8 @@ function SmsCard() {
     onSuccess: () => {
       setSendNote('پیامک آزمایشی در صف ثبت شد و پس از پردازش صف ارسال می‌شود.')
       setError(null)
-      void queryClient.invalidateQueries({ queryKey: ['sms'] })
-      void queryClient.invalidateQueries({ queryKey: ['sms-summary'] })
+      void queryClient.invalidateQueries({ queryKey: ['sms', user?.username] })
+      void queryClient.invalidateQueries({ queryKey: ['sms-summary', user?.username] })
     },
     onError: (e: unknown) => setError(message(e)),
   })
@@ -464,8 +471,9 @@ function SmsCard() {
 }
 
 function OperationsCard() {
+  const { user } = useAuth()
   const query = useQuery({
-    queryKey: ['connections-operations'],
+    queryKey: ['connections-operations', user?.username],
     queryFn: () => api.get<OperationsSettings>('/api/settings/connections/operations'),
   })
   const [draft, setDraft] = useState<OperationsSettings>(EMPTY_OPERATIONS)
@@ -473,6 +481,7 @@ function OperationsCard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable draft after the async read.
     if (query.data) setDraft(query.data)
   }, [query.data])
 

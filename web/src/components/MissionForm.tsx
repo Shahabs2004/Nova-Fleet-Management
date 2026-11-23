@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { jalaliHourToUtcUtc, jalaliOf, tehranHour, todayJalali, toFa } from '../lib/date'
 import { jalaliDaysInMonth } from './JalaliDateField'
@@ -100,7 +101,9 @@ export function MissionForm({
   error: string | null
   initial?: MissionDetails
 }) {
-  const today = useMemo(todayParts, [])
+  const { user } = useAuth()
+  const today = useMemo(() => todayParts(), [])
+  const [now] = useState(() => Date.now())
   const years = useMemo(() => Array.from({ length: today.year + 10 }, (_, i) => today.year + 10 - i), [today.year])
   const [type, setType] = useState(initial?.type ?? 1)
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -118,11 +121,11 @@ export function MissionForm({
   const [passengerNames, setPassengerNames] = useState(initial?.passengerNames ?? '')
 
   const { data: locations } = useQuery({
-    queryKey: ['approved-locations'],
+    queryKey: ['approved-locations', user?.username],
     queryFn: () => api.get<LocationDto[]>('/api/locations?status=2'),
   })
   const { data: profile } = useQuery({
-    queryKey: ['profile'],
+    queryKey: ['profile', user?.username],
     queryFn: () => api.get<ProfileDetails>('/api/profile'),
     enabled: !initial,
   })
@@ -130,6 +133,7 @@ export function MissionForm({
   // شماره موبایل درخواست‌کننده از پروفایل پر می‌شود؛ کاربر می‌تواند آن را تغییر دهد.
   useEffect(() => {
     if (!initial && profile?.mobilePhone) {
+      // oxlint-disable-next-line react/set-state-in-effect -- Prefill the phone without overwriting user edits.
       setPhone((prev) => prev || profile.mobilePhone!)
     }
   }, [profile, initial])
@@ -138,7 +142,7 @@ export function MissionForm({
   const datalistId = 'mission-locations'
   const plannedStartAtUtc = jalaliHourToUtcUtc(start.year, start.month, start.day, start.hour)
   const plannedEndAtUtc = jalaliHourToUtcUtc(end.year, end.month, end.day, end.hour)
-  const isBackdated = new Date(plannedStartAtUtc).getTime() < Date.now() || new Date(plannedEndAtUtc).getTime() < Date.now()
+  const isBackdated = new Date(plannedStartAtUtc).getTime() < now || new Date(plannedEndAtUtc).getTime() < now
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()

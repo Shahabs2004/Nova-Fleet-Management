@@ -37,8 +37,11 @@ public sealed class MissionService(
         currentUser.RequireAny(PermissionCatalog.Missions.View, PermissionCatalog.Missions.ViewOwn);
         var (safePage, safeSize) = Paging.Normalize(query.Page, query.PageSize);
 
-        var source = db.Missions.AsNoTracking();
-        if (query.OnlyMine || (!currentUser.Has(PermissionCatalog.Missions.View) && currentUser.Has(PermissionCatalog.Missions.ViewOwn)))
+        var source = MissionVisibility.Apply(
+            db.Missions.AsNoTracking(),
+            currentUser.Has(PermissionCatalog.Missions.View),
+            currentUser.Username);
+        if (query.OnlyMine)
         {
             source = source.Where(item => item.RequesterUsername == currentUser.Username);
         }
@@ -131,8 +134,7 @@ public sealed class MissionService(
     public async Task<MissionDetailsDto> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         currentUser.RequireAny(PermissionCatalog.Missions.View, PermissionCatalog.Missions.ViewOwn);
-        var mission = await LoadAsync(id, cancellationToken);
-        EnsureVisible(mission);
+        var mission = await LoadVisibleAsync(id, cancellationToken);
         return await ToDetailsAsync(mission, cancellationToken);
     }
 
@@ -701,8 +703,7 @@ public sealed class MissionService(
     public async Task<byte[]> ExportOrderPdfAsync(Guid id, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Missions.Print);
-        var mission = await LoadAsync(id, cancellationToken);
-        EnsureVisible(mission);
+        var mission = await LoadVisibleAsync(id, cancellationToken);
         if (!mission.ApprovedAtUtc.HasValue
             || mission.Status is not (MissionStatus.Confirmed or MissionStatus.Running or MissionStatus.Completed))
         {
@@ -720,6 +721,14 @@ public sealed class MissionService(
         return db.SaveChangesAsync(cancellationToken);
     }
 
+    private async Task<Mission> LoadVisibleAsync(Guid id, CancellationToken cancellationToken) =>
+        await MissionVisibility.Apply(
+                db.Missions,
+                currentUser.Has(PermissionCatalog.Missions.View),
+                currentUser.Username)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+            ?? throw new NotFoundAppException("مأموریت پیدا نشد.");
+
     private async Task<Mission> LoadAsync(Guid id, CancellationToken cancellationToken) =>
         await db.Missions.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundAppException("مأموریت پیدا نشد.");
@@ -727,15 +736,6 @@ public sealed class MissionService(
     private async Task<MissionChangeRequest> LoadChangeAsync(Mission mission, Guid changeRequestId, CancellationToken cancellationToken) =>
         await db.MissionChangeRequests.FirstOrDefaultAsync(item => item.Id == changeRequestId && item.MissionId == mission.Id, cancellationToken)
             ?? throw new NotFoundAppException("درخواست تغییر پیدا نشد.");
-
-    private void EnsureVisible(Mission mission)
-    {
-        if (!currentUser.Has(PermissionCatalog.Missions.View)
-            && mission.RequesterUsername != currentUser.Username)
-        {
-            throw new ForbiddenAppException("این مأموریت متعلق به شما نیست.");
-        }
-    }
 
     private async Task<int> GetGapMinutesAsync(CancellationToken cancellationToken)
     {

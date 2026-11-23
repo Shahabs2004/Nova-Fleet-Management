@@ -19,6 +19,12 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
     {
         currentUser.Require(PermissionCatalog.Dashboard.View);
         var now = clock.UtcNow;
+        var visibleMissions = currentUser.Has(PermissionCatalog.Missions.View) || currentUser.Has(PermissionCatalog.Missions.ViewOwn)
+            ? MissionVisibility.Apply(
+                db.Missions.AsNoTracking(),
+                currentUser.Has(PermissionCatalog.Missions.View),
+                currentUser.Username)
+            : db.Missions.AsNoTracking();
 
         var pendingRequests = 0;
         var activeMissions = 0;
@@ -30,18 +36,21 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
 
         if (currentUser.Has(PermissionCatalog.Missions.View) || currentUser.Has(PermissionCatalog.Missions.ViewOwn))
         {
-            pendingRequests = await db.Missions.CountAsync(item => item.Status == MissionStatus.Pending || item.Status == MissionStatus.UnderReview, cancellationToken);
-            activeMissions = await db.Missions.CountAsync(item => item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running, cancellationToken);
-            pendingWithdrawals = await db.Missions.CountAsync(item => item.Status == MissionStatus.WithdrawalPending, cancellationToken);
-            pendingChangeRequests = await db.MissionChangeRequests.CountAsync(item => item.Status == MissionChangeRequestStatus.Pending, cancellationToken);
+            pendingRequests = await visibleMissions.CountAsync(item => item.Status == MissionStatus.Pending || item.Status == MissionStatus.UnderReview, cancellationToken);
+            activeMissions = await visibleMissions.CountAsync(item => item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running, cancellationToken);
+            pendingWithdrawals = await visibleMissions.CountAsync(item => item.Status == MissionStatus.WithdrawalPending, cancellationToken);
+            pendingChangeRequests = await db.MissionChangeRequests.CountAsync(item =>
+                item.Status == MissionChangeRequestStatus.Pending
+                && visibleMissions.Any(mission => mission.Id == item.MissionId),
+                cancellationToken);
 
             var monthStart = StartOfMonthUtc(now);
-            missionsThisMonth = await db.Missions.CountAsync(item => item.CreatedAtUtc >= monthStart, cancellationToken);
-            distanceThisMonthKm = await db.Missions
+            missionsThisMonth = await visibleMissions.CountAsync(item => item.CreatedAtUtc >= monthStart, cancellationToken);
+            distanceThisMonthKm = await visibleMissions
                 .Where(item => item.ActualEndAtUtc >= monthStart && item.OdometerStartKm != null && item.OdometerEndKm != null)
                 .SumAsync(item => item.OdometerEndKm!.Value - item.OdometerStartKm!.Value, cancellationToken);
 
-            upcoming = (await db.Missions.AsNoTracking()
+            upcoming = (await visibleMissions.AsNoTracking()
                     .Where(item => item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running)
                     .OrderBy(item => item.PlannedStartAtUtc)
                     .Take(5)
@@ -81,7 +90,7 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
         if (currentUser.Has(PermissionCatalog.Vehicles.View))
         {
             var vehicles = await db.Vehicles.AsNoTracking().Where(item => !item.IsArchived).ToListAsync(cancellationToken);
-            var activeVehicleIds = await db.Missions
+            var activeVehicleIds = await visibleMissions
                 .Where(item => item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running || item.Status == MissionStatus.WithdrawalPending)
                 .Select(item => item.VehicleId!.Value)
                 .Distinct()
@@ -101,7 +110,7 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
         if (currentUser.Has(PermissionCatalog.Drivers.View))
         {
             activeDrivers = await db.Drivers.CountAsync(item => !item.IsArchived && item.EmploymentStatus == DriverEmploymentStatus.Active, cancellationToken);
-            var workloadRows = await db.Missions.AsNoTracking()
+            var workloadRows = await visibleMissions.AsNoTracking()
                 .Where(item => item.DriverId != null
                     && (item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running))
                 .Select(item => db.Drivers.Where(d => d.Id == item.DriverId).Select(d => d.FirstName + " " + d.LastName).FirstOrDefault() ?? "نامشخص")
@@ -126,7 +135,7 @@ public sealed class DashboardService(NovaFleetDbContext db, ICurrentUser current
             var today = JalaliDate.StartOfTehranDayUtc(JalaliDate.YearOf(now), JalaliDate.MonthOf(now), JalaliDate.DayOf(now));
             var windowStart = today.AddDays(-7);
             var windowEnd = today.AddDays(8);
-            var starts = await db.Missions.AsNoTracking()
+            var starts = await visibleMissions.AsNoTracking()
                 .Where(item => item.PlannedStartAtUtc >= windowStart && item.PlannedStartAtUtc < windowEnd)
                 .Select(item => item.PlannedStartAtUtc)
                 .ToListAsync(cancellationToken);

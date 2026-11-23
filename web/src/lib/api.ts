@@ -58,6 +58,10 @@ export async function downloadFile(path: string, body: unknown, fallbackName: st
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'X-Requested-With': 'XMLHttpRequest' },
     body: JSON.stringify(body),
   })
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent('nf-unauthorized'))
+  }
+
   if (!response.ok) {
     let message = `خطای سرور (${response.status})`
     try {

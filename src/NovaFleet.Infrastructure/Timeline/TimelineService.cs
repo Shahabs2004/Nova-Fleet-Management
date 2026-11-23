@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
 using NovaFleet.Application.Common;
+using NovaFleet.Application.Missions;
 using NovaFleet.Application.Timeline;
 using NovaFleet.Domain.Missions;
 using NovaFleet.Infrastructure.Persistence;
@@ -27,13 +28,19 @@ public sealed class TimelineService(NovaFleetDbContext db, ICurrentUser currentU
         Guid? vehicleId,
         CancellationToken cancellationToken = default)
     {
-        currentUser.RequireAny(PermissionCatalog.Missions.TimelineView, PermissionCatalog.Missions.View);
+        currentUser.RequireAny(
+            PermissionCatalog.Missions.TimelineView,
+            PermissionCatalog.Missions.View,
+            PermissionCatalog.Missions.ViewOwn);
         if (toUtc <= fromUtc)
         {
             throw new ValidationAppException("بازه زمانی تایم‌لاین معتبر نیست.");
         }
 
-        var source = db.Missions.AsNoTracking()
+        var source = MissionVisibility.Apply(
+                db.Missions.AsNoTracking(),
+                currentUser.Has(PermissionCatalog.Missions.View),
+                currentUser.Username)
             .Where(item => TimelineStatuses.Contains(item.Status)
                 && item.PlannedStartAtUtc <= toUtc
                 && item.PlannedEndAtUtc >= fromUtc);

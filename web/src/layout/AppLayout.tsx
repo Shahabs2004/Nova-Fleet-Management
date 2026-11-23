@@ -65,18 +65,18 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 ]
 
 function NotificationBell() {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const { data } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', user?.username],
     queryFn: () => api.get<{ items: NotificationDto[]; unreadCount: number }>('/api/notifications?pageSize=8'),
     refetchInterval: 30_000,
   })
 
   const markAll = async () => {
     await api.post('/api/notifications/read-all')
-    await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    await queryClient.invalidateQueries({ queryKey: ['notifications', user?.username] })
   }
 
   const unread = data?.unreadCount ?? 0
@@ -126,7 +126,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const [labelsOpen, setLabelsOpen] = useState(false)
   const { data: settings } = useQuery({
-    queryKey: ['settings'],
+    queryKey: ['settings', user?.username],
     queryFn: () => api.get<SettingsBundle>('/api/settings'),
   })
   const organizationName = settings?.organization.name?.trim() || DEFAULT_ORGANIZATION_NAME

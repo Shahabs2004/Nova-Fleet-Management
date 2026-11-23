@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
-import { faNumber, formatFaDateTime, toFa } from '../lib/date'
+import { formatFaDateTime, toFa } from '../lib/date'
 import { MISSION_STATUS, MISSION_TYPE } from '../lib/labels'
 import type { MissionListItem, PagedResult } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner, StatusBadge } from '../components/ui'
@@ -11,7 +11,7 @@ import { Plate } from '../components/Plate'
 import { MissionForm } from '../components/MissionForm'
 
 export function MissionsPage() {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -27,7 +27,7 @@ export function MissionsPage() {
   if (onlyMine) params.set('onlyMine', 'true')
 
   const { data, isLoading } = useQuery({
-    queryKey: ['missions', params.toString()],
+    queryKey: ['missions', user?.username, params.toString()],
     queryFn: () => api.get<PagedResult<MissionListItem>>(`/api/missions?${params}`),
   })
 
@@ -35,7 +35,7 @@ export function MissionsPage() {
     mutationFn: (input: unknown) => api.post('/api/missions', input),
     onSuccess: () => {
       setCreateOpen(false)
-      void queryClient.invalidateQueries({ queryKey: ['missions'] })
+      void queryClient.invalidateQueries({ queryKey: ['missions', user?.username] })
     },
   })
 
@@ -169,8 +169,4 @@ export function MissionsPage() {
       </Modal>
     </div>
   )
-}
-
-export function missionRouteHelpers() {
-  return { faNumber }
 }

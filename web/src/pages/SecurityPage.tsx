@@ -80,7 +80,7 @@ function UsersTab() {
   const [resetting, setResetting] = useState<UserListItem | null>(null)
 
   const users = useQuery({
-    queryKey: ['users', search, includeDisabled],
+    queryKey: ['users', currentUser?.username, search, includeDisabled],
     queryFn: () =>
       api.get<UserListItem[]>(
         `/api/users?includeDisabled=${includeDisabled}&search=${encodeURIComponent(search)}`,
@@ -89,7 +89,7 @@ function UsersTab() {
 
   const toggle = useMutation({
     mutationFn: (user: UserListItem) => api.post(`/api/users/${user.id}/disabled`, { active: user.isDisabled }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['users', currentUser?.username] }),
   })
 
   return (
@@ -191,8 +191,8 @@ function UsersTab() {
           onSavingChange={(value) => { saving.current = value }}
           onDone={async (username) => {
             await Promise.all([
-              queryClient.invalidateQueries({ queryKey: ['users'] }),
-              queryClient.invalidateQueries({ queryKey: ['profile'] }),
+              queryClient.invalidateQueries({ queryKey: ['users', currentUser?.username] }),
+              queryClient.invalidateQueries({ queryKey: ['profile', currentUser?.username] }),
               ...(editor.id && username === currentUser?.username ? [refresh()] : []),
             ])
             setNotice(editor.id ? 'تغییرات کاربر با موفقیت ذخیره شد.' : 'کاربر با موفقیت ایجاد شد.')
@@ -207,7 +207,7 @@ function UsersTab() {
             userId={resetting.id}
             onDone={async () => {
               setResetting(null)
-              await queryClient.invalidateQueries({ queryKey: ['users'] })
+              await queryClient.invalidateQueries({ queryKey: ['users', currentUser?.username] })
             }}
           />
         )}
@@ -255,12 +255,12 @@ function RolesTab() {
   const { user: currentUser } = useAuth()
   const canManageLocalAdmins = currentUser?.isLocalAdmin === true
   const [editing, setEditing] = useState<RoleDto | null>(null)
-  const roles = useQuery({ queryKey: ['roles'], queryFn: () => api.get<RoleDto[]>('/api/roles') })
-  const permissions = useQuery({ queryKey: ['permissions'], queryFn: () => api.get<PermissionDefinition[]>('/api/permissions') })
+  const roles = useQuery({ queryKey: ['roles', currentUser?.username], queryFn: () => api.get<RoleDto[]>('/api/roles') })
+  const permissions = useQuery({ queryKey: ['permissions', currentUser?.username], queryFn: () => api.get<PermissionDefinition[]>('/api/permissions') })
 
   const toggle = useMutation({
     mutationFn: (role: RoleDto) => api.post(`/api/roles/${role.id}/active`, { active: !role.isActive }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['roles'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['roles', currentUser?.username] }),
   })
 
   if (roles.isLoading) return <Spinner />
@@ -316,7 +316,7 @@ function RolesTab() {
             onSave={async (assignments) => {
               await api.put(`/api/roles/${editing.id}/permissions`, { permissions: assignments })
               setEditing(null)
-              await queryClient.invalidateQueries({ queryKey: ['roles'] })
+              await queryClient.invalidateQueries({ queryKey: ['roles', currentUser?.username] })
             }}
           />
         )}
@@ -329,7 +329,7 @@ function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
   const queryClient = useQueryClient()
   const { user: currentUser } = useAuth()
   const canManageLocalAdmins = currentUser?.isLocalAdmin === true
-  const query = useQuery({ queryKey: ['default-role'], queryFn: () => api.get<DefaultRoleDto>('/api/roles/default-role') })
+  const query = useQuery({ queryKey: ['default-role', currentUser?.username], queryFn: () => api.get<DefaultRoleDto>('/api/roles/default-role') })
   const [selected, setSelected] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -344,7 +344,7 @@ function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
     onSuccess: () => {
       setSelected(null)
       setNotice('نقش پیش‌فرض کاربران جدید ذخیره شد.')
-      void queryClient.invalidateQueries({ queryKey: ['default-role'] })
+      void queryClient.invalidateQueries({ queryKey: ['default-role', currentUser?.username] })
     },
   })
 
@@ -392,7 +392,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
   const { user: currentUser } = useAuth()
   const canManageLocalAdmins = currentUser?.isLocalAdmin === true
   const mappings = useQuery({
-    queryKey: ['directory-mappings'],
+    queryKey: ['directory-mappings', currentUser?.username],
     queryFn: () => api.get<DirectoryMappingDto[]>('/api/roles/directory-mappings'),
   })
   const [groupName, setGroupName] = useState('')
@@ -400,7 +400,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
   const [error, setError] = useState<string | null>(null)
 
   const groups = useQuery({
-    queryKey: ['directory-groups'],
+    queryKey: ['directory-groups', currentUser?.username],
     queryFn: () => api.get<DirectoryGroupsResultDto>('/api/roles/directory-groups'),
   })
 
@@ -410,7 +410,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
     (role) => role.id === roleId && role.name.toLowerCase() === 'systemadministrator')
   const isProtectedGroup = (group: string) => (mappings.data ?? []).some(
     (mapping) => mapping.groupName === group && isProtectedMapping(mapping.roleId))
-  const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['directory-mappings'] })
+  const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['directory-mappings', currentUser?.username] })
 
   const save = useMutation({
     mutationFn: () => api.post<DirectoryMappingDto>('/api/roles/directory-mappings', { groupName: groupName.trim(), roleId }),
@@ -629,6 +629,7 @@ function PermissionEditor({
 
 function SessionsTab({ canForceEnd }: { canForceEnd: boolean }) {
   const queryClient = useQueryClient()
+  const { user: currentUser } = useAuth()
   const [username, setUsername] = useState('')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
@@ -641,13 +642,13 @@ function SessionsTab({ canForceEnd }: { canForceEnd: boolean }) {
   params.set('pageSize', String(pageSize))
 
   const sessions = useQuery({
-    queryKey: ['sessions', username, status, page],
+    queryKey: ['sessions', currentUser?.username, username, status, page],
     queryFn: () => api.get<PagedResult<UserSessionDto>>(`/api/sessions?${params.toString()}`),
   })
 
   const end = useMutation({
     mutationFn: (id: string) => api.post(`/api/sessions/${id}/force-end`),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['sessions', currentUser?.username] }),
   })
 
   return (
@@ -752,13 +753,14 @@ function SessionsTab({ canForceEnd }: { canForceEnd: boolean }) {
 }
 
 function AuditTab() {
+  const { user: currentUser } = useAuth()
   const [actor, setActor] = useState('')
   const [action, setAction] = useState('')
   const [outcome, setOutcome] = useState('')
   const [page, setPage] = useState(1)
   const pageSize = 25
 
-  const actions = useQuery({ queryKey: ['audit-actions'], queryFn: () => api.get<string[]>('/api/audit/actions') })
+  const actions = useQuery({ queryKey: ['audit-actions', currentUser?.username], queryFn: () => api.get<string[]>('/api/audit/actions') })
 
   const params = new URLSearchParams()
   if (actor) params.set('actor', actor)
@@ -768,7 +770,7 @@ function AuditTab() {
   params.set('pageSize', String(pageSize))
 
   const audit = useQuery({
-    queryKey: ['audit', actor, action, outcome, page],
+    queryKey: ['audit', currentUser?.username, actor, action, outcome, page],
     queryFn: () => api.get<PagedResult<AuditEntryDto>>(`/api/audit?${params.toString()}`),
   })
 

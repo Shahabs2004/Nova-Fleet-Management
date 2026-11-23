@@ -11,8 +11,8 @@ import { Plate } from '../components/Plate'
 const vehicleColors = ['#0F766E', '#6366F1', '#F59E0B', '#94A3B8']
 
 export function DashboardPage() {
-  const { can } = useAuth()
-  const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: () => api.get<DashboardStats>('/api/dashboard') })
+  const { can, user } = useAuth()
+  const { data, isLoading } = useQuery({ queryKey: ['dashboard', user?.username], queryFn: () => api.get<DashboardStats>('/api/dashboard') })
 
   if (isLoading) return <Spinner />
   if (!data) return null

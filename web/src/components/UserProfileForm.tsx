@@ -13,15 +13,16 @@ interface Props {
 }
 
 export function UserProfileForm({ userId, onDone, onSavingChange }: Props) {
+  const { user: currentUser } = useAuth()
   const details = useQuery({
-    queryKey: ['users', 'details', userId],
+    queryKey: ['users', currentUser?.username, 'details', userId],
     queryFn: () => api.get<UserDetails>(`/api/users/${userId}`),
     enabled: userId !== null,
     staleTime: 0,
     refetchOnMount: 'always',
   })
-  const roles = useQuery({ queryKey: ['roles'], queryFn: () => api.get<RoleDto[]>('/api/roles') })
-  const orgUnits = useQuery({ queryKey: ['org-units'], queryFn: () => api.get<OrgUnitDto[]>('/api/organization-units') })
+  const roles = useQuery({ queryKey: ['roles', currentUser?.username], queryFn: () => api.get<RoleDto[]>('/api/roles') })
+  const orgUnits = useQuery({ queryKey: ['org-units', currentUser?.username], queryFn: () => api.get<OrgUnitDto[]>('/api/organization-units') })
   const [detailsLoaded, setDetailsLoaded] = useState(false)
   // Only hydrate from a successful GET on this open, never cached data after a failed refetch.
   if (!detailsLoaded && details.isSuccess && details.isFetchedAfterMount) setDetailsLoaded(true)

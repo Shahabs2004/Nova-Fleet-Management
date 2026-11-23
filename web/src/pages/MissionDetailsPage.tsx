@@ -32,13 +32,13 @@ export function MissionDetailsPage() {
   const [odometerEnd, setOdometerEnd] = useState('')
 
   const { data: mission, isLoading } = useQuery({
-    queryKey: ['mission', id],
+    queryKey: ['mission', user?.username, id],
     queryFn: () => api.get<MissionDetails>(`/api/missions/${id}`),
   })
-  const { data: drivers } = useQuery({ queryKey: ['driver-options'], queryFn: () => api.get<DriverDto[]>('/api/drivers/options'), enabled: action === 'approve' })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options'], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options'), enabled: action === 'approve' })
+  const { data: drivers } = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options'), enabled: action === 'approve' })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options'), enabled: action === 'approve' })
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['mission', id] })
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['mission', user?.username, id] })
 
   const act = useMutation({
     mutationFn: async ({ path, body }: { path: string; body?: unknown }) => api.post(path, body),
@@ -57,7 +57,7 @@ export function MissionDetailsPage() {
       setAction(null)
       setActionError(null)
       await invalidate()
-      await queryClient.invalidateQueries({ queryKey: ['missions'] })
+      await queryClient.invalidateQueries({ queryKey: ['missions', user?.username] })
     },
     onError: (err) => setActionError(err instanceof Error ? err.message : 'ویرایش مأموریت ناموفق بود.'),
   })
