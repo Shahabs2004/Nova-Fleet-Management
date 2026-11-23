@@ -25,8 +25,10 @@ using NovaFleet.Infrastructure.Persistence;
 using NovaFleet.Infrastructure.Reports;
 using NovaFleet.Infrastructure.Security;
 using NovaFleet.Infrastructure.Timeline;
+using QuestPDF.Fluent;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
+using UglyToad.PdfPig;
 
 namespace NovaFleet.IntegrationTests;
 
@@ -46,6 +48,23 @@ public sealed class MissionVisibilityIntegrationTests
         null, null, null, null, null, null, null, null, false, 1, 100);
     private static readonly ReportQuery ReportQuery = new(
         null, null, null, null, null, null, null);
+
+    [Fact]
+    public void PdfTextExtraction_ReadsKnownVisibleAndHiddenMarkers()
+    {
+        var pdf = Document.Create(container => container.Page(page =>
+        {
+            page.DefaultTextStyle(style => style.FontFamily("Tahoma"));
+            page.ContentFromRightToLeft();
+            page.Content().Text("VISIBLE-ONLY OTHER-ONLY 10 ب 100 - 40");
+        })).GeneratePdf();
+
+        var text = ExtractPdfText(pdf);
+
+        Assert.Contains("VISIBLE-ONLY", text, StringComparison.Ordinal);
+        Assert.Contains("OTHER-ONLY", text, StringComparison.Ordinal);
+        Assert.True(ContainsPdfTokens(text, "10 ب 100 - 40"), text);
+    }
 
     [Fact]
     public async Task Search_OwnOnlySeesOwnRowsAndViewAllSeesBothRequesters()
@@ -80,8 +99,13 @@ public sealed class MissionVisibilityIntegrationTests
         Assert.Equal("OTHER-ONLY approved", (await allService.GetAsync(fixture.OtherApproved.Id)).Title);
         await Assert.ThrowsAsync<NotFoundAppException>(() => ownService.GetAsync(fixture.OtherApproved.Id));
         await Assert.ThrowsAsync<NotFoundAppException>(() => ownService.ExportOrderPdfAsync(fixture.OtherApproved.Id));
-        Assert.NotEmpty(await ownService.ExportOrderPdfAsync(fixture.OwnApproved.Id));
-        Assert.NotEmpty(await allService.ExportOrderPdfAsync(fixture.OtherApproved.Id));
+        var ownPdf = await ownService.ExportOrderPdfAsync(fixture.OwnApproved.Id);
+        var otherPdf = await allService.ExportOrderPdfAsync(fixture.OtherApproved.Id);
+
+        AssertOwnOnlyPdf(ownPdf, fixture, fixture.OwnApproved.Title, fixture.OwnUser.Username, fixture.OwnVehicle.PlateDisplay);
+        var otherText = ExtractPdfText(otherPdf);
+        Assert.Contains("OTHER-ONLY", otherText, StringComparison.Ordinal);
+        Assert.True(ContainsPdfTokens(otherText, fixture.OtherVehicle.PlateDisplay), otherText);
     }
 
     [Fact]
@@ -160,6 +184,55 @@ public sealed class MissionVisibilityIntegrationTests
             sheet.RowsUsed().CellsUsed().Select(cell => cell.GetFormattedString())));
         Assert.DoesNotContain("OTHER-ONLY", text, StringComparison.Ordinal);
         Assert.DoesNotContain(fixture.OtherVehicle.PlateDisplay, text, StringComparison.Ordinal);
+
+        string[] visibleMarkers = key switch
+        {
+            "missions" => [fixture.OwnApproved.Title, fixture.OwnVehicle.PlateDisplay],
+            "missions-distance" or "vehicle-usage" => [fixture.OwnVehicle.PlateDisplay],
+            "driver-activity" => [fixture.OwnDriver.DisplayName],
+            "org-unit" => ["OWN-ONLY unit"],
+            "mission-status" => ["1"],
+            _ => throw new ArgumentOutOfRangeException(nameof(key)),
+        };
+        AssertOwnOnlyPdf(pdf, fixture, visibleMarkers);
+
+        var allPdf = await new ReportService(fixture.Db, fixture.AllUser).ExportPdfAsync(key, ReportQuery);
+        var allText = ExtractPdfText(allPdf);
+        string[] hiddenMarkers = key switch
+        {
+            "missions" => ["OTHER-ONLY", fixture.OtherVehicle.PlateDisplay],
+            "missions-distance" or "vehicle-usage" => [fixture.OtherVehicle.PlateDisplay],
+            "driver-activity" or "org-unit" => ["OTHER-ONLY"],
+            "mission-status" => ["4"],
+            _ => throw new ArgumentOutOfRangeException(nameof(key)),
+        };
+        Assert.All(hiddenMarkers, marker => Assert.True(ContainsPdfTokens(allText, marker), allText));
+    }
+
+    private static void AssertOwnOnlyPdf(byte[] pdf, Fixture fixture, params string[] visibleMarkers)
+    {
+        Assert.NotEmpty(pdf);
+        var text = ExtractPdfText(pdf);
+        Assert.NotEmpty(text);
+        Assert.DoesNotContain("OTHER-ONLY", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(fixture.OtherVehicle.PlateDisplay, text, StringComparison.Ordinal);
+        Assert.False(ContainsPdfTokens(text, fixture.OtherVehicle.PlateDisplay),
+            $"Unexpected other vehicle plate in PDF: {fixture.OtherVehicle.PlateDisplay}\n{text}");
+        Assert.All(visibleMarkers, marker => Assert.True(ContainsPdfTokens(text, marker), text));
+    }
+
+    private static string ExtractPdfText(byte[] pdf)
+    {
+        using var document = PdfDocument.Open(pdf);
+        return string.Join("\n", document.GetPages().Select(page =>
+            string.Join(" ", page.GetWords().Select(word => word.Text))));
+    }
+
+    private static bool ContainsPdfTokens(string text, string expected)
+    {
+        var tokens = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return expected.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .All(token => tokens.Contains(token, StringComparer.Ordinal));
     }
 
     private static void AssertNoOtherRequesterData(ReportTableDto table)

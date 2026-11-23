@@ -103,7 +103,6 @@ export function MissionForm({
 }) {
   const { user } = useAuth()
   const today = useMemo(() => todayParts(), [])
-  const [now] = useState(() => Date.now())
   const years = useMemo(() => Array.from({ length: today.year + 10 }, (_, i) => today.year + 10 - i), [today.year])
   const [type, setType] = useState(initial?.type ?? 1)
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -142,7 +141,8 @@ export function MissionForm({
   const datalistId = 'mission-locations'
   const plannedStartAtUtc = jalaliHourToUtcUtc(start.year, start.month, start.day, start.hour)
   const plannedEndAtUtc = jalaliHourToUtcUtc(end.year, end.month, end.day, end.hour)
-  const isBackdated = new Date(plannedStartAtUtc).getTime() < now || new Date(plannedEndAtUtc).getTime() < now
+  // oxlint-disable-next-line react/purity -- Re-evaluate backdating against the current time on each render.
+  const isBackdated = new Date(plannedStartAtUtc).getTime() < Date.now() || new Date(plannedEndAtUtc).getTime() < Date.now()
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()

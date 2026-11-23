@@ -137,6 +137,35 @@ describe('AuthContext cache isolation', () => {
     expect(queryClient.getQueryCache().getAll()).toEqual([])
   })
 
+  it('cancels then clears legacy and scoped private cache when refresh adopts another username', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, firstUser))
+    const { queryClient, order } = setup()
+    await waitForUser(firstUser.username)
+    queryClient.setQueryData(['drivers', 'page=1'], ['legacy-private'])
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, secondUser))
+
+    await act(async () => { await auth.refresh() })
+
+    expect(screen.getByTestId('user')).toHaveTextContent(secondUser.username)
+    expect(order).toEqual(['cancel', 'clear'])
+    expect(queryClient.getQueryCache().getAll()).toEqual([])
+  })
+
+  it('preserves private cache when refresh returns the same username', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, firstUser))
+    const { queryClient, order } = setup()
+    await waitForUser(firstUser.username)
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, { ...firstUser, displayName: 'کاربر به‌روزشده' }))
+
+    await act(async () => { await auth.refresh() })
+
+    expect(screen.getByTestId('user')).toHaveTextContent(firstUser.username)
+    expect(order).toEqual([])
+    expect(queryClient.getQueryData(['notifications', firstUser.username])).toEqual(['private'])
+    expect(queryClient.getQueryData(['dashboard', firstUser.username])).toEqual({ count: 3 })
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(2)
+  })
+
   it('cancels then clears the cache when logging out', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(response(200, firstUser))
     const { queryClient, order } = setup()

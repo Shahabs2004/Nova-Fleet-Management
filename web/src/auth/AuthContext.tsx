@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../lib/api'
 import type { CurrentUser } from '../lib/types'
 
@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const usernameRef = useRef<string | null>(null)
 
   const clearPrivateCache = useCallback(async () => {
     await queryClient.cancelQueries()
@@ -28,6 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const me = await api.get<CurrentUser>('/api/auth/me')
+      if (usernameRef.current !== null && usernameRef.current !== me.username) {
+        await clearPrivateCache()
+      }
+      usernameRef.current = me.username
       setUser(me)
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 401) {
@@ -36,13 +41,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [clearPrivateCache])
 
   useEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- Restore the initial session after mount.
     void refresh()
     const handler = () => {
-      void clearPrivateCache().finally(() => setUser(null))
+      void clearPrivateCache().finally(() => {
+        usernameRef.current = null
+        setUser(null)
+      })
     }
     window.addEventListener('nf-unauthorized', handler)
     return () => window.removeEventListener('nf-unauthorized', handler)
@@ -51,12 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (path: string, username: string, password: string) => {
       const result = await api.post<CurrentUser>(path, { username, password })
-      if (result.username !== user?.username) {
+      if (result.username !== usernameRef.current) {
         await clearPrivateCache()
       }
+      usernameRef.current = result.username
       setUser(result)
     },
-    [user?.username, clearPrivateCache],
+    [clearPrivateCache],
   )
 
   const loginLocal = useCallback((u: string, p: string) => login('/api/auth/login-local', u, p), [login])
@@ -67,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post('/api/auth/logout')
     } finally {
       await clearPrivateCache()
+      usernameRef.current = null
       setUser(null)
     }
   }, [clearPrivateCache])

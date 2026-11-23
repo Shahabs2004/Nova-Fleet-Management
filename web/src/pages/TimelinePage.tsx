@@ -109,7 +109,6 @@ export function TimelinePage() {
   const [onlyBusyDrivers, setOnlyBusyDrivers] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tip, setTip] = useState<{ mission: TimelineMission; x: number; y: number; below: boolean } | null>(null)
-  const [now] = useState(() => Date.now())
 
   const showTip = (el: HTMLElement, mission: TimelineMission) => {
     const r = el.getBoundingClientRect()
@@ -250,7 +249,8 @@ export function TimelinePage() {
   }, [data, drivers.data, onlyBusyDrivers])
 
   const totalMissions = data?.length ?? 0
-  const todayOffset = ((now - rangeStart) / HOUR_MS) * pxPerHour * scale
+  // oxlint-disable-next-line react/purity -- Keep the today marker aligned with the current time on each render.
+  const todayOffset = ((Date.now() - rangeStart) / HOUR_MS) * pxPerHour * scale
   const showToday = hasGrid && todayOffset >= 0 && todayOffset <= trackWidth
 
   const selected = useQuery({
