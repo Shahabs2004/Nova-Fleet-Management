@@ -11,7 +11,7 @@ import { toFa } from '../lib/date'
 interface NavItem {
   to: string
   title: string
-  permission: string
+  permission: string | string[]
   icon: React.ReactNode
 }
 
@@ -58,7 +58,7 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'مدیریت',
     items: [
-      { to: '/security', title: 'امنیت و کاربران', permission: 'security.audit.view', icon: menuIcon('security') },
+      { to: '/security', title: 'امنیت و کاربران', permission: ['security.audit.view', 'security.sessions.view', 'users.manage', 'settings.authorization'], icon: menuIcon('security') },
       { to: '/settings', title: 'تنظیمات', permission: 'settings.system.manage', icon: menuIcon('settings') },
     ],
   },
@@ -163,7 +163,9 @@ export function AppLayout() {
         </div>
         <nav className={`sidebar-nav flex-1 space-y-4 overflow-y-auto pb-4 ${labelsOpen ? 'px-3' : 'px-2'}`}>
           {NAV_GROUPS.map((group) => {
-            const items = group.items.filter((item) => can(item.permission))
+            const items = group.items.filter((item) =>
+              (Array.isArray(item.permission) ? item.permission : [item.permission]).some((permission) => can(permission)),
+            )
             if (items.length === 0) return null
             return (
               <div key={group.title}>

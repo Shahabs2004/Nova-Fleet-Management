@@ -216,6 +216,12 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("NovaFleet.Domain.Identity.ApplicationUser", b =>
                 {
+                    b.Property<int>("AccessFailedCount")
+                        .IsRequired()
+                        .IsConcurrencyToken()
+                        .HasDefaultValue(0)
+                        .HasColumnType("int");
+
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
@@ -254,6 +260,9 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastDirectorySyncAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("LockoutEndAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -268,6 +277,7 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PasswordHash")
+                        .IsConcurrencyToken()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 

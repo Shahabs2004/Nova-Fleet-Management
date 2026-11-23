@@ -11,7 +11,9 @@ public sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Appl
         builder.ToTable("Users");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Username).HasMaxLength(100).IsRequired();
-        builder.Property(x => x.PasswordHash).HasMaxLength(500);
+        builder.Property(x => x.PasswordHash).HasMaxLength(500).IsConcurrencyToken();
+        builder.Property(x => x.AccessFailedCount).HasDefaultValue(0).IsRequired().IsConcurrencyToken();
+        builder.Property(x => x.LockoutEndAtUtc);
         builder.Property(x => x.FirstName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.LastName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.MobilePhone).HasMaxLength(20);

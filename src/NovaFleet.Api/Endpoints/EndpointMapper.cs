@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using NovaFleet.Api.Identity;
+using NovaFleet.Api.Middleware;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Auditing;
 using NovaFleet.Application.Authorization;
@@ -86,9 +87,9 @@ public static class EndpointMapper
     private static void MapAuthEndpoints(this RouteGroupBuilder group)
     {
         group.MapPost("/auth/login-local", async (LoginRequest request, IAuthService auth, HttpContext http, CancellationToken ct) =>
-            await LoginAsync(request, auth.LoginLocalAsync, http, ct));
+            await LoginAsync(request, auth.LoginLocalAsync, http, ct)).AddEndpointFilter<LoginRateLimitFilter>();
         group.MapPost("/auth/login-ldap", async (LoginRequest request, IAuthService auth, HttpContext http, CancellationToken ct) =>
-            await LoginAsync(request, auth.LoginLdapAsync, http, ct));
+            await LoginAsync(request, auth.LoginLdapAsync, http, ct)).AddEndpointFilter<LoginRateLimitFilter>();
         group.MapPost("/auth/logout", async (IAuthService auth, HttpContext http, CancellationToken ct) =>
         {
             var sessionKey = http.User.FindFirst(SessionCookieEvents.SessionKeyClaim)?.Value;
@@ -375,7 +376,7 @@ public static class EndpointMapper
             Results.Ok(await service.TestSmsBalanceAsync(ct)));
     }
 
-    private static void MapSecurityEndpoints(this RouteGroupBuilder group)
+    internal static void MapSecurityEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/sessions", async (ISessionService service, string? username, UserSessionStatus? status, DateTimeOffset? fromUtc, DateTimeOffset? toUtc, int? page, int? pageSize, CancellationToken ct) =>
             await service.ListAsync(new SessionQuery(username, status, fromUtc, toUtc, page ?? 1, pageSize ?? 20), ct));
@@ -395,7 +396,7 @@ public static class EndpointMapper
         group.MapPut("/users/{id:guid}", async (Guid id, UpdateUserRequest request, IUserService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(id, request, ct)));
         group.MapPost("/users/{id:guid}/disabled", async (Guid id, ActiveBody body, IUserService service, CancellationToken ct) =>
-            Results.Ok(await service.SetDisabledAsync(id, body.Active, ct)));
+            Results.Ok(await service.SetDisabledAsync(id, !body.Active, ct)));
         group.MapPost("/users/{id:guid}/reset-password", async (Guid id, ResetPasswordRequest request, IUserService service, CancellationToken ct) =>
         {
             await service.ResetPasswordAsync(id, request, ct);
@@ -419,8 +420,16 @@ public static class EndpointMapper
             return Results.Ok(new { message = "مجوزهای نقش ذخیره شد." });
         });
         group.MapGet("/roles/directory-mappings", async (IRoleService service, CancellationToken ct) => await service.ListDirectoryMappingsAsync(ct));
-        group.MapGet("/roles/directory-groups", async (IDirectoryAuthenticator directory, CancellationToken ct) =>
-            Results.Ok(await directory.ListGroupsAsync(ct)));
+        group.MapGet("/roles/directory-groups", async (IDirectoryAuthenticator directory, CurrentUserHolder holder, CancellationToken ct) =>
+        {
+            if (!holder.User.IsAuthenticated)
+            {
+                return Results.Unauthorized();
+            }
+
+            holder.User.Require(PermissionCatalog.Administration.AuthorizationManage);
+            return Results.Ok(await directory.ListGroupsAsync(ct));
+        });
         group.MapPost("/roles/directory-mappings", async (SaveDirectoryMappingRequest request, IRoleService service, CancellationToken ct) =>
             Results.Ok(await service.SaveDirectoryMappingAsync(request, ct)));
         group.MapDelete("/roles/directory-mappings/{id:guid}", async (Guid id, IRoleService service, CancellationToken ct) =>

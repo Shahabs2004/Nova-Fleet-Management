@@ -82,6 +82,7 @@ public static class PermissionCatalog
     {
         public const string AuditView = "security.audit.view";
         public const string SessionsView = "security.sessions.view";
+        public const string SessionsManage = "security.sessions.manage";
     }
 
     public static class Administration
@@ -144,6 +145,7 @@ public static class PermissionCatalog
             new(Notifications.SmsTemplatesManage, "مدیریت قالب پیامک", "مدیریت قالب‌های رویداد پیامکی."),
             new(Security.AuditView, "مشاهده گزارش ممیزی", "مشاهده سوابق ممیزی با مجوز مستقل."),
             new(Security.SessionsView, "مشاهده سوابق نشست", "مشاهده سوابق ورود و نشست کاربران."),
+            new(Security.SessionsManage, "پایان اجباری نشست", "پایان دادن به نشست فعال کاربران."),
             new(Administration.AuthorizationManage, "مدیریت نقش‌ها و مجوزها", "مدیریت نقش‌ها، نگاشت AD و مجوزهای مستقیم."),
             new(Administration.ConnectionsManage, "مدیریت اتصال سرویس‌ها", "تغییر و تست اتصال دیتابیس، اکتیو دایرکتوری و سامانه پیامک."),
             new(Administration.SessionsManage, "مدیریت تنظیمات نشست", "تغییر عمر نشست و زمان عدم فعالیت."),

@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
@@ -102,6 +103,11 @@ public sealed class RoleService(
     {
         currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var role = await LoadAsync(id, cancellationToken);
+        if (string.Equals(role.Name, SystemAdministrator, StringComparison.OrdinalIgnoreCase))
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
+
         var normalized = new List<PermissionAssignmentDto>();
 
         foreach (var assignment in request.Permissions)
@@ -149,10 +155,22 @@ public sealed class RoleService(
         currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.GroupName, nameof(request.GroupName));
         var groupName = request.GroupName.Trim();
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
         var role = await LoadAsync(request.RoleId, cancellationToken);
-
         var mapping = await db.DirectoryGroupRoleMappings
             .FirstOrDefaultAsync(item => item.GroupName == groupName, cancellationToken);
+        var currentRoleName = mapping is null
+            ? null
+            : await db.Roles.AsNoTracking()
+                .Where(item => item.Id == mapping.RoleId)
+                .Select(item => item.Name)
+                .FirstOrDefaultAsync(cancellationToken);
+
+        if (IsProtectedRole(role.Name) || IsProtectedRole(currentRoleName))
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
 
         if (mapping is null)
         {
@@ -168,6 +186,7 @@ public sealed class RoleService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("SaveDirectoryMapping", "DirectoryGroupRoleMapping", mapping.Id.ToString(), "Success", After: new { groupName, role = role.Name }), cancellationToken);
         return new DirectoryMappingDto(mapping.Id, mapping.GroupName, role.Id, role.Title, mapping.IsActive);
     }
@@ -175,11 +194,22 @@ public sealed class RoleService(
     public async Task RemoveDirectoryMappingAsync(Guid id, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
         var mapping = await db.DirectoryGroupRoleMappings.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundAppException("نگاشت گروه پیدا نشد.");
+        var roleName = await db.Roles.AsNoTracking()
+            .Where(item => item.Id == mapping.RoleId)
+            .Select(item => item.Name)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (IsProtectedRole(roleName))
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
 
         db.DirectoryGroupRoleMappings.Remove(mapping);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RemoveDirectoryMapping", "DirectoryGroupRoleMapping", id.ToString(), "Success"), cancellationToken);
     }
 
@@ -194,14 +224,47 @@ public sealed class RoleService(
     {
         currentUser.Require(PermissionCatalog.Administration.AuthorizationManage);
         var roleName = request.RoleName?.Trim() ?? string.Empty;
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var currentRoleName = await runtime.GetStringAsync(
+            SettingKeys.DefaultUserRole, cancellationToken) ?? SettingKeys.DefaultUserRoleValue;
+        if (IsProtectedRole(roleName) || IsProtectedRole(currentRoleName))
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
+
         if (roleName.Length > 0 && !await db.Roles.AnyAsync(item => item.Name == roleName, cancellationToken))
         {
             throw new ValidationAppException("نقش انتخاب‌شده برای کاربران جدید وجود ندارد.");
         }
 
         await runtime.SetAsync(SettingKeys.DefaultUserRole, roleName, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("SetDefaultUserRole", "SystemSetting", SettingKeys.DefaultUserRole, "Success", After: new { roleName }), cancellationToken);
         return new DefaultRoleDto(roleName);
+    }
+
+    private static bool IsProtectedRole(string? roleName) =>
+        string.Equals(roleName, SystemAdministrator, StringComparison.OrdinalIgnoreCase);
+
+    private async Task RequireActiveLocalAdminAsync(CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated)
+        {
+            throw new UnauthorizedAppException("برای انجام این عملیات وارد سامانه شوید.");
+        }
+
+        if (!currentUser.IsLocalAdmin)
+        {
+            throw new ForbiddenAppException("این عملیات فقط برای مدیر محلی فعال مجاز است.");
+        }
+
+        var caller = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Username == currentUser.Username, cancellationToken);
+        if (caller is null || caller.IsDisabled || !caller.IsLocalAdmin)
+        {
+            throw new ForbiddenAppException("این عملیات فقط برای مدیر محلی فعال مجاز است.");
+        }
     }
 
     private async Task<Role> LoadAsync(Guid id, CancellationToken cancellationToken) =>

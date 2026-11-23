@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
@@ -29,27 +30,59 @@ public sealed class AuthService(
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Username, nameof(request.Username));
         var username = request.Username.Trim();
         var user = await db.Users.FirstOrDefaultAsync(item => item.Username == username, cancellationToken);
+        var localAccount = user is { IsDirectoryUser: false } ? user : null;
+
+        if (localAccount is not null && localAccount.IsLoginLocked(clock.UtcNow))
+        {
+            await RecordFailureAsync(username, UserSessionLoginMethod.Local, session, "حساب کاربری قفل شده است.", cancellationToken);
+            throw new UnauthorizedAppException(InvalidCredentials);
+        }
 
         if (user is null
             || user.IsDirectoryUser
             || string.IsNullOrEmpty(user.PasswordHash)
             || !passwordHasher.Verify(user.PasswordHash, request.Password ?? string.Empty))
         {
-            await RecordFailureAsync(username, UserSessionLoginMethod.Local, session, InvalidCredentials, cancellationToken);
+            await RecordFailureAsync(username, UserSessionLoginMethod.Local, session, InvalidCredentials, cancellationToken, localAccount);
             throw new UnauthorizedAppException(InvalidCredentials);
         }
 
         if (user.IsDisabled)
         {
-            await RecordFailureAsync(username, UserSessionLoginMethod.Local, session, "حساب غیرفعال است.", cancellationToken);
-            throw new UnauthorizedAppException("حساب کاربری شما غیرفعال شده است.");
+            await RecordFailureAsync(username, UserSessionLoginMethod.Local, session, "حساب غیرفعال است.", cancellationToken, localAccount);
+            throw new UnauthorizedAppException(InvalidCredentials);
         }
 
+        var verifiedPasswordHash = user.PasswordHash;
         var snapshot = await permissionResolver.ResolveAsync(user.Id, cancellationToken)
             ?? throw new UnauthorizedAppException(InvalidCredentials);
 
-        await StartSessionAsync(user.Username, UserSessionLoginMethod.Local, session, snapshot, cancellationToken);
-        return ToDto(snapshot);
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                user.ResetLoginFailures(clock.UtcNow);
+                await StartSessionAsync(user.Username, UserSessionLoginMethod.Local, session, snapshot, cancellationToken);
+                return ToDto(snapshot);
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 8)
+            {
+                db.ChangeTracker.Clear();
+                var current = await db.Users.FirstOrDefaultAsync(item => item.Id == user.Id, cancellationToken);
+                if (current is null
+                    || current.IsDisabled
+                    || current.IsDirectoryUser
+                    || current.IsLoginLocked(clock.UtcNow)
+                    || !string.Equals(current.PasswordHash, verifiedPasswordHash, StringComparison.Ordinal))
+                {
+                    throw new UnauthorizedAppException(InvalidCredentials);
+                }
+
+                user = current;
+                snapshot = await permissionResolver.ResolveAsync(user.Id, cancellationToken)
+                    ?? throw new UnauthorizedAppException(InvalidCredentials);
+            }
+        }
     }
 
     public async Task<CurrentUserDto> LoginLdapAsync(
@@ -82,7 +115,7 @@ public sealed class AuthService(
         if (user.IsDisabled)
         {
             await RecordFailureAsync(info.Username, UserSessionLoginMethod.Ldap, session, "حساب غیرفعال است.", cancellationToken);
-            throw new UnauthorizedAppException("حساب کاربری شما غیرفعال شده است.");
+            throw new UnauthorizedAppException(InvalidCredentials);
         }
 
         var groupsJson = JsonSerializer.Serialize(info.Groups);
@@ -136,7 +169,7 @@ public sealed class AuthService(
         if (user.IsDisabled)
         {
             await RecordFailureAsync(normalized, UserSessionLoginMethod.Windows, session, "حساب غیرفعال است.", cancellationToken);
-            throw new UnauthorizedAppException("حساب کاربری شما غیرفعال شده است.");
+            throw new UnauthorizedAppException(InvalidCredentials);
         }
 
         if (isNew && info is null)
@@ -222,9 +255,31 @@ public sealed class AuthService(
             throw new ValidationAppException("رمز جدید باید حداقل ۸ نویسه باشد.");
         }
 
+        var verifiedPasswordHash = user.PasswordHash;
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        user = await LoadForUpdateAsync(user.Id, cancellationToken);
+        if (!string.Equals(user.PasswordHash, verifiedPasswordHash, StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAppException("رمز فعلی معتبر نیست.");
+        }
+
         user.SetPasswordHash(passwordHasher.Hash(newPassword));
+        await db.UserSessions.Where(item => item.Username == username).ExecuteDeleteAsync(cancellationToken);
         db.AuditEntries.Add(new AuditEntry(username, "ChangePassword", "User", user.Id.ToString()));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private async Task<ApplicationUser> LoadForUpdateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (!db.Database.IsSqlServer())
+            return await db.Users.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
+                ?? throw new NotFoundAppException("کاربر پیدا نشد.");
+
+        return await db.Users
+            .FromSqlInterpolated($"SELECT * FROM [Users] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {id}")
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundAppException("کاربر پیدا نشد.");
     }
 
     private async Task StartSessionAsync(
@@ -246,6 +301,55 @@ public sealed class AuthService(
     }
 
     private async Task RecordFailureAsync(
+        string username,
+        UserSessionLoginMethod method,
+        SessionContext context,
+        string reason,
+        CancellationToken cancellationToken,
+        ApplicationUser? localAccount = null)
+    {
+        if (localAccount is null)
+        {
+            await SaveFailureAsync(username, method, context, reason, cancellationToken);
+            return;
+        }
+
+        const int maxAttempts = 8;
+        for (var attempt = 1; ; attempt++)
+        {
+            db.ChangeTracker.Clear();
+            db.Attach(localAccount);
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await db.Entry(localAccount).ReloadAsync(cancellationToken);
+            var wasLocked = localAccount.IsLoginLocked(clock.UtcNow);
+            localAccount.RecordFailedLogin(clock.UtcNow);
+            if (!wasLocked && localAccount.IsLoginLocked(clock.UtcNow))
+            {
+                db.AuditEntries.Add(new AuditEntry(
+                    username,
+                    "AccountLocked",
+                    "User",
+                    localAccount.Id.ToString(),
+                    "Failed",
+                    "پنج تلاش ناموفق ورود؛ حساب کاربری قفل شد.",
+                    clientIpAddress: context.ClientIpAddress));
+            }
+
+            db.UserSessions.Add(UserSession.Failed(username, method, context.ClientIpAddress, reason));
+            db.AuditEntries.Add(new AuditEntry(username, "Login", "Session", null, "Failed", reason, clientIpAddress: context.ClientIpAddress));
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < maxAttempts)
+            {
+            }
+        }
+    }
+
+    private async Task SaveFailureAsync(
         string username,
         UserSessionLoginMethod method,
         SessionContext context,

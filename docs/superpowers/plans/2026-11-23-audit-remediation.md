@@ -248,40 +248,62 @@ public sealed record ReportTableDto(
 - Modify: `src/NovaFleet.Application/Authorization/PermissionCatalog.cs`
 - Modify: `src/NovaFleet.Infrastructure/Identity/UserService.cs`
 - Modify: `src/NovaFleet.Infrastructure/Identity/AuthService.cs`
+- Modify: `src/NovaFleet.Infrastructure/Identity/RoleService.cs`
 - Modify: `src/NovaFleet.Infrastructure/Sessions/SessionService.cs`
 - Modify: `src/NovaFleet.Domain/Identity/ApplicationUser.cs`
 - Modify: `src/NovaFleet.Api/Endpoints/EndpointMapper.cs`
 - Modify: `src/NovaFleet.Api/Program.cs`
 - Modify: `src/NovaFleet.Api/Middleware/ApiExceptionHandlerMiddleware.cs`
-- Modify: `src/NovaFleet.Infrastructure/Persistence/NovaFleetDbContext.cs` and model configuration if needed
+- Create: `src/NovaFleet.Api/Middleware/LoginRateLimitFilter.cs`
+- Modify: `src/NovaFleet.Infrastructure/Persistence/Configurations/IdentityConfiguration.cs`
 - Create: one EF migration adding `AccessFailedCount` and `LockoutEndAtUtc` to `Users`
-- Modify: `src/NovaFleet.Infrastructure/Setup/DatabaseInitializer.cs` if default-role mapping needs the new permission
-- Modify: `web/src/pages/SecurityPage.tsx`, `web/src/lib/api.ts`, and `web/src/lib/types.ts`
+- Modify: `src/NovaFleet.Infrastructure/Setup/DatabaseInitializer.cs` for default-role mapping
+- Modify: `web/src/pages/SecurityPage.tsx`, `web/src/components/UserProfileForm.tsx`, and `web/src/layout/AppLayout.tsx`
 - Test: `tests/NovaFleet.UnitTests/ProtectedAdministratorTests.cs` (create)
 - Test: `tests/NovaFleet.UnitTests/SessionSecurityTests.cs` (create)
-- Test: `tests/NovaFleet.UnitTests/CsrfExemptionTests.cs` (create)
+- Test: `tests/NovaFleet.UnitTests/RoleServiceSecurityTests.cs` (create)
 - Test: `tests/NovaFleet.UnitTests/LoginLockoutTests.cs` (create)
+- Test: `tests/NovaFleet.UnitTests/LoginLockoutMigrationTests.cs` (create)
+- Test: `tests/NovaFleet.IntegrationTests/CsrfProtectionTests.cs` (create)
+- Test: `tests/NovaFleet.IntegrationTests/DirectoryGroupAuthorizationTests.cs` (create)
+- Test: `tests/NovaFleet.IntegrationTests/LoginRateLimitTests.cs` (create)
+- Test: `tests/NovaFleet.IntegrationTests/LoginLockoutConcurrencyTests.cs` (guarded SQL, create)
+- Test: `tests/NovaFleet.IntegrationTests/ProtectedAdministratorConcurrencyTests.cs` (guarded SQL, create)
+- Test: `tests/NovaFleet.IntegrationTests/UserStatusEndpointTests.cs` (create)
 
 **Interfaces:**
 - Consumes: `ICurrentUser`, existing sessions, password hasher, permission catalog.
-- Produces: `PermissionCatalog.Security.SessionsManage = "security.sessions.manage"`; only an authenticated, active local admin may change protected local-admin state, assign/remove `SystemAdministrator`, or reset a local-admin password. Local login failure fields are `int AccessFailedCount` and `DateTimeOffset? LockoutEndAtUtc`.
+- Produces: `PermissionCatalog.Security.SessionsManage = "security.sessions.manage"`; only an authenticated, active, database-backed local admin may create local admins, change protected role membership/default role/AD mapping, or reset a local-admin/protected-role account's password. No caller may disable a local administrator. Local login failure fields are `int AccessFailedCount` and `DateTimeOffset? LockoutEndAtUtc`.
 
-- [ ] **Step 1: Write failing authorization tests.** Cover create-local-admin, protected-role assignment/removal, local-admin password reset, and disabling a local administrator. Assert a non-local-admin with `users.manage` receives 403 and changes nothing. Assert an active local admin can perform the same operation. There is no current promotion/demotion endpoint; do not add one, and keep `MarkLocalAdmin` unavailable to ordinary user-management callers.
-- [ ] **Step 2: Run tests and observe failure.** Use `--filter FullyQualifiedName~ProtectedAdministratorTests`.
-- [ ] **Step 3: Implement protected-administrator checks in shared service methods.** Define protected roles by ordinal-insensitive name `SystemAdministrator`. Require `currentUser.IsAuthenticated && currentUser.IsLocalAdmin` for protected changes. Load the caller from the database and require `!IsDisabled && IsLocalAdmin`; do not trust only a stale claim. Prevent removal/disable of the last active local admin inside the same transaction as the update.
-- [ ] **Step 4: Close the stale disable finding with a regression test.** Assert `ApplicationUser.Disable()` still throws for `IsLocalAdmin`, and `users.manage` cannot disable any local admin.
-- [ ] **Step 5: Add failing session/CSRF tests and implement them.** Change forced termination to require `SessionsManage`; keep `SessionsView` for listing. Add a dedicated catalog entry and default-role mapping. After password change/reset, delete all sessions for that username before returning success. CSRF exemption is limited to anonymous login and loopback-protected setup mutation; logout and change-password require `X-Requested-With: XMLHttpRequest`.
-- [ ] **Step 6: Add failing login tests and implement persistent lockout.** Apply an endpoint rate limiter keyed by normalized username plus client IP, with fixed-window limits of 5 failed attempts per minute and 20 per hour per IP. Persist local-account failures: lock for 15 minutes after 5 consecutive failures; successful login resets count and lockout; disabled accounts remain rejected. Return a generic Persian credential error and audit lockout without revealing whether a directory account exists.
-- [ ] **Step 7: Restrict directory-group enumeration.** Require `PermissionCatalog.Administration.AuthorizationManage` on `/roles/directory-groups`; add endpoint tests for 401/403 and authorized access.
-- [ ] **Step 8: Update callers and migrate.** Add the permission to role defaults/UI and migration for lockout fields. In `SecurityPage.tsx`, replace `canForceEnd={can('settings.sessions')}` with `canForceEnd={can('security.sessions.manage')}` while keeping the sessions tab under `security.sessions.view`. Verify frontend sends the CSRF header for logout/change-password and handles 401 consistently.
-- [ ] **Step 9: Verify.** Run filtered tests, full unit/integration tests, frontend lint/build, and migration/build checks. Do not use a real AD account or user credentials.
-- [ ] **Step 10: Report and wait.** Include migration name, permission default mapping, rate-limit values, session-revocation behavior, and any skipped integration environment.
+- [x] **Step 1: Write failing authorization tests.** Cover create-local-admin, protected-role assignment/removal, local-admin password reset, and attempted disabling of a local administrator. Assert a non-local-admin with `users.manage` receives 403 and changes nothing. Assert an active local admin can create local admins, change protected role membership, and reset local-admin passwords, but no caller can disable any local administrator. There is no current promotion/demotion endpoint; do not add one, and keep `MarkLocalAdmin` unavailable to ordinary user-management callers.
+- [x] **Step 2: Run tests and observe failure.** Use `--filter FullyQualifiedName~ProtectedAdministratorTests`.
+- [x] **Step 3: Implement protected-administrator checks in shared service methods.** Define protected roles by ordinal-insensitive name `SystemAdministrator`. Require `currentUser.IsAuthenticated && currentUser.IsLocalAdmin` for protected changes. Load the caller from the database and require `!IsDisabled && IsLocalAdmin`; do not trust only a stale claim. Keep the domain invariant that every local administrator is disable-protected; do not weaken it to a last-admin-only check.
+- [x] **Step 4: Close the stale disable finding with a regression test.** Assert `ApplicationUser.Disable()` still throws for `IsLocalAdmin`, and `users.manage` cannot disable any local admin.
+- [x] **Step 5: Add failing session/CSRF tests and implement them.** Change forced termination to require `SessionsManage`; keep `SessionsView` for listing. Add a dedicated catalog entry and default-role mapping. After password change/reset, delete all sessions for that username before returning success. CSRF exemption is limited to anonymous login and loopback-protected setup mutation; logout and change-password require `X-Requested-With: XMLHttpRequest`.
+- [x] **Step 6: Add failing login tests and implement persistent lockout.** Apply an endpoint rate limiter keyed by normalized username plus client IP, with fixed-window limits of 5 failed attempts per minute and 20 per hour per IP. Persist local-account failures: lock for 15 minutes after 5 consecutive failures; successful login resets count and lockout; disabled accounts remain rejected. Return a generic Persian credential error and audit lockout without revealing whether a directory account exists.
+- [x] **Step 7: Restrict directory-group enumeration.** Require `PermissionCatalog.Administration.AuthorizationManage` on `/roles/directory-groups`; add endpoint tests for 401/403 and authorized access.
+- [x] **Step 8: Update callers and migrate.** Add the permission to role defaults/UI and migration for lockout fields. In `SecurityPage.tsx`, replace `canForceEnd={can('settings.sessions')}` with `canForceEnd={can('security.sessions.manage')}` while keeping the sessions tab under `security.sessions.view`. Verify frontend sends the CSRF header for logout/change-password and handles 401 consistently.
+- [x] **Step 9: Verify.** Run filtered tests, full unit/integration tests, frontend lint/build, and migration/build checks. Do not use a real AD account or user credentials.
+- [x] **Step 10: Report and wait.** Include migration name, permission default mapping, rate-limit values, session-revocation behavior, review findings/fixes, and any skipped integration environment. Do not commit or begin Stage 3 before explicit approval.
 
-**Acceptance criteria:** Protected administration cannot be reached through ordinary user-management permission; last local admin cannot be removed; password reset invalidates old sessions; CSRF and AD enumeration tests pass; lockout recovers automatically after 15 minutes.
+**Acceptance criteria:** Protected administration cannot be reached through ordinary user-management permission; no local administrator can be disabled and protected-role password reset requires an active local admin; password change/reset invalidates old sessions even under concurrent login; CSRF and AD enumeration tests pass; lockout recovers automatically after 15 minutes.
 
-**Risk:** A lost local-admin password can no longer be reset by a delegated user manager; recovery must use the documented database/admin recovery path. Rate limits can temporarily block shared-NAT users, so IP limits are deliberately looser than account limits.
+**Risk:** A lost local-admin password can no longer be reset by a delegated user manager; recovery must use the documented database/admin recovery path. Rate limits can temporarily block shared-NAT users, so IP limits are deliberately looser than account limits. Current counters are process-local and must be replaced by a shared limiter before multi-instance deployment.
 
 **Dependencies:** None. Stage 3 reuses session invalidation behavior.
+
+**Stage 2 verification (2026-11-24):**
+- Red-phase tests exposed ordinary-manager access to protected current/default/mapping state; the guarded SQL race reproduced deletion of a newly assigned `SystemAdministrator` membership. Current plus requested protected state is now authorized inside serializable transactions, and SQL Server same-user writes are serialized with `UPDLOCK, HOLDLOCK` while SQLite keeps the portable EF path.
+- Final-review regression tests reproduced two password/session races: a login that verified the old password could create an active session after password change/reset deleted sessions. SQL Server user-row locking now serializes login-session creation with password mutation, and change-password revalidates the hash after locking. Both race tests failed before the fix and passed afterward, including three additional Release repetitions.
+- Another failing test proved an ordinary user manager could reset the password of a non-local `SystemAdministrator` member. Reset now requires an active database-backed local admin for protected-role accounts as well as local-admin accounts. The reset transaction begins before the locked read and covers authorization, password update, and session deletion.
+- Independent review also found the inverted frontend active/disabled request and hidden FleetManager Security navigation; both were corrected. A second review found rollback retained `security.sessions.view`, which base code accepted for force-end. `Down` now fails closed by revoking both session permissions; its regression test failed before the fix. The tradeoff is that an explicitly pre-existing FleetManager View grant is also removed on downgrade and can be re-granted intentionally afterward.
+- A second independent read-only review after these fixes reported no remaining Critical or Important findings across authorization, password/session concurrency, permissions, CSRF, lockout/throttling, migration behavior, frontend mapping, and tests.
+- Final focused administrator/session unit tests passed 20/20. The combined guarded LocalDB login/protected-administrator tests passed 5/5, including five simultaneous failed logins, the correct-password/lockout race, and both password/session races.
+- Full Debug and Release builds exited 0 with zero warnings/errors using installed SDK 11.0.100 directly; pinned SDK 10.0.403 remains unchanged and unavailable on this machine.
+- Debug and Release each passed 423/423 unit tests and 60 integration tests with 0 failures; 5 existing maintenance SQL tests were skipped because `NOVAFLEET_MAINTENANCE_TEST_SQL` is not configured.
+- EF reported no pending model changes. Real LocalDB downgrade/re-upgrade with a seeded FleetManager role removed both session permissions on downgrade, restored exactly two on upgrade, and produced zero duplicate permission groups. After the final rerun, the isolated Stage 2 LocalDB database was removed and no temporary Stage 2 SQL scripts were found.
+- Frontend lint completed with 0 errors and 25 existing warnings in unrelated files; changed frontend files linted with 0 warnings/errors. Production TypeScript/Vite build passed with the existing large-chunk warning.
+- No real AD account, user authentication, paid SMS, remote organization database, or live IIS site was used. Authenticated UI/browser acceptance remains unverified; anonymous browser inspection was blocked by two indistinguishable connected Chrome instances. Failure-rate counters remain process-local and require a shared limiter before multi-instance deployment.
 
 ## Stage 3 — Own-Mission Visibility and Cross-Account Cache Isolation
 

@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
@@ -17,6 +18,7 @@ public sealed class UserService(
     ICurrentUser currentUser,
     IAuditTrail audit) : IUserService
 {
+    private const string SystemAdministratorRole = "SystemAdministrator";
     private static readonly Regex UsernamePattern = new("^[A-Za-z0-9._-]{3,64}$", RegexOptions.Compiled);
 
     public async Task<ProfileDto> GetProfileAsync(CancellationToken cancellationToken = default) =>
@@ -109,6 +111,12 @@ public sealed class UserService(
         CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Administration.UsersManage);
+        var protectedRoleIds = await ProtectedRoleIdsAsync(cancellationToken);
+        if (request.IsLocalAdmin || request.RoleIds.Intersect(protectedRoleIds).Any())
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
+
         var username = request.Username?.Trim() ?? string.Empty;
         if (!UsernamePattern.IsMatch(username))
         {
@@ -144,12 +152,26 @@ public sealed class UserService(
         CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Administration.UsersManage);
-        var user = await LoadAsync(id, cancellationToken);
         var avatar = AvatarImageValidator.ValidateAndNormalize(request.AvatarDataUrl);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var user = await LoadForUpdateAsync(id, cancellationToken);
+        var protectedRoleIds = await ProtectedRoleIdsAsync(cancellationToken);
+        var currentIds = await db.UserRoles.AsNoTracking()
+            .Where(item => item.UserId == id)
+            .Select(item => item.RoleId)
+            .ToListAsync(cancellationToken);
+        var requestedIds = request.RoleIds.Where(item => item != Guid.Empty).Distinct().ToList();
+        if (currentIds.Intersect(protectedRoleIds).Any() != requestedIds.Intersect(protectedRoleIds).Any())
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
+
         user.UpdateProfile(request.FirstName, request.LastName, request.MobilePhone, request.Email, request.OrganizationalUnit);
         user.SetAvatar(avatar);
         await ReplaceRolesAsync(id, request.RoleIds, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateUser", "User", id.ToString(), "Success"), cancellationToken);
 
         return await GetAsync(id, cancellationToken);
@@ -162,6 +184,12 @@ public sealed class UserService(
         if (disabled && string.Equals(user.Username, currentUser.Username, StringComparison.OrdinalIgnoreCase))
         {
             throw new ValidationAppException("کاربر نمی‌تواند حساب خود را غیرفعال کند.");
+        }
+
+        if (disabled && user.IsLocalAdmin)
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+            throw new ValidationAppException("حساب مدیر محلی اضطراری قابل غیرفعال‌سازی نیست.");
         }
 
         if (disabled)
@@ -181,7 +209,15 @@ public sealed class UserService(
     public async Task ResetPasswordAsync(Guid id, ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Administration.UsersManage);
-        var user = await LoadAsync(id, cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var user = await LoadForUpdateAsync(id, cancellationToken);
+        var protectedRoleIds = await ProtectedRoleIdsAsync(cancellationToken);
+        if (user.IsLocalAdmin || await db.UserRoles.AnyAsync(
+            item => item.UserId == id && protectedRoleIds.Contains(item.RoleId), cancellationToken))
+        {
+            await RequireActiveLocalAdminAsync(cancellationToken);
+        }
+
         if (user.IsDirectoryUser)
         {
             throw new ValidationAppException("رمز کاربران دامنه در Active Directory مدیریت می‌شود.");
@@ -193,7 +229,9 @@ public sealed class UserService(
         }
 
         user.SetPasswordHash(passwordHasher.Hash(request.NewPassword));
+        await db.UserSessions.Where(item => item.Username == user.Username).ExecuteDeleteAsync(cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("ResetPassword", "User", id.ToString(), "Success"), cancellationToken);
     }
 
@@ -210,9 +248,52 @@ public sealed class UserService(
         await audit.WriteAsync(new AuditRecord("SetUserPermissions", "User", id.ToString(), "Success", After: assignments), cancellationToken);
     }
 
+    private async Task<List<Guid>> ProtectedRoleIdsAsync(CancellationToken cancellationToken)
+    {
+        var roles = await db.Roles.AsNoTracking()
+            .Select(item => new { item.Id, item.Name })
+            .ToListAsync(cancellationToken);
+        return roles
+            .Where(item => string.Equals(item.Name, SystemAdministratorRole, StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.Id)
+            .ToList();
+    }
+
+    private async Task RequireActiveLocalAdminAsync(CancellationToken cancellationToken)
+    {
+        if (!currentUser.IsAuthenticated)
+        {
+            throw new UnauthorizedAppException("برای انجام این عملیات وارد سامانه شوید.");
+        }
+
+        if (!currentUser.IsLocalAdmin)
+        {
+            throw new ForbiddenAppException("این عملیات فقط برای مدیر محلی فعال مجاز است.");
+        }
+
+        var caller = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Username == currentUser.Username, cancellationToken);
+        if (caller is null || caller.IsDisabled || !caller.IsLocalAdmin)
+        {
+            throw new ForbiddenAppException("این عملیات فقط برای مدیر محلی فعال مجاز است.");
+        }
+    }
+
     private async Task<ApplicationUser> LoadAsync(Guid id, CancellationToken cancellationToken) =>
         await db.Users.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
         ?? throw new NotFoundAppException("کاربر پیدا نشد.");
+
+    // SQL Server callers hold this row lock until their serializable transaction commits.
+    private async Task<ApplicationUser> LoadForUpdateAsync(Guid id, CancellationToken cancellationToken)
+    {
+        if (!db.Database.IsSqlServer())
+            return await LoadAsync(id, cancellationToken);
+
+        return await db.Users
+            .FromSqlInterpolated($"SELECT * FROM [Users] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {id}")
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundAppException("کاربر پیدا نشد.");
+    }
 
     private async Task ReplaceRolesAsync(Guid userId, IReadOnlyList<Guid> roleIds, CancellationToken cancellationToken)
     {

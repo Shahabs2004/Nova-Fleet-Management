@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { AvatarEditor } from './AvatarEditor'
 import { Spinner } from './ui'
 import { api } from '../lib/api'
+import { useAuth } from '../auth/AuthContext'
 import type { OrgUnitDto, RoleDto, UserDetails } from '../lib/types'
 
 interface Props {
@@ -63,6 +64,8 @@ function UserFields({ initial, roles, orgUnits, loading, onDone, onSavingChange 
   onDone: Props['onDone']
   onSavingChange: Props['onSavingChange']
 }) {
+  const { user: currentUser } = useAuth()
+  const canManageLocalAdmins = currentUser?.isLocalAdmin === true
   const [form, setForm] = useState(() => ({
     username: initial?.username ?? '',
     password: '',
@@ -174,8 +177,10 @@ function UserFields({ initial, roles, orgUnits, loading, onDone, onSavingChange 
           <div className="flex flex-wrap gap-2">
             {roles.map((role) => {
               const checked = roleIds.includes(role.id)
-              return <label key={role.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-600'}`}>
-                <input type="checkbox" className="accent-emerald-700" checked={checked}
+              const protectedRole = role.name.toLowerCase() === 'systemadministrator'
+              const disabled = protectedRole && !canManageLocalAdmins
+              return <label key={role.id} className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${checked ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-600'}`}>
+                <input type="checkbox" className="accent-emerald-700" checked={checked} disabled={disabled}
                   onChange={() => setRoleIds((prev) => checked ? prev.filter((id) => id !== role.id) : [...prev, role.id])} />
                 {role.title}
               </label>
@@ -183,11 +188,11 @@ function UserFields({ initial, roles, orgUnits, loading, onDone, onSavingChange 
             {roles.length === 0 && <p className="text-xs text-slate-500">نقشی تعریف نشده است.</p>}
           </div>
         </fieldset>
-        {!initial ? <label className="flex items-center gap-2 text-sm text-slate-600">
+        {!initial ? (canManageLocalAdmins && <label className="flex items-center gap-2 text-sm text-slate-600">
           <input type="checkbox" className="h-4 w-4 accent-emerald-700" checked={form.isLocalAdmin}
             onChange={(e) => setForm((prev) => ({ ...prev, isLocalAdmin: e.target.checked }))} />
           این کاربر مدیر محلی باشد (دسترسی کامل)
-        </label> : <p className="text-xs text-slate-500">
+        </label>) : <p className="text-xs text-slate-500">
           نوع حساب: {initial.isDirectoryUser ? 'دایرکتوری' : 'محلی'}{initial.isLocalAdmin ? ' · مدیر محلی' : ''} · {initial.isDisabled ? 'غیرفعال' : 'فعال'}
         </p>}
       </fieldset>

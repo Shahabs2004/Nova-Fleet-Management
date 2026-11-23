@@ -59,7 +59,7 @@ export function SecurityPage() {
 
       {tab === 'users' && can('users.manage') && <UsersTab />}
       {tab === 'roles' && can('settings.authorization') && <RolesTab />}
-      {tab === 'sessions' && can('security.sessions.view') && <SessionsTab canForceEnd={can('settings.sessions')} />}
+      {tab === 'sessions' && can('security.sessions.view') && <SessionsTab canForceEnd={can('security.sessions.manage')} />}
       {tab === 'audit' && can('security.audit.view') && <AuditTab />}
     </div>
   )
@@ -88,7 +88,7 @@ function UsersTab() {
   })
 
   const toggle = useMutation({
-    mutationFn: (user: UserListItem) => api.post(`/api/users/${user.id}/disabled`, { active: !user.isDisabled }),
+    mutationFn: (user: UserListItem) => api.post(`/api/users/${user.id}/disabled`, { active: user.isDisabled }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
@@ -160,18 +160,20 @@ function UsersTab() {
                       <button className="btn-ghost btn-sm" onClick={() => { setNotice(null); setEditor({ id: user.id }) }}>
                         ویرایش
                       </button>
-                      {!user.isDirectoryUser && (
+                      {!user.isDirectoryUser && (!user.isLocalAdmin || currentUser?.isLocalAdmin === true) && (
                         <button className="btn-ghost btn-sm" onClick={() => setResetting(user)}>
                           بازنشانی رمز
                         </button>
                       )}
-                      <button
-                        className="btn-ghost btn-sm"
-                        disabled={toggle.isPending}
-                        onClick={() => toggle.mutate(user)}
-                      >
-                        {user.isDisabled ? 'فعال‌سازی' : 'غیرفعال‌سازی'}
-                      </button>
+                      {!user.isLocalAdmin && (
+                        <button
+                          className="btn-ghost btn-sm"
+                          disabled={toggle.isPending}
+                          onClick={() => toggle.mutate(user)}
+                        >
+                          {user.isDisabled ? 'فعال‌سازی' : 'غیرفعال‌سازی'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -250,6 +252,8 @@ function ResetPasswordForm({ userId, onDone }: { userId: string; onDone: () => P
 
 function RolesTab() {
   const queryClient = useQueryClient()
+  const { user: currentUser } = useAuth()
+  const canManageLocalAdmins = currentUser?.isLocalAdmin === true
   const [editing, setEditing] = useState<RoleDto | null>(null)
   const roles = useQuery({ queryKey: ['roles'], queryFn: () => api.get<RoleDto[]>('/api/roles') })
   const permissions = useQuery({ queryKey: ['permissions'], queryFn: () => api.get<PermissionDefinition[]>('/api/permissions') })
@@ -293,9 +297,11 @@ function RolesTab() {
                     {role.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'}
                   </button>
                 )}
-                <button className="btn-ghost btn-sm" onClick={() => setEditing(role)}>
-                  مجوزها
-                </button>
+                {(canManageLocalAdmins || role.name.toLowerCase() !== 'systemadministrator') && (
+                  <button className="btn-ghost btn-sm" onClick={() => setEditing(role)}>
+                    مجوزها
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -321,13 +327,17 @@ function RolesTab() {
 
 function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
   const queryClient = useQueryClient()
+  const { user: currentUser } = useAuth()
+  const canManageLocalAdmins = currentUser?.isLocalAdmin === true
   const query = useQuery({ queryKey: ['default-role'], queryFn: () => api.get<DefaultRoleDto>('/api/roles/default-role') })
   const [selected, setSelected] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   const saved = query.data?.roleName ?? ''
   const value = selected ?? saved
-  const activeRoles = roles.filter((role) => role.isActive)
+  const protectedDefault = !canManageLocalAdmins && saved.toLowerCase() === 'systemadministrator'
+  const activeRoles = roles.filter((role) => role.isActive &&
+    (canManageLocalAdmins || role.name.toLowerCase() !== 'systemadministrator'))
 
   const save = useMutation({
     mutationFn: (roleName: string) => api.put<DefaultRoleDto>('/api/roles/default-role', { roleName }),
@@ -353,17 +363,23 @@ function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
         <div className="mt-3 flex flex-wrap items-end gap-3">
           <div className="min-w-56 flex-1">
             <label className="label">نقش پیش‌فرض</label>
-            <select className="input" value={value} onChange={(e) => { setSelected(e.target.value); setNotice(null) }}>
+            <select className="input" value={value} disabled={protectedDefault} onChange={(e) => { setSelected(e.target.value); setNotice(null) }}>
               <option value="">بدون نقش پیش‌فرض</option>
+              {saved && !activeRoles.some((role) => role.name === saved) && (
+                <option value={saved} disabled>{saved} (نقش محافظت‌شده)</option>
+              )}
               {activeRoles.map((role) => (
                 <option key={role.id} value={role.name}>{role.title}</option>
               ))}
             </select>
           </div>
-          <button className="btn-primary btn-sm" disabled={save.isPending || value === saved} onClick={() => save.mutate(value)}>
+          <button className="btn-primary btn-sm" disabled={save.isPending || protectedDefault || value === saved} onClick={() => save.mutate(value)}>
             {save.isPending ? 'در حال ذخیره…' : 'ذخیره'}
           </button>
         </div>
+      )}
+      {protectedDefault && (
+        <p className="mt-2 text-xs font-medium text-rose-700">تغییر نقش پیش‌فرض مدیر سامانه فقط توسط مدیر محلی فعال مجاز است.</p>
       )}
       {notice && <p role="status" className="mt-2 text-xs font-medium text-emerald-700">{notice}</p>}
       {save.isError && <p className="mt-2 text-xs font-medium text-rose-700">{(save.error as Error)?.message}</p>}
@@ -373,6 +389,8 @@ function DefaultRoleCard({ roles }: { roles: RoleDto[] }) {
 
 function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
   const queryClient = useQueryClient()
+  const { user: currentUser } = useAuth()
+  const canManageLocalAdmins = currentUser?.isLocalAdmin === true
   const mappings = useQuery({
     queryKey: ['directory-mappings'],
     queryFn: () => api.get<DirectoryMappingDto[]>('/api/roles/directory-mappings'),
@@ -386,7 +404,12 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
     queryFn: () => api.get<DirectoryGroupsResultDto>('/api/roles/directory-groups'),
   })
 
-  const activeRoles = roles.filter((role) => role.isActive)
+  const activeRoles = roles.filter((role) => role.isActive &&
+    (canManageLocalAdmins || role.name.toLowerCase() !== 'systemadministrator'))
+  const isProtectedMapping = (roleId: string) => !canManageLocalAdmins && roles.some(
+    (role) => role.id === roleId && role.name.toLowerCase() === 'systemadministrator')
+  const isProtectedGroup = (group: string) => (mappings.data ?? []).some(
+    (mapping) => mapping.groupName === group && isProtectedMapping(mapping.roleId))
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ['directory-mappings'] })
 
   const save = useMutation({
@@ -404,7 +427,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
     <div className="card mb-4 p-4">
       <p className="text-sm font-bold text-emerald-950">نگاشت گروه‌های اکتیو دایرکتوری به نقش</p>
       <p className="mt-1 text-xs leading-6 text-slate-500">
-        کاربر دایرکتوری با عضویت در هر گروه نگاشت‌شده، نقش مربوط به آن را می‌گیرد؛ برای نمونه گروه DCManager را به «مدیر سامانه» نگاشت کنید.
+        کاربر دایرکتوری با عضویت در هر گروه نگاشت‌شده، نقش مربوط به آن را می‌گیرد؛ گروه‌ها را به نقش مناسب سازمان نگاشت کنید.
         گروه‌ها از اکتیو دایرکتوری خوانده می‌شوند و یکی‌شده را انتخاب کنید. این نقش‌ها با نقش پیش‌فرض جمع می‌شوند.
       </p>
 
@@ -439,7 +462,8 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
                   <td className="text-left">
                     <button
                       className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50"
-                      disabled={remove.isPending}
+                      disabled={remove.isPending || isProtectedMapping(item.roleId)}
+                      title={isProtectedMapping(item.roleId) ? 'تغییر نگاشت نقش مدیر سامانه فقط توسط مدیر محلی فعال مجاز است.' : undefined}
                       onClick={() => { if (window.confirm(`نگاشت گروه «${item.groupName}» حذف شود؟`)) remove.mutate(item.id) }}
                     >
                       حذف
@@ -458,7 +482,7 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
           <select className="input" dir="ltr" value={groupName} onChange={(e) => { setGroupName(e.target.value); setError(null) }}>
             <option value="">— انتخاب گروه —</option>
             {(groups.data?.groups ?? []).map((group) => (
-              <option key={group.distinguishedName || group.name} value={group.name}>{group.name}</option>
+              <option key={group.distinguishedName || group.name} value={group.name} disabled={isProtectedGroup(group.name)}>{group.name}</option>
             ))}
           </select>
           {groups.isLoading && <p className="mt-1 text-[11px] text-slate-400">در حال خواندن گروه‌ها از دایرکتوری…</p>}
@@ -489,12 +513,15 @@ function DirectoryMappingsCard({ roles }: { roles: RoleDto[] }) {
         </div>
         <button
           className="btn-primary btn-sm"
-          disabled={save.isPending || groupName.length === 0 || roleId.length === 0}
+          disabled={save.isPending || groupName.length === 0 || roleId.length === 0 || isProtectedGroup(groupName)}
           onClick={() => save.mutate()}
         >
           {save.isPending ? 'در حال ذخیره…' : 'افزودن نگاشت'}
         </button>
       </div>
+      {isProtectedGroup(groupName) && (
+        <p className="mt-2 text-xs font-medium text-rose-700">تغییر نگاشت نقش مدیر سامانه فقط توسط مدیر محلی فعال مجاز است.</p>
+      )}
       {error && <p className="mt-2 text-xs font-medium text-rose-700">{error}</p>}
     </div>
   )

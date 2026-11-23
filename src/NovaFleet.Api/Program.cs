@@ -73,6 +73,8 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(keyDirectory);
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<LoginFailureRateLimiter>();
 builder.Services.AddOpenApi();
 
 // بیرون از توسعه نشست فقط روی HTTPS زنده می‌ماند؛ پروفایل http://localhost:5192 توسعه نباید قفل شود.

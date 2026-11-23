@@ -46,7 +46,9 @@ public static class DatabaseInitializer
                     PermissionCatalog.Missions.WithdrawalReview,
                     PermissionCatalog.Reports.View,
                     PermissionCatalog.Reports.Export,
-                    PermissionCatalog.Notifications.View
+                    PermissionCatalog.Notifications.View,
+                    PermissionCatalog.Security.SessionsView,
+                    PermissionCatalog.Security.SessionsManage
                 ]),
             ("Operator", "اپراتور", "بررسی، تأیید و اجرای مأموریت‌ها", true,
                 [

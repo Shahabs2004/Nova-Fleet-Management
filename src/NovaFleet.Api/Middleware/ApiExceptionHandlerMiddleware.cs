@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Settings;
@@ -62,9 +63,14 @@ public sealed class CsrfHeaderMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context)
     {
         var isApi = context.Request.Path.StartsWithSegments("/api");
-        var isAuthPath = context.Request.Path.StartsWithSegments("/api/auth")
-            || context.Request.Path.StartsWithSegments("/api/setup");
-        if (isApi && !isAuthPath && !SafeMethods.Contains(context.Request.Method)
+        var isAnonymousLogin =
+            context.Request.Path.Equals("/api/auth/login-local", StringComparison.OrdinalIgnoreCase)
+            || context.Request.Path.Equals("/api/auth/login-ldap", StringComparison.OrdinalIgnoreCase);
+        var isLoopbackSetupMutation = context.Request.Path.StartsWithSegments("/api/setup")
+            && context.Connection.RemoteIpAddress is { } remoteIpAddress
+            && IPAddress.IsLoopback(remoteIpAddress);
+        if (isApi && !isAnonymousLogin && !isLoopbackSetupMutation
+            && !SafeMethods.Contains(context.Request.Method)
             && context.Request.Headers.XRequestedWith != "XMLHttpRequest")
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;

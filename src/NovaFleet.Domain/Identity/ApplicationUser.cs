@@ -37,6 +37,41 @@ public sealed class ApplicationUser : Entity
 
     public bool IsDisabled { get; private set; }
 
+    public int AccessFailedCount { get; private set; }
+
+    public DateTimeOffset? LockoutEndAtUtc { get; private set; }
+
+    public bool IsLoginLocked(DateTimeOffset nowUtc) => LockoutEndAtUtc > nowUtc;
+
+    public void RecordFailedLogin(DateTimeOffset nowUtc)
+    {
+        if (IsLoginLocked(nowUtc))
+        {
+            return;
+        }
+
+        if (LockoutEndAtUtc is not null)
+        {
+            AccessFailedCount = 0;
+            LockoutEndAtUtc = null;
+        }
+
+        AccessFailedCount++;
+        if (AccessFailedCount >= 5)
+        {
+            LockoutEndAtUtc = nowUtc.AddMinutes(15);
+        }
+
+        UpdatedAtUtc = nowUtc;
+    }
+
+    public void ResetLoginFailures(DateTimeOffset nowUtc)
+    {
+        AccessFailedCount = 0;
+        LockoutEndAtUtc = null;
+        UpdatedAtUtc = nowUtc;
+    }
+
     /// <summary>مدیر محلی اضطراری؛ از چرخه عادی حذف/غیرفعال‌سازی خارج است.</summary>
     public bool IsLocalAdmin { get; private set; }
 

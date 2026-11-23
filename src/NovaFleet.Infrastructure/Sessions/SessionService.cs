@@ -111,7 +111,7 @@ public sealed class SessionService(
 
     public async Task ForceEndAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        currentUser.Require(PermissionCatalog.Security.SessionsView);
+        currentUser.Require(PermissionCatalog.Security.SessionsManage);
         var session = await db.UserSessions.FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
             ?? throw new NotFoundAppException("نشست پیدا نشد.");
 
