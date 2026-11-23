@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="NovaFleet.IntegrationTests" />
     <ProjectReference Include="..\NovaFleet.Infrastructure\NovaFleet.Infrastructure.csproj" />
     <ProjectReference Include="..\NovaFleet.Application\NovaFleet.Application.csproj" />
     <ProjectReference Include="..\NovaFleet.Domain\NovaFleet.Domain.csproj" />

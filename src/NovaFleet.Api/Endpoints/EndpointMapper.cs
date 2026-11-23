@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -57,18 +58,29 @@ public static class EndpointMapper
         api.MapTimelineEndpoints();
     }
 
-    private static void MapSetupEndpoints(this RouteGroupBuilder group)
+    internal static void MapSetupEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/setup/status", async (ISetupService service, CancellationToken ct) => await service.GetStatusAsync(ct));
 
         // گام دیتابیس بی‌نیاز از هر کاربری است؛ پیش از آن هیچ دیتابیسی برای احراز هویت وجود ندارد.
         group.MapGet("/setup/database", async (ISetupService service, CancellationToken ct) =>
             Results.Ok(await service.GetDatabaseStateAsync(ct)));
-        group.MapPost("/setup/database", async (SetupDatabaseRequest request, ISetupService service, CancellationToken ct) =>
-            Results.Ok(await service.ConfigureDatabaseAsync(request, ct)));
+        RouteHandlerBuilder LoopbackOnly(RouteHandlerBuilder endpoint) => endpoint.AddEndpointFilter(async (context, next) =>
+        {
+            var remoteAddress = context.HttpContext.Connection.RemoteIpAddress;
+            if (remoteAddress is null || !IPAddress.IsLoopback(remoteAddress))
+            {
+                return Results.StatusCode(StatusCodes.Status403Forbidden);
+            }
 
-        group.MapPost("/setup/initialize", async (SetupRequest request, ISetupService service, CancellationToken ct) =>
-            Results.Ok(await service.InitializeAsync(request, ct)));
+            return await next(context);
+        });
+
+        LoopbackOnly(group.MapPost("/setup/database", async (SetupDatabaseRequest request, ISetupService service, CancellationToken ct) =>
+            Results.Ok(await service.ConfigureDatabaseAsync(request, ct))));
+
+        LoopbackOnly(group.MapPost("/setup/initialize", async (SetupRequest request, ISetupService service, CancellationToken ct) =>
+            Results.Ok(await service.InitializeAsync(request, ct))));
     }
 
     private static void MapAuthEndpoints(this RouteGroupBuilder group)

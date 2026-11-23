@@ -7,6 +7,8 @@ using NovaFleet.Application.Settings;
 using NovaFleet.Application.Setup;
 using NovaFleet.Infrastructure.Setup;
 using NovaFleet.UnitTests.Missions;
+using NovaFleet.UnitTests.Security;
+using QuestPDF.Infrastructure;
 
 namespace NovaFleet.UnitTests.Setup;
 
@@ -24,6 +26,7 @@ public class SetupWizardTests : MissionTestBase
 
     public SetupWizardTests()
     {
+        QuestPDF.Settings.License = LicenseType.Community;
         Db.Users.RemoveRange(Db.Users);
         Db.SaveChanges();
     }
@@ -39,7 +42,10 @@ public class SetupWizardTests : MissionTestBase
         Assert.Equal("شرکت نوین", status.OrganizationName);
 
         Assert.Equal("شرکت نوین", await Runtime.GetStringAsync(SettingKeys.OrganizationName));
-        Assert.Equal("data:image/png;base64,AAA", await Runtime.GetStringAsync(SettingKeys.OrganizationLogo));
+        var storedLogo = await Runtime.GetStringAsync(SettingKeys.OrganizationLogo);
+        Assert.NotNull(storedLogo);
+        Assert.NotEqual(FullRequest().LogoDataUrl, storedLogo);
+        Assert.StartsWith(PngFixture.Prefix, storedLogo);
         Assert.Equal("dc.example", await Runtime.GetStringAsync(SettingKeys.DirectoryHost));
         Assert.Equal("636", await Runtime.GetStringAsync(SettingKeys.DirectoryPort));
         Assert.Equal("DC=corp,DC=example", await Runtime.GetStringAsync(SettingKeys.DirectoryBaseDn));
@@ -99,6 +105,26 @@ public class SetupWizardTests : MissionTestBase
         Assert.Empty(Db.SystemSettings.Local);
         Assert.False(Db.Users.Local.Any());
         Assert.False(Db.AuditEntries.Local.Any());
+    }
+
+    [Theory]
+    [InlineData("url")]
+    [InlineData("base64")]
+    [InlineData("decodedOversize")]
+    [InlineData("nonsquare")]
+    [InlineData("dimensions")]
+    [InlineData("dimensionBomb")]
+    public async Task Initialize_InvalidLogoAbortsBeforeAnyWrite(string kind)
+    {
+        var request = FullRequest() with { LogoDataUrl = PngFixture.Invalid(kind) };
+
+        var error = await Assert.ThrowsAsync<ValidationAppException>(() => Wizard().InitializeAsync(request));
+
+        Assert.Contains("لوگو", error.Message);
+        Assert.Empty(Db.SystemSettings.Local);
+        Assert.False(Db.Users.Local.Any());
+        Assert.False(Db.AuditEntries.Local.Any());
+        Assert.False(Db.ChangeTracker.HasChanges());
     }
 
     [Fact]
@@ -311,7 +337,7 @@ public class SetupWizardTests : MissionTestBase
         AdminFirstName: "شهاب",
         AdminLastName: "مدیر",
         AdminMobile: "09121112233",
-        LogoDataUrl: "data:image/png;base64,AAA",
+        LogoDataUrl: PngFixture.Create(metadata: true),
         Directory: new UpdateDirectorySettingsDto(
             Enabled: true,
             Host: "dc.example",

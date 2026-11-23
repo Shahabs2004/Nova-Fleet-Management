@@ -53,10 +53,10 @@ public sealed class SettingsService(
         CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Administration.SystemManage);
-        await SettingsWriters.WriteOrganizationAsync(runtime, profile, cancellationToken);
+        var normalized = await SettingsWriters.WriteOrganizationAsync(runtime, profile, cancellationToken);
         await RecordAsync("UpdateOrganizationProfile", "SystemSetting", SettingKeys.OrganizationName,
-            new { profile.Name }, cancellationToken);
-        return profile;
+            new { normalized.Name }, cancellationToken);
+        return normalized;
     }
 
     public async Task<MissionRulesDto> UpdateMissionRulesAsync(

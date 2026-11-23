@@ -1,6 +1,7 @@
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Settings;
+using NovaFleet.Infrastructure.Security;
 
 namespace NovaFleet.Infrastructure.Settings;
 
@@ -152,25 +153,26 @@ public static class SettingsWriters
         return (level, paper, fontPath);
     }
 
-    public static string ValidateOrganization(OrganizationProfileDto profile)
+    public static OrganizationProfileDto ValidateOrganization(OrganizationProfileDto profile)
     {
         if (string.IsNullOrWhiteSpace(profile.Name))
         {
             throw new ValidationAppException("نام سازمان الزامی است.");
         }
 
-        return profile.Name.Trim();
+        return new(profile.Name.Trim(), AvatarImageValidator.ValidateOrganizationLogo(profile.LogoDataUrl));
     }
 
-    public static async Task WriteOrganizationAsync(
+    public static async Task<OrganizationProfileDto> WriteOrganizationAsync(
         IRuntimeSettings settings,
         OrganizationProfileDto profile,
         CancellationToken cancellationToken = default)
     {
-        var name = ValidateOrganization(profile);
+        var normalized = ValidateOrganization(profile);
 
-        await settings.SetAsync(SettingKeys.OrganizationName, name, cancellationToken);
-        await settings.SetAsync(SettingKeys.OrganizationLogo, profile.LogoDataUrl ?? string.Empty, cancellationToken);
+        await settings.SetAsync(SettingKeys.OrganizationName, normalized.Name, cancellationToken);
+        await settings.SetAsync(SettingKeys.OrganizationLogo, normalized.LogoDataUrl ?? string.Empty, cancellationToken);
+        return normalized;
     }
 
     public static void ValidateMissionRules(MissionRulesDto rules)

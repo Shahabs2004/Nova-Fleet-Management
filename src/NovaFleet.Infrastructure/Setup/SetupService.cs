@@ -337,7 +337,7 @@ public sealed class SetupService(
         var summary = new SortedDictionary<string, object>(StringComparer.Ordinal)
         {
             ["organizationName"] = SettingsWriters.ValidateOrganization(
-                new OrganizationProfileDto(request.OrganizationName, request.LogoDataUrl))
+                new OrganizationProfileDto(request.OrganizationName, request.LogoDataUrl)).Name
         };
 
         if (request.Directory is { } directory)
