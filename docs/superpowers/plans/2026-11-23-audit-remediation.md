@@ -426,22 +426,31 @@ public sealed record ReportTableDto(
 - Consumes: `SmsSendResult.IsIndeterminate`, `SmsQueueStatus.Indeterminate`, stored `GatewayMode`, `SendStartedAtUtc`, `NextDeliveryPollAtUtc`.
 - Produces: an explicit reconciliation endpoint that either closes an indeterminate item as failed or requeues it after operator confirmation; it must not run automatically.
 
-- [ ] **Step 1: Add failing claim and recovery tests.** Start two dispatchers against one due item in a guarded SQL test database; assert exactly one provider call. Simulate provider timeout after acceptance; assert indeterminate and no automatic resend. Simulate stale `Sending` older than 10 minutes; assert recovery to indeterminate, not queued. Assert cancellation is rejected once send starts.
-- [ ] **Step 2: Run tests and observe failure.** If the SQL integration environment is unavailable, keep the task blocked and report it; do not claim the race is fixed from SQLite alone.
-- [ ] **Step 3: Implement atomic claiming.** Move `SmsGatewayMode` to `ISmsGateway.cs` and update router references. In a short SQL Server transaction, claim a bounded batch using `UPDLOCK` and `READPAST`, setting `Status=Sending`, `SendStartedAtUtc`, `GatewayMode`, and `UpdatedAtUtc`. Commit the claim before calling the gateway. Store provider reference as soon as a response arrives. Provider I/O must never hold the claim transaction open.
-- [ ] **Step 4: Implement idempotent completion.** Final update loads by ID and current status/version, and only transitions `Sending` to the result state. Catch save failures around the final update; the stale-recovery path handles abandoned rows. Do not overwrite an operator reconciliation or cancellation decision.
-- [ ] **Step 5: Implement indeterminate outcomes.** Add the result factory and status. On timeout, unreadable response, or acceptance without a usable provider reference, record `Indeterminate`, error/raw status without secrets, and never schedule a retry. Add operator reconciliation UI/API with `sms.manage` authorization and audit record.
-- [ ] **Step 6: Make polling mode-aware and scheduled.** Select the gateway from each item's stored `GatewayMode`, not current settings. Set `NextDeliveryPollAtUtc` after every poll using a bounded backoff (10 seconds, 30 seconds, 60 seconds, then 5 minutes, maximum 24 hours). Do not select items whose next poll is in the future. Simulation may mark delivered without polling a real gateway.
-- [ ] **Step 7: Add stale-send recovery.** On worker startup and each bounded batch, move `Sending` rows older than 10 minutes to `Indeterminate` only when no completion occurred. Keep the provider reference and send start for investigation.
-- [ ] **Step 8: Close the stale API-mode finding with contract tests.** Assert router `Api` calls REST gateway, `Wsdl` calls SOAP gateway, and stored mode remains stable across a settings switch. Do not send a real message.
-- [ ] **Step 9: Verify.** Run fake-gateway unit tests, guarded SQL claim tests, migration/build, frontend tests/build, and full backend tests. Explicitly report that live PayamSMS delivery was not tested.
-- [ ] **Step 10: Report and wait.**
+- [x] **Step 1: Add failing claim and recovery tests.** Start two dispatchers against one due item in a guarded SQL test database; assert exactly one provider call. Simulate provider timeout after acceptance; assert indeterminate and no automatic resend. Simulate stale `Sending` older than 10 minutes; assert recovery to indeterminate, not queued. Assert cancellation is rejected once send starts.
+- [x] **Step 2: Run tests and observe failure.** If the SQL integration environment is unavailable, keep the task blocked and report it; do not claim the race is fixed from SQLite alone.
+- [x] **Step 3: Implement atomic claiming.** Move `SmsGatewayMode` to `ISmsGateway.cs` and update router references. In a short SQL Server transaction, claim a bounded batch using `UPDLOCK` and `READPAST`, setting `Status=Sending`, `SendStartedAtUtc`, `GatewayMode`, and `UpdatedAtUtc`. Commit the claim before calling the gateway. Store provider reference as soon as a response arrives. Provider I/O must never hold the claim transaction open.
+- [x] **Step 4: Implement idempotent completion.** Final update loads by ID and current status/version, and only transitions `Sending` to the result state. Catch save failures around the final update; the stale-recovery path handles abandoned rows. Do not overwrite an operator reconciliation or cancellation decision.
+- [x] **Step 5: Implement indeterminate outcomes.** Add the result factory and status. On timeout, unreadable response, or acceptance without a usable provider reference, record `Indeterminate`, error/raw status without secrets, and never schedule a retry. Add operator reconciliation UI/API with `sms.manage` authorization and audit record.
+- [x] **Step 6: Make polling mode-aware and scheduled.** Select the gateway from each item's stored `GatewayMode`, not current settings. Set `NextDeliveryPollAtUtc` after every poll using a bounded backoff (10 seconds, 30 seconds, 60 seconds, then 5 minutes, maximum 24 hours). Do not select items whose next poll is in the future. Simulation may mark delivered without polling a real gateway.
+- [x] **Step 7: Add stale-send recovery.** On worker startup and each bounded batch, move `Sending` rows older than 10 minutes to `Indeterminate` only when no completion occurred. Keep the provider reference and send start for investigation.
+- [x] **Step 8: Close the stale API-mode finding with contract tests.** Assert router `Api` calls REST gateway, `Wsdl` calls SOAP gateway, and stored mode remains stable across a settings switch. Do not send a real message.
+- [x] **Step 9: Verify.** Run fake-gateway unit tests, guarded SQL claim tests, migration/build, frontend tests/build, and full backend tests. Explicitly report that live PayamSMS delivery was not tested.
+- [x] **Step 10: Report and wait.**
 
 **Acceptance criteria:** One queue item produces at most one in-flight send; uncertain paid outcomes are visible and never auto-resent; abandoned sends recover; polling uses the original gateway and bounded schedule; API mode is proven by tests.
 
 **Risk:** Exactly-once external delivery cannot be proven after a network timeout. The safe contract is at-most-one automatic attempt plus explicit human reconciliation. SQL tests must not use the live database.
 
 **Dependencies:** Stage 4 settings/recipient semantics. Stage 7 may reuse bounded batch patterns but must not change SMS claim semantics.
+
+**تأیید مرحله ۵ (۲۰۲۶-۱۱-۲۴):**
+- ادعای اتمی صف با تراکنش کوتاه `UPDLOCK, READPAST` و batch محدود انجام می‌شود؛ claim پیش از هر I/O درگاه commit می‌شود و آزمون واقعی LocalDB مشاهدهٔ `Sending` از context دیگر را تأیید می‌کند.
+- timeout، پاسخ ناخوانا، خطای انتقال پس از درخواست و پذیرش بدون شناسهٔ قابل‌استفاده به `Indeterminate` تبدیل می‌شوند و هرگز retry خودکار نمی‌گیرند. ارسال‌های `Sending` قدیمی‌تر از ۱۰ دقیقه با حفظ شاهد provider و زمان شروع به `Indeterminate` بازیابی می‌شوند.
+- تکمیل نهایی فقط روی `Sending` و همان تلاش claimed انجام می‌شود؛ نتیجهٔ دیرهنگام نمی‌تواند retry تأییدشدهٔ اپراتور یا لغو هم‌زمان را بازنویسی کند. migration رکوردهای `Accepted` قدیمی بدون mode ذخیره‌شده را نیز به `Indeterminate` منتقل می‌کند.
+- polling از `GatewayMode` ذخیره‌شده استفاده می‌کند، سررسید آینده را رد می‌کند و backoff ده‌ثانیه‌ای/سی‌ثانیه‌ای/یک‌دقیقه‌ای و سپس نمایی ۵دقیقه‌ای با سقف ۲۴ساعت دارد. router با آزمون قرارداد برای `Api` به REST و `Wsdl` به SOAP می‌رود.
+- API و UI رسیدگی اپراتور فقط با `sms.manage`، دلیل معتبر، تأیید صریح و رکورد ممیزی کار می‌کند؛ retry هشدار فارسی ارسال پولی تکراری دارد و هیچ تصمیم رسیدگی‌ای خودکار اجرا نمی‌شود.
+- ساخت Debug و Release بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۴۸۵ تست واحد و ۸۳ تست یکپارچه گذشت. ۶ آزمون SQL اختصاصی SMS روی LocalDB گذشتند و ۱۰ آزمون SQL موجود login/maintenance به‌علت نبود متغیرهای محیطی skip شدند. فرانت‌اند ۳۶/۳۶ تست سبک داشت؛ lint ۰ خطا و ۶ هشدار موجود نامرتبط و build موفق با هشدار قبلی chunk بزرگ بود.
+- هیچ SMS واقعی، درگاه شبکه‌ای، ورود کاربر، اتصال به SQL مشترک/تولیدی یا IIS زنده استفاده نشد. تضمین exactly-once پس از timeout درگاه ممکن نیست؛ قرارداد ایمن «حداکثر یک تلاش خودکار + رسیدگی صریح انسان» است.
 
 ## Stage 6 — Mission Odometer and Change-Request Integrity
 

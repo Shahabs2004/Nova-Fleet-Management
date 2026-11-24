@@ -55,6 +55,17 @@ public sealed class SmsServiceCancelTests : MissionTestBase
     }
 
     [Fact]
+    public async Task CancelAsync_SendingItem_IsRejected()
+    {
+        var item = await SeedAsync(row => row.MarkSending(Clock.UtcNow));
+
+        await Assert.ThrowsAsync<ValidationAppException>(() => SmsServiceFor(Operator()).CancelAsync(item.Id));
+
+        var stored = await Db.SmsQueueItems.AsNoTracking().FirstAsync(row => row.Id == item.Id);
+        Assert.Equal(SmsQueueStatus.Sending, stored.Status);
+    }
+
+    [Fact]
     public async Task CancelAsync_AcceptedItem_IsRejected()
     {
         var now = Clock.UtcNow;

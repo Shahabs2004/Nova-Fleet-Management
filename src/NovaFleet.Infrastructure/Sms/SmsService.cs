@@ -75,8 +75,12 @@ public sealed class SmsService(
                 row.item.AcceptedAtUtc,
                 row.item.DeliveredAtUtc,
                 row.item.NextAttemptAtUtc,
+                (SmsGatewayMode)row.item.GatewayMode,
+                row.item.SendStartedAtUtc,
+                row.item.NextDeliveryPollAtUtc,
                 row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure,
-                row.item.Status == SmsQueueStatus.Queued || row.item.Status == SmsQueueStatus.RetryScheduled || row.item.Status == SmsQueueStatus.Sending || row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure))
+                row.item.Status == SmsQueueStatus.Queued || row.item.Status == SmsQueueStatus.RetryScheduled || row.item.Status == SmsQueueStatus.Failed || row.item.Status == SmsQueueStatus.PermanentFailure,
+                row.item.Status == SmsQueueStatus.Indeterminate))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<SmsQueueItemDto>(items, total, page, pageSize);
@@ -109,6 +113,55 @@ public sealed class SmsService(
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("CancelSms", "SmsQueueItem", id.ToString(), "Success",
             After: new { item.EventKey, item.RecipientMobile }), cancellationToken);
+    }
+
+    public async Task ReconcileAsync(
+        Guid id, SmsReconciliationRequest request, CancellationToken cancellationToken = default)
+    {
+        currentUser.Require(PermissionCatalog.Notifications.SmsManage);
+        if (!request.Confirmed)
+        {
+            throw new ValidationAppException("پس از بررسی پیام و تأیید خطر ارسال تکراری، تصمیم را صریحاً تأیید کنید.");
+        }
+
+        var reason = request.Reason?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ValidationAppException("دلیل رسیدگی به پیامک الزامی است.");
+        }
+
+        if (reason.Length > 500)
+        {
+            throw new ValidationAppException("دلیل رسیدگی نمی‌تواند بیش از ۵۰۰ نویسه باشد.");
+        }
+
+        var decision = request.Decision?.Trim().ToLowerInvariant();
+        if (decision is not ("retry" or "failed"))
+        {
+            throw new ValidationAppException("تصمیم رسیدگی باید «retry» یا «failed» باشد.");
+        }
+
+        var item = await db.SmsQueueItems.FirstOrDefaultAsync(row => row.Id == id, cancellationToken)
+            ?? throw new NotFoundAppException("پیامک پیدا نشد.");
+        if (item.Status != SmsQueueStatus.Indeterminate)
+        {
+            throw new ValidationAppException("فقط پیامک‌های با نتیجه نامشخص نیازمند رسیدگی صریح هستند.");
+        }
+
+        var before = new { item.Status, item.ProviderReference, item.SendStartedAtUtc };
+        if (decision == "retry")
+        {
+            item.ReconcileForRetry($"ارسال مجدد پس از تأیید اپراتور: {reason}", clock.UtcNow);
+        }
+        else
+        {
+            item.ReconcileAsFailed($"بستن توسط اپراتور: {reason}", clock.UtcNow);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord(
+            "ReconcileSms", "SmsQueueItem", id.ToString(), "Success", reason, before,
+            new { Decision = decision, item.Status, item.ProviderReference }), cancellationToken);
     }
 
     public async Task<IReadOnlyList<SmsTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken = default)
@@ -230,7 +283,8 @@ public sealed class SmsService(
             Count(SmsQueueStatus.Delivered),
             Count(SmsQueueStatus.Failed),
             Count(SmsQueueStatus.PermanentFailure),
-            todayCount);
+            todayCount,
+            Count(SmsQueueStatus.Indeterminate));
     }
 
     private static readonly SmsEventType[] MissionEvents =

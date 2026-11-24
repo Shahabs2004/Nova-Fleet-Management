@@ -216,15 +216,15 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("NovaFleet.Domain.Identity.ApplicationUser", b =>
                 {
-                    b.Property<int>("AccessFailedCount")
-                        .IsRequired()
-                        .IsConcurrencyToken()
-                        .HasDefaultValue(0)
-                        .HasColumnType("int");
-
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AccessFailedCount")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("AvatarDataUrl")
                         .HasColumnType("nvarchar(max)");
@@ -260,13 +260,13 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastDirectorySyncAtUtc")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<DateTimeOffset?>("LockoutEndAtUtc")
-                        .HasColumnType("datetimeoffset");
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset?>("LockoutEndAtUtc")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("MobilePhone")
                         .HasMaxLength(20)
@@ -1161,6 +1161,9 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                     b.Property<int>("EventType")
                         .HasColumnType("int");
 
+                    b.Property<int>("GatewayMode")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset?>("LastAttemptAtUtc")
                         .HasColumnType("datetimeoffset");
 
@@ -1180,6 +1183,9 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("NextDeliveryPollAtUtc")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("ProviderReference")
@@ -1202,6 +1208,9 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<DateTimeOffset?>("SendStartedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -1215,6 +1224,10 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                     b.HasIndex("MissionId");
 
                     b.HasIndex("Status", "NextAttemptAtUtc");
+
+                    b.HasIndex("Status", "NextDeliveryPollAtUtc");
+
+                    b.HasIndex("Status", "SendStartedAtUtc");
 
                     b.ToTable("SmsQueueItems", (string)null);
                 });

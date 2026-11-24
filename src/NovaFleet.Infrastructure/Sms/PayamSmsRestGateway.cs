@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -67,10 +68,12 @@ public sealed class PayamSmsRestGateway(
             }
         };
 
-        var (envelope, error) = await PostAsync(payload, config, cancellationToken);
+        var (envelope, error, indeterminate) = await PostAsync(payload, config, cancellationToken);
         if (envelope is null)
         {
-            return SmsSendResult.Transient(error!);
+            return indeterminate
+                ? SmsSendResult.Indeterminate(error!)
+                : SmsSendResult.Transient(error!);
         }
 
         if (envelope.Code != 200)
@@ -82,12 +85,10 @@ public sealed class PayamSmsRestGateway(
         }
 
         var result = MapSendData(envelope.Data);
-        if (!result.Accepted && !result.IsPermanentFailure)
+        if (result.IsIndeterminate)
         {
-            // پاسخ ۲۰۰ بود ولی به شناسه پیام نگاشت نشد؛ شکل خام فقط در لاگ می‌نشیند تا
-            // بدون ارسال آزمایشیِ هزینه‌دار، قرارداد واقعیِ پاسخ موفق قابل تشخیص باشد.
-            var raw = envelope.Data.ValueKind == JsonValueKind.Undefined ? "(غایب)" : envelope.Data.GetRawText();
-            logger.LogWarning("پاسخ send درگاه REST به شناسه پیام نگاشت نشد؛ data خام: {Data}", raw);
+            // بدنه خام می‌تواند شماره، متن پیام یا داده حساس داشته باشد؛ فقط شکل عمومی ثبت می‌شود.
+            logger.LogWarning("پاسخ موفق درگاه REST به شناسه قابل استفاده پیام نگاشت نشد.");
         }
 
         return result;
@@ -119,7 +120,7 @@ public sealed class PayamSmsRestGateway(
             method = "getbalance"
         };
 
-        var (envelope, error) = await PostAsync(payload, config, cancellationToken);
+        var (envelope, error, _) = await PostAsync(payload, config, cancellationToken);
         if (envelope is null)
         {
             return SmsBalanceResult.Failure(error!);
@@ -195,7 +196,7 @@ public sealed class PayamSmsRestGateway(
             }
         }
 
-        return SmsSendResult.Transient("سرویس پیامک شناسه پیام برنگرداند.");
+        return SmsSendResult.Indeterminate("سرویس پیامک شناسه پیام برنگرداند.");
     }
 
     /// <summary>یک آیتم پاسخ send را به خطا یا شناسه پیام (serverId یا ID) نگاشت می‌کند؛ بدون شناسه و بدون خطا null است.</summary>
@@ -228,18 +229,19 @@ public sealed class PayamSmsRestGateway(
             return null;
         }
 
-        return value.ValueKind switch
+        var reference = value.ValueKind switch
         {
             JsonValueKind.String => value.GetString(),
             JsonValueKind.Number => value.GetRawText(),
             _ => null
         };
+        return string.IsNullOrWhiteSpace(reference) ? null : reference;
     }
 
     private void LogRejected(RestEnvelope envelope) =>
-        logger.LogWarning("پاسخ ناموفق درگاه REST پیامک: کد {Code} — {Message}", envelope.Code, envelope.Message);
+        logger.LogWarning("پاسخ ناموفق درگاه REST پیامک: کد {Code}", envelope.Code);
 
-    private async Task<(RestEnvelope? Envelope, string? Error)> PostAsync(
+    private async Task<(RestEnvelope? Envelope, string? Error, bool IsIndeterminate)> PostAsync(
         object payload, Config config, CancellationToken cancellationToken)
     {
         try
@@ -255,13 +257,23 @@ public sealed class PayamSmsRestGateway(
             return envelope is null
                 ? (null, response.IsSuccessStatusCode
                     ? "پاسخ سرویس پیامک قابل‌خواندن نیست."
-                    : $"پاسخ HTTP {(int)response.StatusCode} از سرویس پیامک.")
-                : (envelope, null);
+                    : $"پاسخ HTTP {(int)response.StatusCode} از سرویس پیامک.", true)
+                : (envelope, null, false);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("زمان انتظار فراخوان REST سرویس پیامک به پایان رسید.");
+            return (null, "نتیجه ارسال به سرویس پیامک به‌دلیل پایان زمان انتظار نامشخص است.", true);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(ex, "فراخوان REST سرویس پیامک با نتیجه نامشخص شکست خورد.");
+            return (null, "ارتباط با سرویس پیامک برقرار نشد؛ نتیجه ارسال قابل تعیین نیست.", true);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "فراخوان REST سرویس پیامک ناموفق بود.");
-            return (null, "ارتباط با سرویس پیامک برقرار نشد.");
+            logger.LogWarning(ex, "فراخوان REST سرویس پیامک با پاسخ نامشخص شکست خورد.");
+            return (null, "نتیجه ارسال به سرویس پیامک قابل تعیین نیست.", true);
         }
     }
 

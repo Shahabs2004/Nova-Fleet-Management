@@ -4,17 +4,8 @@ import { EmptyState, Modal, PageHeader, Pagination, Spinner, StatCard } from '..
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { faNumber, formatFaDateTime, toFa } from '../lib/date'
-import { SMS_STATUS } from '../lib/labels'
-import type { PagedResult, SmsItem, SmsRecipient, SmsTemplate } from '../lib/types'
-
-interface SmsSummary {
-  queued: number
-  accepted: number
-  delivered: number
-  failed: number
-  permanentFailure: number
-  todayCount: number
-}
+import { SMS_GATEWAY_MODE, SMS_STATUS } from '../lib/labels'
+import type { PagedResult, SmsItem, SmsReconciliationDecision, SmsReconciliationRequest, SmsRecipient, SmsStatusSummary, SmsTemplate } from '../lib/types'
 
 function SmsStatusBadge({ status }: { status: number }) {
   const meta = SMS_STATUS[status] ?? { title: 'نامشخص', badge: 'bg-slate-100 text-slate-600' }
@@ -30,8 +21,9 @@ export function SmsPage() {
   const [page, setPage] = useState(1)
   const pageSize = 20
   const [testOpen, setTestOpen] = useState(false)
+  const [reconciliation, setReconciliation] = useState<{ item: SmsItem; decision: SmsReconciliationDecision } | null>(null)
 
-  const summary = useQuery({ queryKey: ['sms-summary', user?.username], queryFn: () => api.get<SmsSummary>('/api/sms/summary') })
+  const summary = useQuery({ queryKey: ['sms-summary', user?.username], queryFn: () => api.get<SmsStatusSummary>('/api/sms/summary') })
 
   const params = new URLSearchParams()
   if (search) params.set('q', search)
@@ -61,6 +53,26 @@ export function SmsPage() {
     },
   })
 
+  const reconcile = useMutation({
+    mutationFn: ({ id, request }: { id: string; request: SmsReconciliationRequest }) => api.post(`/api/sms/${id}/reconcile`, request),
+    onSuccess: () => {
+      setReconciliation(null)
+      void queryClient.invalidateQueries({ queryKey: ['sms', user?.username] })
+      void queryClient.invalidateQueries({ queryKey: ['sms-summary', user?.username] })
+    },
+  })
+
+  const openReconciliation = (item: SmsItem, decision: SmsReconciliationDecision) => {
+    reconcile.reset()
+    setReconciliation({ item, decision })
+  }
+
+  const closeReconciliation = () => {
+    if (reconcile.isPending) return
+    reconcile.reset()
+    setReconciliation(null)
+  }
+
   return (
     <div>
       <PageHeader
@@ -75,11 +87,12 @@ export function SmsPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-5">
+      <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-6">
         <StatCard title="در صف" value={faNumber(summary.data?.queued)} tone="gold" icon={icon('M12 7v5l3 3M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z')} />
         <StatCard title="پذیرفته‌شده" value={faNumber(summary.data?.accepted)} tone="sky" icon={icon('M22 12h-4l-3 9L9 3l-3 9H2')} />
         <StatCard title="تحویل‌شده" value={faNumber(summary.data?.delivered)} tone="emerald" icon={icon('M20 6 9 17l-5-5')} />
         <StatCard title="ناموفق" value={faNumber((summary.data?.failed ?? 0) + (summary.data?.permanentFailure ?? 0))} tone="rose" icon={icon('M12 8v4m0 4h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z')} />
+        <StatCard title="نتیجه نامشخص" value={faNumber(summary.data?.indeterminate)} tone="gold" icon={icon('M9.1 9a3 3 0 1 1 5.8 1c-.9.6-1.9 1.2-1.9 2.5M12 17h.01M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z')} />
         <StatCard title="امروز" value={faNumber(summary.data?.todayCount)} tone="indigo" icon={icon('M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z')} />
       </div>
 
@@ -166,7 +179,8 @@ export function SmsPage() {
                         </td>
                         <td className="max-w-72">
                           <p className="line-clamp-2 text-xs leading-5 text-slate-600">{item.messageBody}</p>
-                          {item.lastError && <p className="mt-0.5 text-[10px] text-rose-600">{item.lastError}</p>}
+                          <SmsInvestigationEvidence item={item} />
+                          {item.lastError && <p className="mt-0.5 text-[10px] text-rose-600">آخرین خطا: {item.lastError}</p>}
                         </td>
                         <td>
                           <SmsStatusBadge status={item.status} />
@@ -177,6 +191,20 @@ export function SmsPage() {
                         <td className="num text-[11px] text-slate-400">{formatFaDateTime(item.createdAtUtc)}</td>
                         <td className="text-left">
                           <div className="flex items-center justify-end gap-1">
+                            {can('sms.manage') && item.canReconcile && (
+                              <>
+                                <button className="btn-ghost btn-sm" disabled={reconcile.isPending} onClick={() => openReconciliation(item, 'retry')}>
+                                  ارسال مجدد پس از بررسی
+                                </button>
+                                <button
+                                  className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50"
+                                  disabled={reconcile.isPending}
+                                  onClick={() => openReconciliation(item, 'failed')}
+                                >
+                                  بستن به‌عنوان ناموفق
+                                </button>
+                              </>
+                            )}
                             {can('notifications.sms.retry') && item.canRetry && (
                               <button className="btn-ghost btn-sm" disabled={retry.isPending} onClick={() => retry.mutate(item.id)}>
                                 ارسال مجدد
@@ -216,7 +244,126 @@ export function SmsPage() {
           void queryClient.invalidateQueries({ queryKey: ['sms-summary', user?.username] })
         }}
       />
+
+      {reconciliation && (
+        <SmsReconciliationModal
+          item={reconciliation.item}
+          decision={reconciliation.decision}
+          submitting={reconcile.isPending}
+          error={reconcile.error}
+          onClose={closeReconciliation}
+          onSubmit={(reason) => reconcile.mutate({
+            id: reconciliation.item.id,
+            request: { decision: reconciliation.decision, reason, confirmed: true },
+          })}
+        />
+      )}
     </div>
+  )
+}
+
+function SmsInvestigationEvidence({ item }: { item: SmsItem }) {
+  if (item.status !== 3 && item.status !== 9) return null
+
+  return (
+    <div className="mt-2 space-y-1 text-[10px] leading-4 text-slate-500">
+      <p>حالت ذخیره‌شده درگاه: {SMS_GATEWAY_MODE[item.gatewayMode] ?? 'نامشخص'}</p>
+      <p>زمان شروع ارسال: {formatFaDateTime(item.sendStartedAtUtc)}</p>
+      <p>
+        مرجع سرویس‌دهنده:{' '}
+        {item.providerReference ? <span className="num" dir="ltr">{toFa(item.providerReference)}</span> : 'ثبت نشده'}
+      </p>
+      {item.nextDeliveryPollAtUtc && <p>استعلام بعدی تحویل: {formatFaDateTime(item.nextDeliveryPollAtUtc)}</p>}
+    </div>
+  )
+}
+
+function SmsReconciliationModal({
+  item,
+  decision,
+  submitting,
+  error,
+  onClose,
+  onSubmit,
+}: {
+  item: SmsItem
+  decision: SmsReconciliationDecision
+  submitting: boolean
+  error: Error | null
+  onClose: () => void
+  onSubmit: (reason: string) => void
+}) {
+  const [reason, setReason] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
+  const isRetry = decision === 'retry'
+  const normalizedReason = reason.trim()
+  const canSubmit = normalizedReason.length > 0 && normalizedReason.length <= 500 && confirmed && !submitting
+  const title = isRetry ? 'رسیدگی به پیامک با نتیجه نامشخص' : 'بستن پیامک به‌عنوان ناموفق'
+
+  return (
+    <Modal open title={title} onClose={onClose}>
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (canSubmit) onSubmit(normalizedReason)
+        }}
+      >
+        <div className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-600">
+          <p>رویداد: {item.eventKey}</p>
+          <p>گیرنده: {item.recipientName} — <span className="num">{toFa(item.recipientMobile)}</span></p>
+          {item.providerReference && <p>مرجع سرویس‌دهنده: <span className="num" dir="ltr">{toFa(item.providerReference)}</span></p>}
+        </div>
+
+        <div className={`rounded-xl px-4 py-3 text-sm leading-6 ring-1 ${isRetry
+          ? 'bg-amber-50 text-amber-900 ring-amber-100'
+          : 'bg-rose-50 text-rose-800 ring-rose-100'}`}>
+          <p className="font-bold">{isRetry ? 'هشدار ارسال تکراری' : 'تأیید بستن پیامک'}</p>
+          <p>
+            {isRetry
+              ? 'هشدار: ممکن است پیامک قبلاً توسط سرویس‌دهنده تحویل شده باشد. ارسال مجدد می‌تواند پیامک تکراری و هزینه اضافی ایجاد کند.'
+              : 'با بستن این پیامک به‌عنوان ناموفق، ارسال خودکار دیگری انجام نمی‌شود و تصمیم در ممیزی ثبت می‌شود.'}
+          </p>
+        </div>
+
+        <div>
+          <label className="label" htmlFor="sms-reconciliation-reason">دلیل رسیدگی (الزامی)</label>
+          <textarea
+            id="sms-reconciliation-reason"
+            className="input min-h-24 resize-y"
+            rows={4}
+            maxLength={500}
+            value={reason}
+            disabled={submitting}
+            aria-describedby="sms-reconciliation-reason-hint"
+            aria-invalid={normalizedReason.length > 500}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <p id="sms-reconciliation-reason-hint" className="mt-1 text-[11px] text-slate-400">دلیل در ممیزی ثبت می‌شود؛ حداکثر ۵۰۰ نویسه.</p>
+          {normalizedReason.length > 500 && <p className="mt-1 text-xs font-medium text-rose-700">دلیل رسیدگی نمی‌تواند بیش از ۵۰۰ نویسه باشد.</p>}
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-emerald-700"
+            checked={confirmed}
+            disabled={submitting}
+            onChange={(event) => setConfirmed(event.target.checked)}
+          />
+          تصمیم را پس از بررسی شواهد تأیید می‌کنم.
+        </label>
+
+        {error && <div role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error.message}</div>}
+
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn-ghost" disabled={submitting} onClick={onClose}>انصراف</button>
+          <button type="submit" className={isRetry ? 'btn-primary' : 'btn-danger'} disabled={!canSubmit}>
+            {submitting ? 'در حال ثبت…' : isRetry ? 'تأیید ارسال مجدد' : 'تأیید بستن به‌عنوان ناموفق'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
@@ -55,14 +56,14 @@ public sealed class PayamSmsGateway(
             StringArray("destNo", [destination]));
 
         var (outcome, document, error) = await PostAsync(SendAction, envelope, config, cancellationToken);
-        if (outcome == PostOutcome.TransportFailure)
+        if (outcome == PostOutcome.Indeterminate)
         {
-            return SmsSendResult.Transient(error!);
+            return SmsSendResult.Indeterminate(error!);
         }
 
         if (document is null)
         {
-            return SmsSendResult.Transient(error ?? "پاسخ سرویس پیامک قابل‌خواندن نیست.");
+            return SmsSendResult.Indeterminate(error ?? "پاسخ سرویس پیامک قابل‌خواندن نیست.");
         }
 
         var fault = PayamSmsFaults.Classify(ReadFault(document) ?? ReadFirstId(document));
@@ -79,7 +80,7 @@ public sealed class PayamSmsGateway(
             .FirstOrDefault(id => !string.IsNullOrWhiteSpace(id) && PayamSmsFaults.ParseCode(id) is null);
 
         return string.IsNullOrWhiteSpace(reference)
-            ? SmsSendResult.Transient(error ?? "سرویس پیامک شناسه پیام برنگرداند.")
+            ? SmsSendResult.Indeterminate(error ?? "سرویس پیامک شناسه پیام برنگرداند.")
             : SmsSendResult.Success(reference.Trim(), null);
     }
 
@@ -223,7 +224,7 @@ public sealed class PayamSmsGateway(
     private enum PostOutcome
     {
         Ok,
-        TransportFailure,
+        Indeterminate,
     }
 
     private async Task<(PostOutcome Outcome, XDocument? Document, string? Error)> PostAsync(
@@ -256,13 +257,24 @@ public sealed class PayamSmsGateway(
             }
 
             return document is null
-                ? (PostOutcome.TransportFailure, null, "پاسخ سرویس پیامک قابل‌خواندن نیست.")
+                ? (PostOutcome.Indeterminate, null, "پاسخ سرویس پیامک قابل‌خواندن نیست.")
                 : (PostOutcome.Ok, document, null);
+        }
+        catch (OperationCanceledException)
+        {
+            // پایان زمان انتظار پس از ارسال درخواست، پذیرش پیام را قابل اثبات نمی‌کند.
+            logger.LogWarning("زمان انتظار فراخوان {Action} سرویس پیامک به پایان رسید.", action);
+            return (PostOutcome.Indeterminate, null, "نتیجه ارسال به سرویس پیامک به‌دلیل پایان زمان انتظار نامشخص است.");
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(ex, "فراخوان {Action} سرویس پیامک با نتیجه نامشخص شکست خورد.", action);
+            return (PostOutcome.Indeterminate, null, "ارتباط با سرویس پیامک برقرار نشد؛ نتیجه ارسال قابل تعیین نیست.");
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "فراخوان {Action} سرویس پیامک ناموفق بود.", action);
-            return (PostOutcome.TransportFailure, null, "ارتباط با سرویس پیامک برقرار نشد.");
+            logger.LogWarning(ex, "فراخوان {Action} سرویس پیامک با پاسخ نامشخص شکست خورد.", action);
+            return (PostOutcome.Indeterminate, null, "نتیجه ارسال به سرویس پیامک قابل تعیین نیست.");
         }
     }
 

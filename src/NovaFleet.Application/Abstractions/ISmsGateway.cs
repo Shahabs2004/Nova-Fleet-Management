@@ -9,13 +9,43 @@ public sealed record SmsSendResult(
     string? ProviderReference,
     string? Error,
     bool IsPermanentFailure,
-    string? RawStatus)
+    string? RawStatus,
+    bool IsIndeterminate = false)
 {
     public static SmsSendResult Success(string? reference, string? rawStatus) => new(true, reference, null, false, rawStatus);
 
     public static SmsSendResult Transient(string error, string? rawStatus = null) => new(false, null, error, false, rawStatus);
 
     public static SmsSendResult Permanent(string error, string? rawStatus = null) => new(false, null, error, true, rawStatus);
+
+    /// <summary>ارسال یا نتیجه آن قابل قطعیت نیست؛ صف هرگز این مورد را خودکار دوباره ارسال نمی‌کند.</summary>
+    public static SmsSendResult Indeterminate(string error, string? rawStatus = null) =>
+        new(false, null, error, false, rawStatus, true);
+}
+
+/// <summary>حالت درگاهی که هنگام برداشت از صف ذخیره می‌شود و برای کل عمر پیام ثابت می‌ماند.</summary>
+public enum SmsGatewayMode
+{
+    Simulation = 0,
+    Wsdl = 1,
+    Api = 2,
+}
+
+/// <summary>انتخاب درگاه ثابت بر اساس حالت ذخیره‌شده، مستقل از تنظیمات جاری.</summary>
+public interface ISmsGatewaySelector
+{
+    ISmsGateway ForMode(SmsGatewayMode mode);
+}
+
+public static class SmsGatewayModes
+{
+    /// <summary>حالت ناشناخته عمداً به شبیه‌سازی می‌رود تا غلط تایپی هزینه‌ای ایجاد نکند.</summary>
+    public static SmsGatewayMode Parse(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        "wsdl" => SmsGatewayMode.Wsdl,
+        "api" => SmsGatewayMode.Api,
+        _ => SmsGatewayMode.Simulation,
+    };
 }
 
 public enum SmsDeliveryState

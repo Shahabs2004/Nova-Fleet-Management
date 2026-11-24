@@ -166,7 +166,7 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
     }
 
     [Fact]
-    public async Task Send_HttpErrorWithoutFaultNamesTheStatusCode()
+    public async Task Send_UnreadableHttpErrorIsIndeterminateAndNamesTheStatusCode()
     {
         var gateway = await WiredGatewayAsync("<html>gateway is down</html>", HttpStatusCode.ServiceUnavailable);
 
@@ -174,13 +174,14 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
 
         Assert.False(result.Accepted);
         Assert.False(result.IsPermanentFailure);
+        Assert.True(result.IsIndeterminate);
         Assert.Contains("503", result.Error, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Send_TransportFailureIsRetryable()
+    public async Task Send_TransportFailureAfterRequestIsIndeterminate()
     {
-        handler = new StubHttpMessageHandler(new HttpRequestException("connection refused"));
+        handler = new StubHttpMessageHandler(new HttpRequestException("connection reset after request"));
         var gateway = Gateway();
         await ConfigureConnectionAsync();
 
@@ -188,11 +189,12 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
 
         Assert.False(result.Accepted);
         Assert.False(result.IsPermanentFailure);
+        Assert.True(result.IsIndeterminate);
         Assert.Contains("ارتباط با سرویس پیامک برقرار نشد", result.Error, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task Send_MissingSendResultIdIsTransient()
+    public async Task Send_MissingSendResultIdIsIndeterminate()
     {
         var gateway = await WiredGatewayAsync("<tns:SendResponse xmlns:tns=\"urn:SMSAPIwsdl\">" +
             "<SendReturn><SendResult><Status>queued</Status></SendResult></SendReturn></tns:SendResponse>");
@@ -200,6 +202,7 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
         var result = await gateway.SendAsync(Message);
 
         Assert.False(result.Accepted);
+        Assert.True(result.IsIndeterminate);
         Assert.Contains("شناسه پیام برنگرداند", result.Error, StringComparison.Ordinal);
     }
 

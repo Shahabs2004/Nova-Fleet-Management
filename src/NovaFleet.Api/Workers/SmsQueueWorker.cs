@@ -11,6 +11,21 @@ public sealed class SmsQueueWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        try
+        {
+            using var startupScope = scopeFactory.CreateScope();
+            var startupDispatcher = startupScope.ServiceProvider.GetRequiredService<ISmsDispatcher>();
+            await startupDispatcher.RecoverStaleSendsAsync(100, stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "SMS stale-send recovery at worker startup failed.");
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

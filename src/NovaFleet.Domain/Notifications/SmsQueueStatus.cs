@@ -29,6 +29,9 @@ public enum SmsQueueStatus
 
     /// <summary>پیش از ارسال لغو شده است.</summary>
     Cancelled = 8,
+
+    /// <summary>نتیجه ارسال قابل قطعیت نیست؛ ارسال خودکار ممنوع و نیازمند تصمیم اپراتور است.</summary>
+    Indeterminate = 9,
 }
 
 public static class SmsQueueStatusRules

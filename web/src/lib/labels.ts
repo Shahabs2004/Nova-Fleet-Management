@@ -37,6 +37,13 @@ export const SMS_STATUS: Record<number, { title: string; badge: string }> = {
   6: { title: 'ناموفق', badge: 'bg-rose-50 text-rose-700' },
   7: { title: 'خطای دائمی', badge: 'bg-rose-100 text-rose-800' },
   8: { title: 'لغوشده', badge: 'bg-slate-100 text-slate-500' },
+  9: { title: 'نتیجه نامشخص', badge: 'bg-amber-50 text-amber-800' },
+}
+
+export const SMS_GATEWAY_MODE: Record<number, string> = {
+  0: 'شبیه‌سازی',
+  1: 'SOAP (Wsdl)',
+  2: 'REST (Api)',
 }
 
 export const SESSION_METHOD: Record<number, string> = {

@@ -487,6 +487,7 @@ public sealed class MissionVisibilityIntegrationTests
         public Task<int> ProcessQueueAsync(int batchSize, CancellationToken cancellationToken = default) => Task.FromResult(0);
 
         public Task<int> PollDeliveryAsync(int batchSize, CancellationToken cancellationToken = default) => Task.FromResult(0);
+        public Task<int> RecoverStaleSendsAsync(int batchSize, CancellationToken cancellationToken = default) => Task.FromResult(0);
     }
 
     private sealed class FakeSettingsService : ISettingsService

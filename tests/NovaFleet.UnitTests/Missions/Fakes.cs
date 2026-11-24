@@ -132,6 +132,9 @@ public sealed class FakeSmsDispatcher : ISmsDispatcher
     public Task<int> PollDeliveryAsync(int batchSize, CancellationToken cancellationToken = default)
         => Task.FromResult(0);
 
+    public Task<int> RecoverStaleSendsAsync(int batchSize, CancellationToken cancellationToken = default)
+        => Task.FromResult(0);
+
     public bool QueuedFor(Guid missionId, SmsEventType eventType)
         => Queued.Any(item => item.MissionId == missionId && item.EventType == eventType);
 }

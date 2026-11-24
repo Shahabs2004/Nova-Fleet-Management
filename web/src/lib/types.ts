@@ -190,12 +190,37 @@ export interface SmsItem {
   status: number
   attemptCount: number
   maxAttempts: number
+  providerReference: string | null
   lastError: string | null
   createdAtUtc: string
+  lastAttemptAtUtc: string | null
+  acceptedAtUtc: string | null
   deliveredAtUtc: string | null
   nextAttemptAtUtc: string | null
+  gatewayMode: number
+  sendStartedAtUtc: string | null
+  nextDeliveryPollAtUtc: string | null
   canRetry: boolean
   canCancel: boolean
+  canReconcile: boolean
+}
+
+export interface SmsStatusSummary {
+  queued: number
+  accepted: number
+  delivered: number
+  failed: number
+  permanentFailure: number
+  todayCount: number
+  indeterminate: number
+}
+
+export type SmsReconciliationDecision = 'retry' | 'failed'
+
+export interface SmsReconciliationRequest {
+  decision: SmsReconciliationDecision
+  reason: string
+  confirmed: boolean
 }
 
 export type SmsRecipient = 'requester' | 'driver'

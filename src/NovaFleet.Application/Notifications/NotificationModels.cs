@@ -1,3 +1,4 @@
+using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Common;
 using NovaFleet.Domain.Notifications;
 
@@ -47,8 +48,12 @@ public sealed record SmsQueueItemDto(
     DateTimeOffset? AcceptedAtUtc,
     DateTimeOffset? DeliveredAtUtc,
     DateTimeOffset? NextAttemptAtUtc,
+    SmsGatewayMode GatewayMode,
+    DateTimeOffset? SendStartedAtUtc,
+    DateTimeOffset? NextDeliveryPollAtUtc,
     bool CanRetry,
-    bool CanCancel);
+    bool CanCancel,
+    bool CanReconcile);
 
 public sealed record SmsQuery(
     string? Search,
@@ -70,14 +75,20 @@ public sealed record UpdateSmsTemplateRequest(string Body, bool IsActive, IReadO
 
 public sealed record SmsTestRequest(string Mobile, string Body);
 
+/// <summary>تصمیم صریح اپراتور برای نتیجه مبهم؛ retry فقط پس از تأیید خطر ارسال تکراری.</summary>
+public sealed record SmsReconciliationRequest(string Decision, string Reason, bool Confirmed);
+
 public interface ISmsService
 {
     Task<PagedResult<SmsQueueItemDto>> ListAsync(SmsQuery query, CancellationToken cancellationToken = default);
 
     Task RetryAsync(Guid id, CancellationToken cancellationToken = default);
 
-    /// <summary>لغو دستی یک پیامک ارسال‌نشده در صف (صف‌شده، زمان‌بندی مجدد یا در حال ارسال).</summary>
+    /// <summary>لغو دستی یک پیامک ارسال‌نشده در صف (صف‌شده، زمان‌بندی مجدد یا ناموفق).</summary>
     Task CancelAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>بستن یا ارسال مجدد صریح یک پیامک با نتیجه نامشخص، با مجوز و ممیزی.</summary>
+    Task ReconcileAsync(Guid id, SmsReconciliationRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<SmsTemplateDto>> ListTemplatesAsync(CancellationToken cancellationToken = default);
 
@@ -89,7 +100,7 @@ public interface ISmsService
     Task<SmsStatusSummaryDto> GetStatusSummaryAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed record SmsStatusSummaryDto(int Queued, int Accepted, int Delivered, int Failed, int PermanentFailure, int TodayCount);
+public sealed record SmsStatusSummaryDto(int Queued, int Accepted, int Delivered, int Failed, int PermanentFailure, int TodayCount, int Indeterminate);
 
 /// <summary>پردازش صف پیامک؛ در سرویس پس‌زمینه فراخوانی می‌شود و هرگز گردش‌کار مأموریت را متوقف نمی‌کند.</summary>
 public interface ISmsDispatcher
@@ -98,6 +109,9 @@ public interface ISmsDispatcher
 
     /// <summary>استعلام وضعیت پیام‌های پذیرفته‌شده تا سقف تلاش تنظیم‌شده.</summary>
     Task<int> PollDeliveryAsync(int batchSize, CancellationToken cancellationToken = default);
+
+    /// <summary>بازیابی ارسال‌های Sending رهاشده پس از ده دقیقه، بدون ارسال دوباره.</summary>
+    Task<int> RecoverStaleSendsAsync(int batchSize, CancellationToken cancellationToken = default);
 
     /// <summary>ثبت پیامک‌های یک رخداد مأموریت برای گیرندگان تنظیم‌شده.</summary>
     Task QueueForMissionAsync(Guid missionId, SmsEventType eventType, string? reason, CancellationToken cancellationToken = default);

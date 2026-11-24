@@ -76,12 +76,15 @@ public sealed class SmsQueueItemConfiguration : IEntityTypeConfiguration<SmsQueu
         builder.Property(x => x.RecipientName).HasMaxLength(200);
         builder.Property(x => x.MessageBody).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.Status).HasConversion<int>();
+        builder.Property(x => x.GatewayMode).HasConversion<int>();
         builder.Property(x => x.ProviderReference).HasMaxLength(100);
         builder.Property(x => x.LastError).HasMaxLength(500);
         builder.Property(x => x.CreatedBy).HasMaxLength(100);
         builder.Property(x => x.RowVersion).IsRowVersion();
         builder.Ignore(x => x.CanRetryManually);
         builder.HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
+        builder.HasIndex(x => new { x.Status, x.NextDeliveryPollAtUtc });
+        builder.HasIndex(x => new { x.Status, x.SendStartedAtUtc });
         builder.HasIndex(x => x.MissionId);
         builder.HasIndex(x => x.CreatedAtUtc);
     }

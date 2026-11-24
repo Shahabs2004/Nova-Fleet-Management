@@ -328,6 +328,11 @@ public static class EndpointMapper
             await service.CancelAsync(id, ct);
             return Results.Ok(new { message = "پیامک لغو شد." });
         });
+        group.MapPost("/sms/{id:guid}/reconcile", async (Guid id, SmsReconciliationRequest request, ISmsService service, CancellationToken ct) =>
+        {
+            await service.ReconcileAsync(id, request, ct);
+            return Results.Ok(new { message = "تصمیم رسیدگی به پیامک ثبت شد." });
+        });
         group.MapPost("/sms/test", async (SmsTestRequest request, ISmsService service, CancellationToken ct) =>
             Results.Ok(new { id = await service.QueueTestAsync(request, ct) }));
     }

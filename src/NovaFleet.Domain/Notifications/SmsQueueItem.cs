@@ -35,6 +35,15 @@ public sealed class SmsQueueItem : Entity
 
     public DateTimeOffset? NextAttemptAtUtc { get; private set; }
 
+    /// <summary>حالت درگاه هنگام برداشت؛ به‌صورت int ذخیره می‌شود تا Domain به Application وابسته نشود.</summary>
+    public int GatewayMode { get; private set; }
+
+    /// <summary>زمان شروع ارسال؛ برای بازیابی ارسال‌های رهاشده بعد از ده دقیقه.</summary>
+    public DateTimeOffset? SendStartedAtUtc { get; private set; }
+
+    /// <summary>سررسید بعدی استعلام تحویل با زمان‌بندی پشتیبان محدود.</summary>
+    public DateTimeOffset? NextDeliveryPollAtUtc { get; private set; }
+
     /// <summary>شناسه پیام در سرویس‌دهنده؛ برای پیگیری تحویل.</summary>
     public string? ProviderReference { get; private set; }
 
@@ -85,8 +94,10 @@ public sealed class SmsQueueItem : Entity
 
     public bool CanRetryManually => Status is SmsQueueStatus.Failed or SmsQueueStatus.PermanentFailure;
 
-    /// <summary>پیام‌های صف‌شده، در انتظار تلاش، در حال ارسال و ناموفق قابل لغو هستند؛ پیام پذیرفته/تحویل‌شده دیگر لغو نمی‌شود.</summary>
-    public bool CanCancel => Status is SmsQueueStatus.Queued or SmsQueueStatus.RetryScheduled or SmsQueueStatus.Sending or SmsQueueStatus.Failed or SmsQueueStatus.PermanentFailure;
+    public bool CanReconcile => Status == SmsQueueStatus.Indeterminate;
+
+    /// <summary>پیام‌های صف‌شده، در انتظار تلاش و ناموفق قابل لغو هستند؛ ارسال در جریان یا نتیجه مبهم لغو نمی‌شود.</summary>
+    public bool CanCancel => Status is SmsQueueStatus.Queued or SmsQueueStatus.RetryScheduled or SmsQueueStatus.Failed or SmsQueueStatus.PermanentFailure;
 
     /// <summary>آماده‌برداشت برای worker؛ تنها پیام‌های صف‌شده و سررسیدشده.</summary>
     public bool IsDue(DateTimeOffset nowUtc) =>
@@ -101,16 +112,22 @@ public sealed class SmsQueueItem : Entity
         UpdatedAtUtc = DateTimeOffset.UtcNow;
     }
 
-    public void RecordDeliveryPoll(DateTimeOffset nowUtc)
+    public void RecordDeliveryPoll(DateTimeOffset nowUtc, DateTimeOffset nextPollAtUtc)
     {
+        EnsureStatus(SmsQueueStatus.Accepted);
         DeliveryPollCount++;
+        NextDeliveryPollAtUtc = nextPollAtUtc;
         UpdatedAtUtc = nowUtc;
     }
 
-    public void MarkSending(DateTimeOffset nowUtc)
+    public void MarkSending(DateTimeOffset nowUtc, int gatewayMode = 0)
     {
         EnsureStatus(SmsQueueStatus.Queued, SmsQueueStatus.RetryScheduled);
         Status = SmsQueueStatus.Sending;
+        GatewayMode = gatewayMode;
+        SendStartedAtUtc = nowUtc;
+        NextAttemptAtUtc = null;
+        NextDeliveryPollAtUtc = null;
         AttemptCount++;
         LastAttemptAtUtc = nowUtc;
         UpdatedAtUtc = nowUtc;
@@ -123,7 +140,25 @@ public sealed class SmsQueueItem : Entity
         Status = SmsQueueStatus.Accepted;
         ProviderReference = providerReference?.Trim();
         AcceptedAtUtc = nowUtc;
+        NextDeliveryPollAtUtc = nowUtc.AddSeconds(10);
         LastError = null;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    /// <summary>نتیجه قابل قطعیت نیست؛ هیچ زمان تلاش خودکار تعیین نمی‌شود.</summary>
+    public void MarkIndeterminate(
+        string error, string? rawStatus, DateTimeOffset nowUtc, string? providerReference = null)
+    {
+        EnsureStatus(SmsQueueStatus.Sending);
+        Status = SmsQueueStatus.Indeterminate;
+        if (!string.IsNullOrWhiteSpace(providerReference))
+        {
+            ProviderReference = providerReference.Trim();
+        }
+
+        LastError = Truncate(Combine(error, rawStatus), 500);
+        NextAttemptAtUtc = null;
+        NextDeliveryPollAtUtc = null;
         UpdatedAtUtc = nowUtc;
     }
 
@@ -132,6 +167,7 @@ public sealed class SmsQueueItem : Entity
         EnsureStatus(SmsQueueStatus.Accepted, SmsQueueStatus.Delivered);
         Status = SmsQueueStatus.Delivered;
         DeliveredAtUtc = nowUtc;
+        NextDeliveryPollAtUtc = null;
         UpdatedAtUtc = nowUtc;
     }
 
@@ -184,6 +220,31 @@ public sealed class SmsQueueItem : Entity
         UpdatedAtUtc = nowUtc;
     }
 
+    /// <summary>بستن نتیجه مبهم به‌عنوان ناموفق، فقط با تصمیم و دلیل اپراتور.</summary>
+    public void ReconcileAsFailed(string reason, DateTimeOffset nowUtc)
+    {
+        EnsureStatus(SmsQueueStatus.Indeterminate);
+        Status = SmsQueueStatus.Failed;
+        LastError = Truncate(reason, 500);
+        NextAttemptAtUtc = null;
+        NextDeliveryPollAtUtc = null;
+        UpdatedAtUtc = nowUtc;
+    }
+
+    /// <summary>ارسال مجدد صریح پس از بررسی اپراتور؛ ممکن است پیام اولیه تحویل شده باشد.</summary>
+    public void ReconcileForRetry(string reason, DateTimeOffset nowUtc)
+    {
+        EnsureStatus(SmsQueueStatus.Indeterminate);
+        Status = SmsQueueStatus.Queued;
+        AttemptCount = 0;
+        SendStartedAtUtc = null;
+        AcceptedAtUtc = null;
+        NextAttemptAtUtc = nowUtc;
+        NextDeliveryPollAtUtc = null;
+        LastError = Truncate(reason, 500);
+        UpdatedAtUtc = nowUtc;
+    }
+
     /// <summary>تلاش مجدد دستی توسط اپراتور؛ سهمیه تلاش بازنشانی می‌شود.</summary>
     public void QueueManualRetry(DateTimeOffset nowUtc)
     {
@@ -231,6 +292,16 @@ public sealed class SmsQueueItem : Entity
         ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
         var normalized = value.Trim();
         return normalized.Length > maxLength ? normalized[..maxLength] : normalized;
+    }
+
+    private static string Combine(string error, string? rawStatus)
+    {
+        if (string.IsNullOrWhiteSpace(rawStatus) || rawStatus.Trim().Equals(error?.Trim(), StringComparison.Ordinal))
+        {
+            return error;
+        }
+
+        return $"{error} | {rawStatus.Trim()}";
     }
 
     private static string Truncate(string? value, int maxLength)
