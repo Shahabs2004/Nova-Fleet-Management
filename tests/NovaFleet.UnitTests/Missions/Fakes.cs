@@ -142,9 +142,17 @@ public sealed class FakeSmsDispatcher : ISmsDispatcher
 public sealed class FakeSettingsService : ISettingsService
 {
     public Dictionary<string, string?> Values { get; } = [];
+    public Exception? ReadException { get; set; }
 
     public Task<string?> GetValueAsync(string key, CancellationToken cancellationToken = default)
-        => Task.FromResult(Values.TryGetValue(key, out var value) ? value : null);
+    {
+        if (ReadException is not null)
+        {
+            throw ReadException;
+        }
+
+        return Task.FromResult(Values.TryGetValue(key, out var value) ? value : null);
+    }
 
     public Task<SettingsBundleDto> GetBundleAsync(CancellationToken cancellationToken = default)
         => GetRuntimeBundleAsync(cancellationToken);

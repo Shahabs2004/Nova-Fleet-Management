@@ -120,3 +120,102 @@ describe('connection settings failed reads', () => {
     for (const test of tests) expect(within(recovered).getByRole('button', { name: test })).toBeEnabled()
   })
 })
+
+describe('SMS password intent', () => {
+  const smsPath = '/api/settings/connections/sms'
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  async function renderSmsCard(): Promise<HTMLElement> {
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const path = String(input)
+      if (path === smsPath) {
+        if (init?.method === 'PUT') return response(200, { restartRequired: false, hint: null })
+        return response(200, {
+          enabled: false,
+          mode: 'Wsdl',
+          endpoint: 'https://sms.example/soap',
+          organization: 'organization',
+          username: 'svc.user',
+          senderNumber: '1000999',
+          timeoutSeconds: 20,
+          retryMinutes: 5,
+          maxAttempts: 5,
+          hasPassword: true,
+        })
+      }
+      if (path in routes) return response(200, routes[path])
+      throw new Error(`Unexpected request: ${path}`)
+    })
+
+    setup()
+    await screen.findByRole('heading', { name: 'سرویس پیامک' })
+    const section = card('سرویس پیامک')
+    await waitFor(() => expect(passwordInput(section)).toBeInTheDocument())
+    return section
+  }
+
+  function passwordInput(section: HTMLElement): HTMLInputElement {
+    const input = section.querySelector<HTMLInputElement>('input[type="password"]')
+    if (!input) throw new Error('Missing SMS password input')
+    return input
+  }
+
+  function savedPassword(): string | null | undefined {
+    const call = vi.mocked(fetch).mock.calls.find(([input, init]) =>
+      String(input) === smsPath && init?.method === 'PUT')
+    if (!call) throw new Error('SMS settings were not saved')
+    return (JSON.parse(String(call[1]?.body)) as { password?: string | null }).password
+  }
+
+  it.each(['', '   '])('preserves the stored password for untouched or whitespace input (%j)', async (input) => {
+    const section = await renderSmsCard()
+    fireEvent.change(passwordInput(section), { target: { value: input } })
+
+    fireEvent.click(within(section).getByRole('button', { name: 'ذخیره تنظیمات پیامک' }))
+
+    await waitFor(() => expect(savedPassword()).toBeNull())
+  })
+
+  it('sends a replacement password without clear intent', async () => {
+    const section = await renderSmsCard()
+    fireEvent.change(passwordInput(section), { target: { value: 'replacement-secret' } })
+
+    fireEvent.click(within(section).getByRole('button', { name: 'ذخیره تنظیمات پیامک' }))
+
+    await waitFor(() => expect(savedPassword()).toBe('replacement-secret'))
+  })
+
+  it('sends an empty password only after explicit clear and confirmation', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const section = await renderSmsCard()
+    const clear = within(section).getByRole('checkbox', { name: /پاک کردن رمز ذخیره‌شده/ })
+    fireEvent.click(clear)
+
+    fireEvent.click(within(section).getByRole('button', { name: 'ذخیره تنظیمات پیامک' }))
+
+    expect(confirm).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(savedPassword()).toBe(''))
+  })
+
+  it('does not save or clear when the destructive confirmation is canceled', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const section = await renderSmsCard()
+    const clear = within(section).getByRole('checkbox', { name: /پاک کردن رمز ذخیره‌شده/ })
+    fireEvent.click(clear)
+
+    fireEvent.click(within(section).getByRole('button', { name: 'ذخیره تنظیمات پیامک' }))
+
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(clear).toBeChecked()
+    expect(vi.mocked(fetch).mock.calls.every(([, init]) => init?.method !== 'PUT')).toBe(true)
+  })
+})

@@ -452,6 +452,7 @@ function SmsCard() {
   })
   const [draft, setDraft] = useState<SmsConnectionSettings>(EMPTY_SMS)
   const [password, setPassword] = useState('')
+  const [clearPassword, setClearPassword] = useState(false)
   const [mobile, setMobile] = useState('')
   const [note, setNote] = useState<SettingsSaveResult | null>(null)
   const [balance, setBalance] = useState<ConnectionTestResult | null>(null)
@@ -466,11 +467,15 @@ function SmsCard() {
   const save = useMutation({
     mutationFn: () => {
       requireSettings(query.data, query.isError)
-      return api.put<SettingsSaveResult>('/api/settings/connections/sms', { ...draft, password: password || null })
+      return api.put<SettingsSaveResult>('/api/settings/connections/sms', {
+        ...draft,
+        password: clearPassword ? '' : password.trim() ? password : null,
+      })
     },
     onSuccess: (result) => {
       setNote(result)
       setPassword('')
+      setClearPassword(false)
       setError(null)
       void query.refetch()
     },
@@ -520,7 +525,10 @@ function SmsCard() {
     <Card
       title="سرویس پیامک"
       hint="سوییچ سراسری خاموش باشد، هیچ پیامکی به سرویس‌دهنده نمی‌رود و پیامک‌ها فقط در صف می‌مانند."
-      onSave={() => save.mutate()}
+      onSave={() => {
+        if (clearPassword && !window.confirm('رمز ذخیره‌شده پیامک پاک شود؟ این کار قابل بازگشت نیست.')) return
+        save.mutate()
+      }}
       saveLabel="ذخیره تنظیمات پیامک"
       onTest={() => runBalance.mutate()}
       testLabel="تست اعتبار درگاه"
@@ -552,11 +560,34 @@ function SmsCard() {
             <Text
               label="رمز عبور"
               value={password}
-              onChange={setPassword}
+              onChange={(value) => {
+                setPassword(value)
+                if (value.trim()) setClearPassword(false)
+              }}
               type="password"
               hint={draft.hasPassword ? 'رمز ذخیره شده است؛ برای تغییر، مقدار جدید را وارد کنید.' : 'هنوز رمزی ذخیره نشده است.'}
             />
           </div>
+        )}
+        {draft.hasPassword && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-rose-50 px-4 py-3 ring-1 ring-rose-200">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-rose-700"
+              checked={clearPassword}
+              disabled={save.isPending || query.isFetching}
+              onChange={(event) => {
+                setClearPassword(event.target.checked)
+                if (event.target.checked) setPassword('')
+              }}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-rose-800">پاک کردن رمز ذخیره‌شده پیامک</span>
+              <span className="mt-0.5 block text-[11px] leading-5 text-rose-700">
+                با ذخیره و تأیید، رمز فعلی حذف می‌شود و این کار قابل بازگشت نیست.
+              </span>
+            </span>
+          </label>
         )}
         <div className="grid gap-4 sm:grid-cols-3">
           <NumberField label="تایم‌اوت (ثانیه)" value={draft.timeoutSeconds} onChange={set('timeoutSeconds')} />

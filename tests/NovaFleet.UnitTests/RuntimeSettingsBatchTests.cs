@@ -67,6 +67,27 @@ public sealed class RuntimeSettingsBatchTests : MissionTestBase
         Assert.False(await Db.SystemSettings.AnyAsync(item => item.Key == "batch.new-secret"));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t\r\n")]
+    public async Task SetBatchAsync_BlankSecretStoresCanonicalNonSecretClear(string value)
+    {
+        var settings = new RuntimeSettings(Db, Clock, new RecordingSecretProtector());
+        await settings.SetSecretAsync("batch.secret", "before-secret");
+
+        await settings.SetBatchAsync([new SettingWrite("batch.secret", value, true)]);
+
+        var stored = await Db.SystemSettings.AsNoTracking().SingleAsync(item => item.Key == "batch.secret");
+        Assert.False(stored.IsSecret);
+        Assert.Equal(string.Empty, stored.Value);
+        Assert.Null(stored.ProtectedValue);
+        Assert.False(await settings.HasSecretAsync("batch.secret"));
+        Assert.Null(await settings.GetSecretAsync("batch.secret"));
+        Assert.Equal(string.Empty, await settings.GetStringAsync("batch.secret"));
+        Assert.Equal(string.Empty, (await settings.ReadAllAsync())["batch.secret"]);
+    }
+
     [Fact]
     public async Task SetBatchAsync_ForcedSaveFailurePreservesEveryPriorValue()
     {

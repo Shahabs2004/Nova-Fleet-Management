@@ -98,8 +98,8 @@ public sealed class RuntimeSettings(
             }
             else
             {
-                // برای سرّی، مقدار خالیِ صریح یعنی پاک کردن؛ برای کلید معمولی null رشته خالی است.
-                setting.SetValue(write.Value ?? string.Empty, now);
+                // برای سرّی، مقدار خالی/فاصله‌ای یعنی پاک کردن؛ برای کلید معمولی null رشته خالی است.
+                setting.SetValue(write.IsSecret ? string.Empty : write.Value ?? string.Empty, now);
             }
         }
 

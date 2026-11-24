@@ -2,10 +2,14 @@ using System.Net;
 using System.Text;
 using System.Xml.Linq;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NovaFleet.Application.Abstractions;
+using NovaFleet.Application.Missions;
 using NovaFleet.Application.Settings;
+using NovaFleet.Domain.Missions;
 using NovaFleet.Domain.Notifications;
+using NovaFleet.Infrastructure.Missions;
 using NovaFleet.Infrastructure.Sms;
 using NovaFleet.UnitTests.Missions;
 
@@ -448,6 +452,54 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
     }
 
     [Fact]
+    public async Task QueueForMissionAsync_InvalidStoredRecipientsAreLoggedWithoutChangingMissionOrQueue()
+    {
+        var approved = await ConfirmAsync();
+        await AddApprovalTemplateAsync();
+        Settings.Values[ApprovalRecipientsKey] = "requester,manager";
+        var logger = new RecordingLogger();
+
+        await Dispatcher(logger).QueueForMissionAsync(approved.Id, SmsEventType.MissionApproved, null);
+
+        Assert.Equal(MissionStatus.Confirmed, Reload(approved.Id).Status);
+        Assert.Empty(await Db.SmsQueueItems.AsNoTracking().ToListAsync());
+        Assert.Contains(logger.Levels, level => level == LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task ApproveAsync_InvalidStoredRecipientsDoNotTurnCommittedApprovalIntoFailure()
+    {
+        var created = await CreatePendingAsync();
+        await ServiceFor(MissionAdmin()).StartReviewAsync(created.Id);
+        var resources = SaveReadyResources();
+        await AddApprovalTemplateAsync();
+        Settings.Values[ApprovalRecipientsKey] = "manager";
+        var service = new MissionService(
+            Db, MissionAdmin(), Audit, Clock, Settings, Notifications, Dispatcher());
+
+        var approved = await service.ApproveAsync(
+            created.Id, new MissionApprovalRequest(resources.Driver.Id, resources.Vehicle.Id, null));
+
+        Assert.Equal(MissionStatus.Confirmed, approved.Status);
+        Assert.Equal(MissionStatus.Confirmed, Reload(created.Id).Status);
+        Assert.True(Audit.Wrote("ApproveMission"));
+        Assert.Empty(await Db.SmsQueueItems.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
+    public async Task QueueForMissionAsync_UnrelatedSettingsFailureStillPropagates()
+    {
+        var approved = await ConfirmAsync();
+        await AddApprovalTemplateAsync();
+        Settings.ReadException = new InvalidOperationException("forced settings read failure");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Dispatcher().QueueForMissionAsync(
+            approved.Id, SmsEventType.MissionApproved, null));
+
+        Assert.Empty(await Db.SmsQueueItems.AsNoTracking().ToListAsync());
+    }
+
+    [Fact]
     public async Task MaxAttempts_StopsAutomaticRetriesAtTheConfiguredCeiling()
     {
         var item = new SmsQueueItem(SmsEventType.ManualTest, "09121112233", "آزمون", "متن آزمایشی",
@@ -468,8 +520,33 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
 
     private SmsQueueItem ReloadQueueItem(Guid id) => Db.SmsQueueItems.AsNoTracking().First(item => item.Id == id);
 
-    private SmsDispatcher Dispatcher() =>
-        new(Db, Gateway(), Settings, Clock, NullLogger<SmsDispatcher>.Instance);
+    private async Task AddApprovalTemplateAsync()
+    {
+        Db.SmsTemplates.Add(new SmsTemplate(SmsEventType.MissionApproved, "تأیید شد"));
+        await Db.SaveChangesAsync();
+    }
+
+    private static string ApprovalRecipientsKey =>
+        $"{SettingKeys.SmsRecipientsPrefix}{SmsEventNames.Of(SmsEventType.MissionApproved)}";
+
+    private SmsDispatcher Dispatcher(ILogger<SmsDispatcher>? logger = null) =>
+        new(Db, Gateway(), Settings, Clock, logger ?? NullLogger<SmsDispatcher>.Instance);
+
+    private sealed class RecordingLogger : ILogger<SmsDispatcher>
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) => Levels.Add(logLevel);
+    }
 
     private async Task<PayamSmsGateway> WiredGatewayAsync(
         string responseXml, HttpStatusCode status = HttpStatusCode.OK)

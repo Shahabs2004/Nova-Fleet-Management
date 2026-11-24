@@ -45,9 +45,20 @@ public sealed class SmsDispatcher(
             return;
         }
 
-        var recipients = SmsDefaults.ParseRecipients(
-            await settings.GetValueAsync($"{SettingKeys.SmsRecipientsPrefix}{eventKey}", cancellationToken),
-            eventType);
+        var storedRecipients = await settings.GetValueAsync(
+            $"{SettingKeys.SmsRecipientsPrefix}{eventKey}", cancellationToken);
+        IReadOnlyList<string> recipients;
+        try
+        {
+            recipients = SmsDefaults.ParseRecipients(storedRecipients, eventType);
+        }
+        catch (ValidationAppException ex)
+        {
+            logger.LogWarning(ex,
+                "تنظیمات گیرنده پیامک برای رخداد {EventKey} مأموریت {MissionId} معتبر نیست؛ پیامکی در صف ثبت نشد.",
+                eventKey, missionId);
+            return;
+        }
 
         var driver = mission.DriverId.HasValue
             ? await db.Drivers.AsNoTracking().FirstOrDefaultAsync(item => item.Id == mission.DriverId, cancellationToken)

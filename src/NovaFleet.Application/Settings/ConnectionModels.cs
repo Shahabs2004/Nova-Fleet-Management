@@ -44,7 +44,7 @@ public sealed record SmsConnectionSettingsDto(
     int MaxAttempts,
     bool HasPassword);
 
-/// <summary>Password null یا خالی یعنی رمز ذخیره‌شده دست‌نخورده بماند.</summary>
+/// <summary>Password null یا ارسال‌نشدن رمز ذخیره‌شده را حفظ می‌کند؛ رشتهٔ خالی/فاصله‌ای صریحاً آن را پاک می‌کند.</summary>
 public sealed record UpdateSmsConnectionSettingsDto(
     bool Enabled,
     string Mode,
