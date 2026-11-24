@@ -444,12 +444,13 @@ public sealed record ReportTableDto(
 **Dependencies:** Stage 4 settings/recipient semantics. Stage 7 may reuse bounded batch patterns but must not change SMS claim semantics.
 
 **تأیید مرحله ۵ (۲۰۲۶-۱۱-۲۴):**
-- ادعای اتمی صف با تراکنش کوتاه `UPDLOCK, READPAST` و batch محدود انجام می‌شود؛ claim پیش از هر I/O درگاه commit می‌شود و آزمون واقعی LocalDB مشاهدهٔ `Sending` از context دیگر را تأیید می‌کند.
+- worker هر آیتم due را تک‌تک و درست پیش از I/O درگاه با تراکنش کوتاه `UPDLOCK, READPAST` claim می‌کند؛ claim پیش از I/O commit می‌شود و ارسال مسدودشدهٔ اول، آیتم‌های بعدی را در `Sending` معرض بازیابی stale نمی‌کند. آزمون واقعی LocalDB این مسیر را تأیید می‌کند.
 - timeout، پاسخ ناخوانا، خطای انتقال پس از درخواست و پذیرش بدون شناسهٔ قابل‌استفاده به `Indeterminate` تبدیل می‌شوند و هرگز retry خودکار نمی‌گیرند. ارسال‌های `Sending` قدیمی‌تر از ۱۰ دقیقه با حفظ شاهد provider و زمان شروع به `Indeterminate` بازیابی می‌شوند.
-- تکمیل نهایی فقط روی `Sending` و همان تلاش claimed انجام می‌شود؛ نتیجهٔ دیرهنگام نمی‌تواند retry تأییدشدهٔ اپراتور یا لغو هم‌زمان را بازنویسی کند. migration رکوردهای `Accepted` قدیمی بدون mode ذخیره‌شده را نیز به `Indeterminate` منتقل می‌کند.
-- polling از `GatewayMode` ذخیره‌شده استفاده می‌کند، سررسید آینده را رد می‌کند و backoff ده‌ثانیه‌ای/سی‌ثانیه‌ای/یک‌دقیقه‌ای و سپس نمایی ۵دقیقه‌ای با سقف ۲۴ساعت دارد. router با آزمون قرارداد برای `Api` به REST و `Wsdl` به SOAP می‌رود.
-- API و UI رسیدگی اپراتور فقط با `sms.manage`، دلیل معتبر، تأیید صریح و رکورد ممیزی کار می‌کند؛ retry هشدار فارسی ارسال پولی تکراری دارد و هیچ تصمیم رسیدگی‌ای خودکار اجرا نمی‌شود.
-- ساخت Debug و Release بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۴۸۵ تست واحد و ۸۳ تست یکپارچه گذشت. ۶ آزمون SQL اختصاصی SMS روی LocalDB گذشتند و ۱۰ آزمون SQL موجود login/maintenance به‌علت نبود متغیرهای محیطی skip شدند. فرانت‌اند ۳۶/۳۶ تست سبک داشت؛ lint ۰ خطا و ۶ هشدار موجود نامرتبط و build موفق با هشدار قبلی chunk بزرگ بود.
+- تکمیل نهایی و ذخیرهٔ provider reference فقط به `SendStartedAtUtc` همان تلاش correlate می‌شوند؛ نتیجهٔ دیرهنگام نمی‌تواند retry تأییدشدهٔ اپراتور یا لغو هم‌زمان را بازنویسی کند و reference جدید تلاش جایگزین شاهد قبلی می‌شود. migration رکوردهای `Accepted` قدیمی بدون mode ذخیره‌شده را نیز به `Indeterminate` منتقل می‌کند.
+- شروع هر تلاش، `DeliveryPollCount` و `AcceptedAtUtc` قبلی را در مسیر domain و SQL پاک می‌کند. polling از `GatewayMode` ذخیره‌شده استفاده می‌کند، سررسید آینده را رد می‌کند و backoff ده‌ثانیه‌ای/سی‌ثانیه‌ای/یک‌دقیقه‌ای و سپس نمایی ۵دقیقه‌ای با سقف ۲۴ساعت دارد. router با آزمون قرارداد برای `Api` به REST و `Wsdl` به SOAP می‌رود.
+- API و UI رسیدگی اپراتور فقط با `sms.manage`، دلیل معتبر، تأیید صریح و رکورد ممیزی کار می‌کند؛ retry هشدار فارسی ارسال پولی تکراری دارد و هیچ تصمیم رسیدگی‌ای خودکار اجرا نمی‌شود. rollback نیز status 9 را با توضیح امن به failure قدیمی status 6 تبدیل می‌کند.
+- ساخت Debug و Release بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۴۸۷ تست واحد و ۸۶ تست یکپارچه گذشت. ۹ آزمون SQL اختصاصی SMS روی LocalDB گذشتند و ۱۰ آزمون SQL موجود login/maintenance به‌علت نبود متغیرهای محیطی skip شدند. فرانت‌اند ۳۶/۳۶ تست سبک داشت؛ lint ۰ خطا و ۶ هشدار موجود نامرتبط و build موفق با هشدار قبلی chunk بزرگ بود.
+- بازبینی مستقل `e14eea4..0ade675` هر چهار یافتهٔ Critical/Important/Minor را addressed و هیچ breaking جدید Critical/Important را گزارش نکرد. کامیت‌های کد مرحله `e14eea4` و `0ade675` هستند.
 - هیچ SMS واقعی، درگاه شبکه‌ای، ورود کاربر، اتصال به SQL مشترک/تولیدی یا IIS زنده استفاده نشد. تضمین exactly-once پس از timeout درگاه ممکن نیست؛ قرارداد ایمن «حداکثر یک تلاش خودکار + رسیدگی صریح انسان» است.
 
 ## Stage 6 — Mission Odometer and Change-Request Integrity
