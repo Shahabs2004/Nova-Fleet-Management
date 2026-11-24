@@ -37,6 +37,11 @@ public sealed class TimelineService(NovaFleetDbContext db, ICurrentUser currentU
             throw new ValidationAppException("بازه زمانی تایم‌لاین معتبر نیست.");
         }
 
+        if (toUtc - fromUtc > TimeSpan.FromDays(31))
+        {
+            throw new ValidationAppException("بازه تایم‌لاین نمی‌تواند بیش از ۳۱ روز باشد.");
+        }
+
         var source = MissionVisibility.Apply(
                 db.Missions.AsNoTracking(),
                 currentUser.Has(PermissionCatalog.Missions.View),
@@ -52,6 +57,12 @@ public sealed class TimelineService(NovaFleetDbContext db, ICurrentUser currentU
         if (vehicleId.HasValue)
         {
             source = source.Where(item => item.VehicleId == vehicleId.Value);
+        }
+
+        var count = await source.CountAsync(cancellationToken);
+        if (count > 2000)
+        {
+            throw new ValidationAppException("تعداد مأموریت‌های تایم‌لاین بیش از ۲۰۰۰ است؛ بازه را محدود کنید.");
         }
 
         return await source

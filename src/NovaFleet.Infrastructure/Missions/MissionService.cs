@@ -636,6 +636,7 @@ public sealed class MissionService(
                 throw new ValidationAppException("برای بخش دوم مأموریت، راننده و خودرو باید مشخص باشند.");
             }
 
+            await LoadEligibleResourcesAsync(secondDriverId.Value, secondVehicleId.Value, cancellationToken);
             var gap = await GetGapMinutesAsync(cancellationToken);
             var conflict = await FindConflictAsync(secondDriverId.Value, secondVehicleId.Value, request.SplitAtUtc, originalEndAtUtc, gap, first.Id, cancellationToken);
             if (conflict is not null)
@@ -748,6 +749,28 @@ public sealed class MissionService(
         await db.MissionChangeRequests.FirstOrDefaultAsync(item => item.Id == changeRequestId && item.MissionId == mission.Id, cancellationToken)
             ?? throw new NotFoundAppException("درخواست تغییر پیدا نشد.");
 
+    private async Task<(Driver Driver, Vehicle Vehicle)> LoadEligibleResourcesAsync(
+        Guid driverId,
+        Guid vehicleId,
+        CancellationToken cancellationToken)
+    {
+        var driver = await db.Drivers.FirstOrDefaultAsync(item => item.Id == driverId, cancellationToken)
+            ?? throw new NotFoundAppException("راننده انتخاب‌شده پیدا نشد.");
+        var vehicle = await db.Vehicles.FirstOrDefaultAsync(item => item.Id == vehicleId, cancellationToken)
+            ?? throw new NotFoundAppException("خودروی انتخاب‌شده پیدا نشد.");
+        if (!driver.CanBeAssignedToMission())
+        {
+            throw new ConflictAppException("راننده انتخاب‌شده فعال نیست یا بایگانی شده است.");
+        }
+
+        if (!vehicle.IsReadyForAssignment)
+        {
+            throw new ConflictAppException("خودروی انتخاب‌شده بایگانی شده یا در تعمیرگاه/خارج از سرویس است.");
+        }
+
+        return (driver, vehicle);
+    }
+
     private static void ValidateProposedResources(MissionChangeInput proposed)
     {
         var driverMissing = proposed.DriverId is null || proposed.DriverId == Guid.Empty;
@@ -831,8 +854,8 @@ public sealed class MissionService(
             .Where(item => item.Id != excludeMissionId
                 && (item.Status == MissionStatus.Confirmed || item.Status == MissionStatus.Running || item.Status == MissionStatus.WithdrawalPending || item.Status == MissionStatus.Completed)
                 && (item.DriverId == driverId || item.VehicleId == vehicleId)
-                && item.PlannedStartAtUtc <= endAtUtc + pad
-                && item.PlannedEndAtUtc >= startAtUtc - pad)
+                && item.PlannedStartAtUtc < endAtUtc + pad
+                && item.PlannedEndAtUtc > startAtUtc - pad)
             .OrderBy(item => item.PlannedStartAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
     }

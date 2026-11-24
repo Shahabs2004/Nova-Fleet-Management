@@ -10,6 +10,21 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(@"
+IF OBJECT_ID(N'dbo.MissionRequestingGroupArchive', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MissionRequestingGroupArchive (
+        MissionId uniqueidentifier NOT NULL PRIMARY KEY,
+        RequestingGroup nvarchar(200) NOT NULL
+    );
+END
+INSERT INTO dbo.MissionRequestingGroupArchive (MissionId, RequestingGroup)
+SELECT m.Id, m.RequestingGroup
+FROM dbo.Missions m
+WHERE m.RequestingGroup IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM dbo.MissionRequestingGroupArchive a WHERE a.MissionId = m.Id);
+");
+
             migrationBuilder.DropColumn(
                 name: "RequestingGroup",
                 table: "Missions");
@@ -28,6 +43,21 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(@"
+UPDATE dbo.Missions SET Purpose = N'' WHERE Purpose IS NULL;
+IF COL_LENGTH(N'dbo.Missions', N'RequestingGroup') IS NULL
+BEGIN
+    ALTER TABLE dbo.Missions ADD RequestingGroup nvarchar(200) NULL;
+END
+IF OBJECT_ID(N'dbo.MissionRequestingGroupArchive', N'U') IS NOT NULL
+BEGIN
+    UPDATE m SET m.RequestingGroup = a.RequestingGroup
+    FROM dbo.Missions m
+    INNER JOIN dbo.MissionRequestingGroupArchive a ON a.MissionId = m.Id;
+END
+UPDATE dbo.Missions SET RequestingGroup = N'' WHERE RequestingGroup IS NULL;
+");
+
             migrationBuilder.AlterColumn<string>(
                 name: "Purpose",
                 table: "Missions",
@@ -40,13 +70,20 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                 oldMaxLength: 500,
                 oldNullable: true);
 
-            migrationBuilder.AddColumn<string>(
+            migrationBuilder.AlterColumn<string>(
                 name: "RequestingGroup",
                 table: "Missions",
                 type: "nvarchar(200)",
                 maxLength: 200,
                 nullable: false,
                 defaultValue: "");
+
+            migrationBuilder.Sql(@"
+IF OBJECT_ID(N'dbo.MissionRequestingGroupArchive', N'U') IS NOT NULL
+BEGIN
+    DROP TABLE dbo.MissionRequestingGroupArchive;
+END
+");
         }
     }
 }

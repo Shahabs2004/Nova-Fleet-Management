@@ -1034,6 +1034,9 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("VehicleId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("WithdrawalRequestedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.HasKey("Id");
 
                     b.HasIndex("MissionNumber")

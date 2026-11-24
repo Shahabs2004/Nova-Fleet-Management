@@ -82,6 +82,9 @@ public sealed class Mission : Entity
 
     public MissionStatus? StatusBeforeWithdrawal { get; private set; }
 
+    /// <summary>زمان ثبت درخواست انصراف؛ مبنای مهلت بستن خودکار و nullable برای رکوردهای قدیمی.</summary>
+    public DateTimeOffset? WithdrawalRequestedAtUtc { get; private set; }
+
     public Guid? RelatedMissionId { get; private set; }
 
     public string? SplitReason { get; private set; }
@@ -323,6 +326,7 @@ public sealed class Mission : Entity
         StatusBeforeWithdrawal = Status;
         DecisionReason = Required(reason, 1000, nameof(reason));
         Status = MissionStatus.WithdrawalPending;
+        WithdrawalRequestedAtUtc = nowUtc;
         UpdatedAtUtc = nowUtc;
     }
 
@@ -352,9 +356,14 @@ public sealed class Mission : Entity
     public void AutoCloseExpiredWithdrawal(DateTimeOffset nowUtc)
     {
         EnsureStatus(MissionStatus.WithdrawalPending);
-        if (nowUtc < PlannedEndAtUtc)
+        if (WithdrawalRequestedAtUtc is null)
         {
-            throw new InvalidOperationException("زمان پایان برنامه‌ریزی‌شده هنوز فرا نرسیده است.");
+            throw new InvalidOperationException("این درخواست انصراف قدیمی است و نیازمند بازبینی دستی است.");
+        }
+
+        if (nowUtc < WithdrawalRequestedAtUtc.Value)
+        {
+            throw new InvalidOperationException("مهلت انصراف هنوز پایان نیافته است.");
         }
 
         if (StatusBeforeWithdrawal == MissionStatus.Running)

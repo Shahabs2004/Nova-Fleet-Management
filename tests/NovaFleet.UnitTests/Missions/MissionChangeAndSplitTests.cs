@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Authorization;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Missions;
+using NovaFleet.Domain.Drivers;
 using NovaFleet.Domain.Missions;
 using NovaFleet.Domain.Notifications;
+using NovaFleet.Domain.Vehicles;
 
 namespace NovaFleet.UnitTests.Missions;
 
@@ -346,6 +348,60 @@ public sealed class MissionChangeAndSplitTests : MissionTestBase
             new MissionSplitRequest(Hour(0, 12), 1_100, resources.Driver.Id, resources.Vehicle.Id, "تقسیم", null)));
         Assert.Contains("بخش دوم", error.Message);
         Assert.Equal(MissionStatus.Running, Reload(running.Id).Status);
+    }
+
+    [Theory]
+    [InlineData("driver-archived")]
+    [InlineData("driver-inactive")]
+    [InlineData("vehicle-archived")]
+    [InlineData("vehicle-repair")]
+    [InlineData("vehicle-out-of-service")]
+    public async Task SplitAsync_RejectsIneligibleSecondLegResourcesWithoutChangingOriginal(string eligibility)
+    {
+        var running = await ConfirmRunningAsync();
+        var driver = NewDriver("حسین", "کاظمی");
+        var vehicle = NewVehicle();
+        switch (eligibility)
+        {
+            case "driver-archived":
+                driver.Archive();
+                break;
+            case "driver-inactive":
+                driver.ChangeEmploymentStatus(DriverEmploymentStatus.Inactive);
+                break;
+            case "vehicle-archived":
+                vehicle.Archive();
+                break;
+            case "vehicle-repair":
+                vehicle.ChangeManualStatus(ManualVehicleStatus.RepairShop, hasActiveMission: false);
+                break;
+            case "vehicle-out-of-service":
+                vehicle.ChangeManualStatus(ManualVehicleStatus.OutOfService, hasActiveMission: false);
+                break;
+        }
+        await Db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ConflictAppException>(() => ServiceFor(MissionAdmin()).SplitAsync(
+            running.Id,
+            new MissionSplitRequest(Hour(0, 12), 1_100, driver.Id, vehicle.Id, "تغییر تیم", null, 8_500)));
+
+        Db.ChangeTracker.Clear();
+        Assert.Equal(MissionStatus.Running, Reload(running.Id).Status);
+        Assert.Null(Reload(running.Id).RelatedMissionId);
+        Assert.Single(Db.Missions.AsNoTracking());
+    }
+
+    [Fact]
+    public async Task SplitAsync_WithMissingSecondLegResourceIsNotFound()
+    {
+        var running = await ConfirmRunningAsync();
+
+        await Assert.ThrowsAsync<NotFoundAppException>(() => ServiceFor(MissionAdmin()).SplitAsync(
+            running.Id,
+            new MissionSplitRequest(Hour(0, 12), 1_100, Guid.NewGuid(), running.VehicleId, "تغییر راننده", null)));
+
+        Assert.Equal(MissionStatus.Running, Reload(running.Id).Status);
+        Assert.Single(Db.Missions.AsNoTracking());
     }
 
     [Fact]
