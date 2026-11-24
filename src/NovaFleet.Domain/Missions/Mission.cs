@@ -493,6 +493,11 @@ public sealed class Mission : Entity
         }
 
         var vehicleChanged = VehicleId != changes.VehicleId;
+        if (Status == MissionStatus.Running && vehicleChanged)
+        {
+            throw new InvalidOperationException("تغییر خودرو در مأموریت در حال اجرا مجاز نیست؛ برای تغییر خودرو مأموریت را تقسیم کنید.");
+        }
+
         if (vehicleChanged && !changes.OdometerStartKm.HasValue)
         {
             throw new InvalidOperationException("برای تغییر خودرو باید کیلومترشمار شروع خودروی جدید مشخص شود.");
@@ -529,6 +534,7 @@ public sealed class Mission : Entity
             SetOdometerStart(changes.OdometerStartKm.Value);
         }
 
+        IsBackdated = PlannedStartAtUtc < nowUtc;
         UpdatedAtUtc = nowUtc;
     }
 

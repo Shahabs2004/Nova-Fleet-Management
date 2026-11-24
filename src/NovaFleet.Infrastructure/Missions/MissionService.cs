@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
@@ -461,21 +462,18 @@ public sealed class MissionService(
         }
 
         var proposed = request.Proposed;
-        var driverMissing = proposed.DriverId is null || proposed.DriverId == Guid.Empty;
-        var vehicleMissing = proposed.VehicleId is null || proposed.VehicleId == Guid.Empty;
-        if (driverMissing || vehicleMissing)
-        {
-            var message = driverMissing
-                ? "درخواست تغییر باید راننده پیشنهادی را شامل شود."
-                : "درخواست تغییر باید خودروی پیشنهادی را شامل شود.";
-            throw new ValidationAppException(message);
-        }
+        ValidateProposedResources(proposed);
 
         var change = new MissionChangeRequest(
             id,
             currentUser.Username,
             request.Reason,
-            JsonSerializer.Serialize(proposed, ChangeJson));
+            JsonSerializer.Serialize(proposed, ChangeJson),
+            new MissionChangeRequestSnapshot(
+                mission.RowVersion,
+                mission.Status,
+                mission.PlannedStartAtUtc,
+                mission.PlannedEndAtUtc));
         db.MissionChangeRequests.Add(change);
         await SaveAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("RequestMissionChange", "Mission", id.ToString(), "Success", Reason: request.Reason, After: new { change.Id, ProposedStart = proposed.PlannedStartAtUtc, ProposedEnd = proposed.PlannedEndAtUtc }), cancellationToken);
@@ -518,73 +516,86 @@ public sealed class MissionService(
         var oldStart = default(DateTimeOffset);
         MissionChangeInput proposed = null!;
 
-        await using (var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken))
+        try
         {
-            mission = await LoadAsync(id, cancellationToken);
-            change = await LoadChangeAsync(mission, changeRequestId, cancellationToken);
-            proposed = JsonSerializer.Deserialize<MissionChangeInput>(change.ProposedValuesJson, ChangeJson)
-                ?? throw new ValidationAppException("محتوای درخواست تغییر قابل خواندن نیست.");
-
-            if (!approve)
+            await using (var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken))
             {
-                Run(() => change.Reject(currentUser.Username, decision.Reason ?? "درخواست تغییر رد شد.", now));
-                await SaveAsync(cancellationToken);
-                await tx.CommitAsync(cancellationToken);
+                mission = await LoadAsync(id, cancellationToken);
+                change = await LoadChangeAsync(mission, changeRequestId, cancellationToken);
+                proposed = JsonSerializer.Deserialize<MissionChangeInput>(change.ProposedValuesJson, ChangeJson)
+                    ?? throw new ValidationAppException("محتوای درخواست تغییر قابل خواندن نیست.");
+
+                if (!approve)
+                {
+                    Run(() => change.Reject(currentUser.Username, decision.Reason ?? "درخواست تغییر رد شد.", now));
+                    await SaveAsync(cancellationToken);
+                    await tx.CommitAsync(cancellationToken);
+                }
+                else
+                {
+                    EnsureCurrentBaseSnapshot(mission, change);
+                    ValidateProposedResources(proposed);
+                    oldDriverId = mission.DriverId;
+                    oldVehicleId = mission.VehicleId;
+                    oldStart = mission.PlannedStartAtUtc;
+
+                    var futureDays = await GetFutureDaysAsync(cancellationToken);
+                    var pastDays = await GetBackdateDaysAsync(cancellationToken);
+                    ValidateRequestWindow(proposed.PlannedStartAtUtc, proposed.PlannedEndAtUtc, now, futureDays, pastDays);
+
+                    var gap = await GetGapMinutesAsync(cancellationToken);
+                    var conflict = await FindConflictAsync(proposed.DriverId!.Value, proposed.VehicleId!.Value, proposed.PlannedStartAtUtc, proposed.PlannedEndAtUtc, gap, mission.Id, cancellationToken);
+                    if (conflict is not null)
+                    {
+                        throw new ConflictAppException($"اعمال تغییر ممکن نیست؛ تداخل با مأموریت {conflict.MissionNumber}.");
+                    }
+
+                    var driver = await db.Drivers.FirstOrDefaultAsync(item => item.Id == proposed.DriverId, cancellationToken)
+                        ?? throw new NotFoundAppException("راننده پیشنهادی پیدا نشد.");
+                    var vehicle = await db.Vehicles.FirstOrDefaultAsync(item => item.Id == proposed.VehicleId, cancellationToken)
+                        ?? throw new NotFoundAppException("خودروی پیشنهادی پیدا نشد.");
+                    if (!driver.CanBeAssignedToMission())
+                    {
+                        throw new ConflictAppException("راننده پیشنهادی فعال نیست یا بایگانی شده است.");
+                    }
+
+                    if (!vehicle.IsReadyForAssignment)
+                    {
+                        throw new ConflictAppException("خودروی پیشنهادی بایگانی شده یا در تعمیرگاه/خارج از سرویس است.");
+                    }
+
+                    var changes = new MissionChanges(
+                        proposed.Title,
+                        proposed.Type,
+                        proposed.Purpose,
+                        proposed.Origin,
+                        proposed.Destination,
+                        proposed.IntermediateStops,
+                        proposed.PlannedStartAtUtc,
+                        proposed.PlannedEndAtUtc,
+                        proposed.DriverId.Value,
+                        proposed.VehicleId.Value,
+                        mission.RequesterName,
+                        proposed.RequesterPhoneSnapshot,
+                        mission.RequesterOrganizationalUnit,
+                        proposed.Description,
+                        proposed.PassengerCount,
+                        proposed.MissionOrderNumber,
+                        proposed.MissionOrderDate,
+                        proposed.CargoDescription,
+                        proposed.ConsigneeName,
+                        proposed.PassengerNames,
+                        proposed.OdometerStartKm);
+                    Run(() => mission.ApplyApprovedChanges(changes, now));
+                    Run(() => change.Approve(currentUser.Username, decision.Reason, now));
+                    await SaveAsync(cancellationToken);
+                    await tx.CommitAsync(cancellationToken);
+                }
             }
-            else
-            {
-                oldDriverId = mission.DriverId;
-                oldVehicleId = mission.VehicleId;
-                oldStart = mission.PlannedStartAtUtc;
-
-                var gap = await GetGapMinutesAsync(cancellationToken);
-                var conflict = await FindConflictAsync(proposed.DriverId!.Value, proposed.VehicleId!.Value, proposed.PlannedStartAtUtc, proposed.PlannedEndAtUtc, gap, mission.Id, cancellationToken);
-                if (conflict is not null)
-                {
-                    throw new ConflictAppException($"اعمال تغییر ممکن نیست؛ تداخل با مأموریت {conflict.MissionNumber}.");
-                }
-
-                var driver = await db.Drivers.FirstOrDefaultAsync(item => item.Id == proposed.DriverId, cancellationToken)
-                    ?? throw new NotFoundAppException("راننده پیشنهادی پیدا نشد.");
-                var vehicle = await db.Vehicles.FirstOrDefaultAsync(item => item.Id == proposed.VehicleId, cancellationToken)
-                    ?? throw new NotFoundAppException("خودروی پیشنهادی پیدا نشد.");
-                if (!driver.CanBeAssignedToMission())
-                {
-                    throw new ConflictAppException("راننده پیشنهادی فعال نیست یا بایگانی شده است.");
-                }
-
-                if (!vehicle.IsReadyForAssignment)
-                {
-                    throw new ConflictAppException("خودروی پیشنهادی بایگانی شده یا در تعمیرگاه/خارج از سرویس است.");
-                }
-
-                var changes = new MissionChanges(
-                    proposed.Title,
-                    proposed.Type,
-                    proposed.Purpose,
-                    proposed.Origin,
-                    proposed.Destination,
-                    proposed.IntermediateStops,
-                    proposed.PlannedStartAtUtc,
-                    proposed.PlannedEndAtUtc,
-                    proposed.DriverId.Value,
-                    proposed.VehicleId.Value,
-                    mission.RequesterName,
-                    proposed.RequesterPhoneSnapshot,
-                    mission.RequesterOrganizationalUnit,
-                    proposed.Description,
-                    proposed.PassengerCount,
-                    proposed.MissionOrderNumber,
-                    proposed.MissionOrderDate,
-                    proposed.CargoDescription,
-                    proposed.ConsigneeName,
-                    proposed.PassengerNames,
-                    proposed.OdometerStartKm);
-                Run(() => mission.ApplyApprovedChanges(changes, now));
-                Run(() => change.Approve(currentUser.Username, decision.Reason, now));
-                await SaveAsync(cancellationToken);
-                await tx.CommitAsync(cancellationToken);
-            }
+        }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ContainsSqlContention(ex))
+        {
+            throw new ConflictAppException("این درخواست هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
         }
 
         if (!approve)
@@ -736,6 +747,44 @@ public sealed class MissionService(
     private async Task<MissionChangeRequest> LoadChangeAsync(Mission mission, Guid changeRequestId, CancellationToken cancellationToken) =>
         await db.MissionChangeRequests.FirstOrDefaultAsync(item => item.Id == changeRequestId && item.MissionId == mission.Id, cancellationToken)
             ?? throw new NotFoundAppException("درخواست تغییر پیدا نشد.");
+
+    private static void ValidateProposedResources(MissionChangeInput proposed)
+    {
+        var driverMissing = proposed.DriverId is null || proposed.DriverId == Guid.Empty;
+        var vehicleMissing = proposed.VehicleId is null || proposed.VehicleId == Guid.Empty;
+        if (driverMissing || vehicleMissing)
+        {
+            var message = driverMissing
+                ? "درخواست تغییر باید راننده پیشنهادی را شامل شود."
+                : "درخواست تغییر باید خودروی پیشنهادی را شامل شود.";
+            throw new ValidationAppException(message);
+        }
+    }
+
+    private static bool ContainsSqlContention(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is SqlException { Number: 1205 or 1222 })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void EnsureCurrentBaseSnapshot(Mission mission, MissionChangeRequest change)
+    {
+        if (change.BaseRowVersion is not { Length: 8 }
+            || change.BaseStatus != mission.Status
+            || change.BasePlannedStartAtUtc != mission.PlannedStartAtUtc
+            || change.BasePlannedEndAtUtc != mission.PlannedEndAtUtc
+            || !change.BaseRowVersion.AsSpan().SequenceEqual(mission.RowVersion))
+        {
+            throw new ConflictAppException("مأموریت پس از ثبت درخواست تغییر کرده است؛ درخواست را دوباره ثبت کنید.");
+        }
+    }
 
     private async Task<int> GetGapMinutesAsync(CancellationToken cancellationToken)
     {

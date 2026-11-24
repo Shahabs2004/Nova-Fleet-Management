@@ -55,6 +55,10 @@ public sealed class MissionChangeRequestConfiguration : IEntityTypeConfiguration
         builder.Property(x => x.RequesterUsername).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.ProposedValuesJson).HasColumnType("nvarchar(max)").IsRequired();
+        builder.Property(x => x.BaseRowVersion).HasColumnType("varbinary(8)");
+        builder.Property(x => x.BaseStatus).HasConversion<int>();
+        builder.Property(x => x.BasePlannedStartAtUtc);
+        builder.Property(x => x.BasePlannedEndAtUtc);
         builder.Property(x => x.Status).HasConversion<int>();
         builder.Property(x => x.ReviewerUsername).HasMaxLength(100);
         builder.Property(x => x.DecisionReason).HasMaxLength(1000);

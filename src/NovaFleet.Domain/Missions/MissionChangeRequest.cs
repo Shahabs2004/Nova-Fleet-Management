@@ -2,6 +2,13 @@ using NovaFleet.Domain.Common;
 
 namespace NovaFleet.Domain.Missions;
 
+/// <summary>وضعیت مأموریت هنگام ثبت درخواست تغییر؛ مبنای تطبیق دقیق هنگام تصمیم‌گیری است.</summary>
+public sealed record MissionChangeRequestSnapshot(
+    byte[] RowVersion,
+    MissionStatus Status,
+    DateTimeOffset PlannedStartAtUtc,
+    DateTimeOffset PlannedEndAtUtc);
+
 /// <summary>
 /// درخواست تغییر مأموریت پس از تأیید؛ تا تصمیم نهایی اطلاعات قبلی معتبر است.
 /// </summary>
@@ -18,6 +25,14 @@ public sealed class MissionChangeRequest : Entity
     public string Reason { get; private set; } = string.Empty;
 
     public string ProposedValuesJson { get; private set; } = "{}";
+
+    public byte[]? BaseRowVersion { get; private set; }
+
+    public MissionStatus? BaseStatus { get; private set; }
+
+    public DateTimeOffset? BasePlannedStartAtUtc { get; private set; }
+
+    public DateTimeOffset? BasePlannedEndAtUtc { get; private set; }
 
     public MissionChangeRequestStatus Status { get; private set; } = MissionChangeRequestStatus.Pending;
 
@@ -44,6 +59,26 @@ public sealed class MissionChangeRequest : Entity
         RequesterUsername = requesterUsername.Trim();
         Reason = reason.Trim();
         ProposedValuesJson = proposedValuesJson;
+    }
+
+    public MissionChangeRequest(
+        Guid missionId,
+        string requesterUsername,
+        string reason,
+        string proposedValuesJson,
+        MissionChangeRequestSnapshot baseSnapshot)
+        : this(missionId, requesterUsername, reason, proposedValuesJson)
+    {
+        ArgumentNullException.ThrowIfNull(baseSnapshot);
+        if (baseSnapshot.RowVersion is null || baseSnapshot.RowVersion.Length != 8)
+        {
+            throw new ArgumentException("نسخه پایه مأموریت معتبر نیست.", nameof(baseSnapshot));
+        }
+
+        BaseRowVersion = [.. baseSnapshot.RowVersion];
+        BaseStatus = baseSnapshot.Status;
+        BasePlannedStartAtUtc = baseSnapshot.PlannedStartAtUtc;
+        BasePlannedEndAtUtc = baseSnapshot.PlannedEndAtUtc;
     }
 
     public void StartReview(string reviewer, DateTimeOffset nowUtc)

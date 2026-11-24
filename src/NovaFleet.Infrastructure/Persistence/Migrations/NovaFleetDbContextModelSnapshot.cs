@@ -1056,6 +1056,18 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("BasePlannedEndAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("BasePlannedStartAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("BaseRowVersion")
+                        .HasColumnType("varbinary(8)");
+
+                    b.Property<int?>("BaseStatus")
+                        .HasColumnType("int");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("datetimeoffset");
 

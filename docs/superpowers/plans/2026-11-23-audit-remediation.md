@@ -461,7 +461,7 @@ public sealed record ReportTableDto(
 - Modify: `src/NovaFleet.Domain/Missions/Mission.cs`
 - Modify: `src/NovaFleet.Domain/Missions/MissionChangeRequest.cs`
 - Modify: `src/NovaFleet.Infrastructure/Missions/MissionService.cs`
-- Modify: `src/NovaFleet.Application/Missions/MissionModels.cs`
+- Inspect: `src/NovaFleet.Application/Missions/MissionModels.cs` (DTO contract unchanged; no edit required)
 - Create: one EF migration for change-request base snapshot columns
 - Modify: change-request UI if it displays/rejects stale proposals
 - Test: `tests/NovaFleet.UnitTests/RunningMissionVehicleTests.cs` (create)
@@ -471,19 +471,26 @@ public sealed record ReportTableDto(
 - Consumes: `MissionChangeRequestSnapshot` and existing serializable approval transaction.
 - Produces: `Mission.ApplyChanges` throws while `Status == Running` if vehicle changes; approval requires exact base row-version/status/schedule and recomputes backdated state under current policy.
 
-- [ ] **Step 1: Write failing running-mission tests.** Attempt vehicle change during `Running`, with and without a new start odometer. Assert domain rejection and unchanged vehicle/start/end odometer. Assert completed or not-started missions retain existing allowed behavior.
-- [ ] **Step 2: Run tests and observe failure**, then add the smallest domain guard. A real handoff must close mission A and create mission B; do not add a hidden handoff feature.
-- [ ] **Step 3: Write failing stale-approval tests.** Create a proposal, then modify mission schedule/status or another field so row-version changes. Approval must return conflict/409, leave request pending, and change nothing. Also test schedule crossing the current allowed backdate window after proposal creation.
-- [ ] **Step 4: Run tests and observe failure**, then persist `BaseRowVersion`, `BaseStatus`, `BasePlannedStartAtUtc`, and `BasePlannedEndAtUtc` when requesting a change. Add migration with required/default handling for existing pending requests; existing pending requests without a snapshot must be rejected as stale and require resubmission.
-- [ ] **Step 5: Validate at approval time.** Inside the existing serializable transaction, load the current mission, apply row-version, compare status and schedule, rerun current eligibility/conflict/backdate-window rules, apply changes, and recompute `IsBackdated` from the resulting start and current policy. Never approve from proposed JSON alone.
-- [ ] **Step 6: Verify.** Run focused tests, full backend tests, migration/build, and frontend checks for changed DTOs. Add an isolated migration test if the existing migration harness supports it.
-- [ ] **Step 7: Report and wait.**
+- [x] **Step 1: Write failing running-mission tests.** Attempt vehicle change during `Running`, with and without a new start odometer. Assert domain rejection and unchanged vehicle/start/end odometer. Assert completed or not-started missions retain existing allowed behavior.
+- [x] **Step 2: Run tests and observe failure**, then add the smallest domain guard. A real handoff must close mission A and create mission B; do not add a hidden handoff feature.
+- [x] **Step 3: Write failing stale-approval tests.** Create a proposal, then modify mission schedule/status or another field so row-version changes. Approval must return conflict/409, leave request pending, and change nothing. Also test schedule crossing the current allowed backdate window after proposal creation.
+- [x] **Step 4: Run tests and observe failure**, then persist `BaseRowVersion`, `BaseStatus`, `BasePlannedStartAtUtc`, and `BasePlannedEndAtUtc` when requesting a change. Add migration with required/default handling for existing pending requests; existing pending requests without a snapshot must be rejected as stale and require resubmission.
+- [x] **Step 5: Validate at approval time.** Inside the existing serializable transaction, load the current mission, apply row-version, compare status and schedule, rerun current eligibility/conflict/backdate-window rules, apply changes, and recompute `IsBackdated` from the resulting start and current policy. Never approve from proposed JSON alone.
+- [x] **Step 6: Verify.** Run focused tests, full backend tests, migration/build, and frontend checks for changed DTOs. Add an isolated migration test if the existing migration harness supports it.
+- [x] **Step 7: Report, commit, push, and continue.**
 
 **Acceptance criteria:** Running mission vehicle/odometer state cannot be rewritten; stale proposals return 409; current approval rules always run; backdated state reflects approved values.
 
 **Risk:** Existing pending change requests may need to be recreated. This is safer than approving without a known base state and must be documented in the stage report.
 
 **Dependencies:** None. Stage 7 reuses the serializable mission transaction and validation helpers.
+
+**تأیید مرحله ۶ (۲۰۲۶-۱۱-۲۴):**
+- درخواست تغییر snapshot دقیق `RowVersion/Status/PlannedStart/PlannedEnd` را با کپی مستقل `varbinary(8)` ذخیره می‌کند؛ درخواست‌های قدیمی بدون snapshot به‌عنوان stale رد می‌شوند. تأیید داخل تراکنش serializable وضعیت، زمان‌بندی، صلاحیت منابع، پنجرهٔ مجاز، فاصلهٔ حداقلی و تداخل روز را دوباره بررسی می‌کند.
+- تغییر خودرو در مأموریت `Running` پیش از هر mutation رد می‌شود و آزمون سطح سرویس نیز نبود audit/SMS/notification و تغییر وضعیت را ثابت می‌کند. `IsBackdated` پس از تأیید از شروع نهایی دوباره محاسبه می‌شود.
+- خطاهای مستقیم یا wrapped قفل/deadlock شامل `SqlException` 1205/1222 در هر لایهٔ `InnerException` به `ConflictAppException` و HTTP 409 تبدیل می‌شوند. تست LocalDB مسیر SELECT و مرز `SaveChanges` را جداگانه پوشش می‌دهد و rollback بدون side effect را ثابت می‌کند.
+- ساخت Debug و Release بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۵۱۳ تست واحد و ۹۱ تست یکپارچه گذشت و ۱۰ آزمون SQL موجود login/maintenance به‌علت نبود متغیرهای محیطی skip شدند. ۵ آزمون SQL اختصاصی Stage 6 روی LocalDB گذشتند؛ EF هیچ pending model change نداشت و SQL migration فقط چهار ستون nullable و رکورد history را اضافه می‌کند.
+- بازبینی مستقل پس از یک روند اصلاح، Yافتهٔ باقی‌ماندهٔ خطای قفل هنگام ذخیره را بست و re-review نهایی `Looks good. Ship.` بود. هیچ SMS واقعی، ورود کاربر، SQL مشترک/تولیدی یا IIS زنده استفاده نشد.
 
 ## Stage 7 — Resource Races, Worker Bounds, and Time Windows
 

@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -51,10 +52,10 @@ internal sealed class SqliteProviderColumnTypesModelCustomizer(ModelCustomizerDe
                     && property.ValueGenerated == ValueGenerated.OnAddOrUpdate
                     && property.IsConcurrencyToken)
                 {
-                    // SQLite مولّد rowversion ندارد؛ پیش‌فرض ثابت با تولید در درج جایگزین می‌شود
-                    // تا قید NOT NULL نقض نشود و به‌روزرسانی‌ها شرط همزمانی نداشته باشند.
-                    property[RelationalAnnotationNames.DefaultValue] = new byte[1];
-                    property.ValueGenerated = ValueGenerated.OnAdd;
+                    // SQLite مولّد rowversion ندارد؛ interceptor فقط آزمون، مقادیر هشت‌بایتی را
+                    // هنگام درج و هر به‌روزرسانی می‌سازد تا snapshot با SQL Server یکسان شکل داشته باشد.
+                    property["SqliteRowVersion"] = true;
+                    property.ValueGenerated = ValueGenerated.Never;
                     property.IsConcurrencyToken = false;
                 }
             }
@@ -62,6 +63,54 @@ internal sealed class SqliteProviderColumnTypesModelCustomizer(ModelCustomizerDe
     }
 
     private static Type UnderlyingType(Type type) => Nullable.GetUnderlyingType(type) ?? type;
+}
+
+internal sealed class SqliteRowVersionInterceptor : SaveChangesInterceptor
+{
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        AssignRowVersions(eventData.Context);
+        return base.SavingChanges(eventData, result);
+    }
+
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        AssignRowVersions(eventData.Context);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    private static void AssignRowVersions(DbContext? context)
+    {
+        if (context is null)
+        {
+            return;
+        }
+
+        foreach (var entry in context.ChangeTracker.Entries())
+        {
+            if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            {
+                continue;
+            }
+
+            foreach (var property in entry.Metadata.GetProperties())
+            {
+                if (property.ClrType != typeof(byte[]) || property["SqliteRowVersion"] is not true)
+                {
+                    continue;
+                }
+
+                var current = property.PropertyInfo?.GetValue(entry.Entity) as byte[];
+                var version = current is { Length: 8 } ? BitConverter.ToInt64(current, 0) : 0;
+                entry.Property(property.Name).CurrentValue = BitConverter.GetBytes(version + 1);
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -83,6 +132,7 @@ public abstract class MissionTestBase : IDisposable
         Connection.Open();
         Options = new DbContextOptionsBuilder<NovaFleetDbContext>()
             .UseSqlite(Connection)
+            .AddInterceptors(new SqliteRowVersionInterceptor())
             .ReplaceService<IModelCustomizer, SqliteProviderColumnTypesModelCustomizer>()
             .Options;
         Db = new NovaFleetDbContext(Options);

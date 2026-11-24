@@ -20,5 +20,9 @@ public sealed class SqliteFixtureSmokeTests : MissionTestBase
         var fromDb = Reload(mission.Id);
         Assert.Equal(MissionStatus.Confirmed, fromDb.Status);
         Assert.Equal(mission.MissionNumber, fromDb.MissionNumber);
+        Assert.Equal(8, fromDb.RowVersion.Length);
+        var returnedRowVersion = Convert.FromBase64String(mission.RowVersion);
+        Assert.Equal(8, returnedRowVersion.Length);
+        Assert.True(returnedRowVersion.AsSpan().SequenceEqual(fromDb.RowVersion));
     }
 }
