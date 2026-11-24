@@ -151,6 +151,10 @@ public sealed class SmsService(
         }
 
         var eventKey = SmsEventNames.Of(eventType);
+        var recipients = SmsDefaults.ParseRecipients(
+            request.Recipients.Count == 0 ? "none" : string.Join(',', request.Recipients),
+            eventType);
+
         var template = await db.SmsTemplates.FirstOrDefaultAsync(item => item.EventKey == eventKey, cancellationToken);
         if (template is null)
         {
@@ -162,12 +166,8 @@ public sealed class SmsService(
             template.Update(request.Body, request.IsActive);
         }
 
-        var recipients = request.Recipients
-            .Where(item => item is "requester" or "driver")
-            .Distinct()
-            .ToList();
-
-        SetSetting($"{SettingKeys.SmsRecipientsPrefix}{eventKey}", string.Join(',', recipients));
+        SetSetting($"{SettingKeys.SmsRecipientsPrefix}{eventKey}",
+            recipients.Count == 0 ? "none" : string.Join(',', recipients));
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateSmsTemplate", "SmsTemplate", eventKey, "Success",
             After: new { EventType = eventType, request.IsActive, Recipients = recipients }), cancellationToken);
@@ -178,7 +178,7 @@ public sealed class SmsService(
             SmsDefaults.TitleFor(eventType),
             template.Body,
             template.IsActive,
-            recipients.Count > 0 ? recipients : SmsDefaults.RecipientsFor(eventType));
+            recipients);
     }
 
     public async Task<Guid> QueueTestAsync(SmsTestRequest request, CancellationToken cancellationToken = default)

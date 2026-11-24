@@ -198,13 +198,15 @@ export interface SmsItem {
   canCancel: boolean
 }
 
+export type SmsRecipient = 'requester' | 'driver'
+
 export interface SmsTemplate {
   eventType: number
   eventKey: string
   title: string
   body: string
   isActive: boolean
-  recipients: string[]
+  recipients: SmsRecipient[]
 }
 
 export interface SetupStatus {

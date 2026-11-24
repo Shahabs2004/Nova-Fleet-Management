@@ -98,7 +98,7 @@ public sealed class ConnectionsSettingsService(
             request.TimeoutSeconds,
             request.RetryMinutes,
             request.MaxAttempts,
-            PasswordChanged = !string.IsNullOrWhiteSpace(request.Password)
+            PasswordChanged = request.Password is not null
         }, cancellationToken);
 
         return new SettingsSaveResultDto(false, null);

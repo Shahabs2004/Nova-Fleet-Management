@@ -1,3 +1,4 @@
+using NovaFleet.Application.Common;
 using NovaFleet.Domain.Notifications;
 
 namespace NovaFleet.Application.Notifications;
@@ -58,10 +59,23 @@ public static class SmsDefaults
             return RecipientsFor(type);
         }
 
-        var parsed = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(item => item is "requester" or "driver")
-            .Distinct()
-            .ToList();
-        return parsed.Count > 0 ? parsed : RecipientsFor(type);
+        var tokens = value.Split(',', StringSplitOptions.TrimEntries);
+        if (tokens.Any(string.IsNullOrEmpty)
+            || tokens.Any(item => item is not ("requester" or "driver" or "none")))
+        {
+            throw new ValidationAppException("گیرنده پیامک معتبر نیست؛ فقط requester، driver یا none مجاز است.");
+        }
+
+        if (tokens.Contains("none", StringComparer.Ordinal))
+        {
+            if (tokens.Length != 1)
+            {
+                throw new ValidationAppException("none نمی‌تواند همراه گیرنده دیگری انتخاب شود.");
+            }
+
+            return [];
+        }
+
+        return tokens.Distinct(StringComparer.Ordinal).ToList();
     }
 }

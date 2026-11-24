@@ -64,7 +64,9 @@ public static class SettingsWriters
     }
 
     /// <summary>مقدار نرمال‌شده sms.mode؛ برای ثبت در ممیزی.</summary>
-    public static string ValidateSms(UpdateSmsConnectionSettingsDto request)
+    public static string ValidateSms(UpdateSmsConnectionSettingsDto request) => ValidateSms(request, request.Password);
+
+    private static string ValidateSms(UpdateSmsConnectionSettingsDto request, string? password)
     {
         var mode = Normalize(request.Mode);
         if (!SettingKeys.SmsModes.Contains(mode))
@@ -90,7 +92,10 @@ public static class SettingsWriters
         if (request.Enabled && !string.Equals(mode, "Simulation", StringComparison.OrdinalIgnoreCase))
         {
             Require(request.Endpoint, "آدرس سرویس پیامک الزامی است.");
+            Require(request.Organization, "سازمان سرویس پیامک الزامی است.");
             Require(request.Username, "شناسه کاربری پیامک الزامی است.");
+            Require(password, "رمز سرویس پیامک الزامی است.");
+            Require(request.SenderNumber, "شماره فرستنده پیامک الزامی است.");
             ValidateEndpoint(request.Endpoint!);
         }
 
@@ -102,18 +107,36 @@ public static class SettingsWriters
         UpdateSmsConnectionSettingsDto request,
         CancellationToken cancellationToken = default)
     {
-        var mode = ValidateSms(request);
+        var password = request.Password;
+        if (password is null && request.Enabled
+            && !string.Equals(Normalize(request.Mode), "Simulation", StringComparison.OrdinalIgnoreCase))
+        {
+            password = await settings.GetSecretAsync(SettingKeys.SmsPassword, cancellationToken);
+        }
 
-        await settings.SetAsync(SettingKeys.SmsEnabled, request.Enabled.ToString(), cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsMode, mode, cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsEndpoint, request.Endpoint?.Trim() ?? string.Empty, cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsOrganization, request.Organization?.Trim() ?? string.Empty, cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsUsername, request.Username?.Trim() ?? string.Empty, cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsSenderNumber, request.SenderNumber?.Trim() ?? string.Empty, cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsTimeoutSeconds, request.TimeoutSeconds.ToString(), cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsRetryMinutes, request.RetryMinutes.ToString(), cancellationToken);
-        await settings.SetAsync(SettingKeys.SmsMaxAttempts, request.MaxAttempts.ToString(), cancellationToken);
-        await settings.SetSecretAsync(SettingKeys.SmsPassword, request.Password, cancellationToken);
+        var mode = ValidateSms(request, password);
+        var writes = new List<SettingWrite>
+        {
+            new(SettingKeys.SmsMode, mode, false),
+            new(SettingKeys.SmsEndpoint, request.Endpoint?.Trim() ?? string.Empty, false),
+            new(SettingKeys.SmsOrganization, request.Organization?.Trim() ?? string.Empty, false),
+            new(SettingKeys.SmsUsername, request.Username?.Trim() ?? string.Empty, false),
+            new(SettingKeys.SmsSenderNumber, request.SenderNumber?.Trim() ?? string.Empty, false),
+            new(SettingKeys.SmsTimeoutSeconds, request.TimeoutSeconds.ToString(), false),
+            new(SettingKeys.SmsRetryMinutes, request.RetryMinutes.ToString(), false),
+            new(SettingKeys.SmsMaxAttempts, request.MaxAttempts.ToString(), false),
+        };
+
+        if (request.Password is not null)
+        {
+            writes.Add(string.IsNullOrWhiteSpace(request.Password)
+                ? new SettingWrite(SettingKeys.SmsPassword, string.Empty, false)
+                : new SettingWrite(SettingKeys.SmsPassword, request.Password.Trim(), true));
+        }
+
+        // فعال‌سازی همیشه آخرین نوشتن است؛ اعتبارسنجی و محافظت رمز پیش از یک ذخیره مشترک انجام می‌شود.
+        writes.Add(new SettingWrite(SettingKeys.SmsEnabled, request.Enabled.ToString(), false));
+        await settings.SetBatchAsync(writes, cancellationToken);
         return mode;
     }
 

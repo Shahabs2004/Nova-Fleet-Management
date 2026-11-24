@@ -43,7 +43,13 @@ const EMPTY_SMS: SmsConnectionSettings = {
 
 const EMPTY_OPERATIONS: OperationsSettings = { logLevel: 'Information', pdfFontPath: '', reportPaperSize: 'A4' }
 
+const READ_ERROR = 'خطا در دریافت تنظیمات؛ برای جلوگیری از ذخیره مقادیر پیش‌فرض، دوباره تلاش کنید.'
 const message = (error: unknown) => (error as Error)?.message ?? 'عملیات ناموفق بود.'
+
+function requireSettings<T>(data: T | undefined, failed: boolean): T {
+  if (failed || !data) throw new Error(READ_ERROR)
+  return data
+}
 
 export function ConnectionsSettingsTab() {
   return (
@@ -66,9 +72,12 @@ function Card({
   testLabel,
   busy,
   testing,
+  disabled,
   note,
   result,
   error,
+  onRetry,
+  retrying,
 }: {
   title: string
   hint?: string
@@ -79,9 +88,12 @@ function Card({
   testLabel?: string
   busy: boolean
   testing?: boolean
+  disabled?: boolean
   note?: SettingsSaveResult | null
   result?: ConnectionTestResult | null
   error?: string | null
+  onRetry?: () => void
+  retrying?: boolean
 }) {
   return (
     <section className="card p-6">
@@ -92,11 +104,11 @@ function Card({
         </div>
         <div className="flex gap-2">
           {onTest && (
-            <button type="button" className="btn-ghost btn-sm" onClick={onTest} disabled={busy || testing}>
+            <button type="button" className="btn-ghost btn-sm" onClick={onTest} disabled={busy || testing || disabled}>
               {testing ? 'در حال آزمون…' : (testLabel ?? 'تست اتصال')}
             </button>
           )}
-          <button type="button" className="btn-primary btn-sm" onClick={onSave} disabled={busy}>
+          <button type="button" className="btn-primary btn-sm" onClick={onSave} disabled={busy || disabled}>
             {busy ? 'در حال ذخیره…' : saveLabel}
           </button>
         </div>
@@ -115,6 +127,11 @@ function Card({
       )}
       {result && <TestResult result={result} />}
       {error && <p className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</p>}
+      {onRetry && (
+        <button type="button" className="btn-ghost btn-sm mt-3" onClick={onRetry} disabled={retrying}>
+          تلاش مجدد
+        </button>
+      )}
     </section>
   )
 }
@@ -203,6 +220,40 @@ function Busy({ text }: { text: string }) {
   return <p className="py-8 text-center text-slate-400">{text}</p>
 }
 
+function LoadFailure({
+  title,
+  hint,
+  saveLabel,
+  testLabel,
+  onRetry,
+  retrying,
+}: {
+  title: string
+  hint?: string
+  saveLabel: string
+  testLabel?: string
+  onRetry: () => void
+  retrying: boolean
+}) {
+  return (
+    <Card
+      title={title}
+      hint={hint}
+      onSave={() => undefined}
+      saveLabel={saveLabel}
+      onTest={testLabel ? () => undefined : undefined}
+      testLabel={testLabel}
+      busy={false}
+      disabled
+      error={READ_ERROR}
+      onRetry={onRetry}
+      retrying={retrying}
+    >
+      {null}
+    </Card>
+  )
+}
+
 function DatabaseCard() {
   const { user } = useAuth()
   const query = useQuery({
@@ -220,12 +271,14 @@ function DatabaseCard() {
   }, [query.data])
 
   const save = useMutation({
-    mutationFn: () =>
-      api.put<SettingsSaveResult>('/api/settings/connections/database', {
+    mutationFn: () => {
+      const current = requireSettings(query.data, query.isError)
+      return api.put<SettingsSaveResult>('/api/settings/connections/database', {
         connectionString: value.trim(),
-        isConfigured: query.data?.isConfigured ?? false,
-        source: query.data?.source ?? '',
-      }),
+        isConfigured: current.isConfigured,
+        source: current.source,
+      })
+    },
     onSuccess: (result) => {
       setNote(result)
       setError(null)
@@ -235,12 +288,27 @@ function DatabaseCard() {
   })
 
   const runTest = useMutation({
-    mutationFn: () => api.post<ConnectionTestResult>('/api/settings/connections/database/test'),
+    mutationFn: () => {
+      requireSettings(query.data, query.isError)
+      return api.post<ConnectionTestResult>('/api/settings/connections/database/test')
+    },
     onSuccess: setTest,
     onError: (e: unknown) => setError(message(e)),
   })
 
   if (query.isLoading) return <Busy text="در حال خواندن اتصال پایگاه داده…" />
+  if (query.isError || !query.data) {
+    return (
+      <LoadFailure
+        title="پایگاه داده"
+        hint="منبع فعال در حال استفاده: —"
+        saveLabel="ذخیره رشته اتصال"
+        testLabel="تست اتصال"
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    )
+  }
 
   return (
     <Card
@@ -251,6 +319,7 @@ function DatabaseCard() {
       onTest={() => runTest.mutate()}
       testing={runTest.isPending}
       busy={save.isPending}
+      disabled={query.isFetching}
       note={note}
       result={test}
       error={error}
@@ -284,11 +353,13 @@ function DirectoryCard() {
   }, [query.data])
 
   const save = useMutation({
-    mutationFn: () =>
-      api.put<SettingsSaveResult>('/api/settings/connections/directory', {
+    mutationFn: () => {
+      requireSettings(query.data, query.isError)
+      return api.put<SettingsSaveResult>('/api/settings/connections/directory', {
         ...draft,
         bindPassword: bindPassword || null,
-      }),
+      })
+    },
     onSuccess: (result) => {
       setNote(result)
       setBindPassword('')
@@ -300,6 +371,7 @@ function DirectoryCard() {
 
   const runTest = useMutation({
     mutationFn: () => {
+      requireSettings(query.data, query.isError)
       const trimmed = sample.trim()
       return api.post<ConnectionTestResult>(
         `/api/settings/connections/directory/test${trimmed ? `?sampleUsername=${encodeURIComponent(trimmed)}` : ''}`,
@@ -310,6 +382,18 @@ function DirectoryCard() {
   })
 
   if (query.isLoading) return <Busy text="در حال خواندن تنظیمات دامنه…" />
+  if (query.isError || !query.data) {
+    return (
+      <LoadFailure
+        title="دامنه (Active Directory)"
+        hint="ورود کاربران با حساب دامنه. رمز حساب Bind هرگز به این صفحه برنمی‌گردد."
+        saveLabel="ذخیره تنظیمات دامنه"
+        testLabel="تست اتصال"
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    )
+  }
 
   const set = <K extends keyof DirectorySettings>(key: K) => (value: DirectorySettings[K]) => setDraft({ ...draft, [key]: value })
 
@@ -322,6 +406,7 @@ function DirectoryCard() {
       onTest={() => runTest.mutate()}
       testing={runTest.isPending}
       busy={save.isPending}
+      disabled={query.isFetching}
       note={note}
       result={test}
       error={error}
@@ -379,7 +464,10 @@ function SmsCard() {
   }, [query.data])
 
   const save = useMutation({
-    mutationFn: () => api.put<SettingsSaveResult>('/api/settings/connections/sms', { ...draft, password: password || null }),
+    mutationFn: () => {
+      requireSettings(query.data, query.isError)
+      return api.put<SettingsSaveResult>('/api/settings/connections/sms', { ...draft, password: password || null })
+    },
     onSuccess: (result) => {
       setNote(result)
       setPassword('')
@@ -390,13 +478,19 @@ function SmsCard() {
   })
 
   const runBalance = useMutation({
-    mutationFn: () => api.post<ConnectionTestResult>('/api/settings/connections/sms/test'),
+    mutationFn: () => {
+      requireSettings(query.data, query.isError)
+      return api.post<ConnectionTestResult>('/api/settings/connections/sms/test')
+    },
     onSuccess: setBalance,
     onError: (e: unknown) => setError(message(e)),
   })
 
   const sendTest = useMutation({
-    mutationFn: () => api.post<{ id: string }>('/api/sms/test', { mobile: mobile.trim(), body: 'آزمون اتصال سامانه مدیریت ناوگان.' }),
+    mutationFn: () => {
+      requireSettings(query.data, query.isError)
+      return api.post<{ id: string }>('/api/sms/test', { mobile: mobile.trim(), body: 'آزمون اتصال سامانه مدیریت ناوگان.' })
+    },
     onSuccess: () => {
       setSendNote('پیامک آزمایشی در صف ثبت شد و پس از پردازش صف ارسال می‌شود.')
       setError(null)
@@ -407,6 +501,18 @@ function SmsCard() {
   })
 
   if (query.isLoading) return <Busy text="در حال خواندن تنظیمات پیامک…" />
+  if (query.isError || !query.data) {
+    return (
+      <LoadFailure
+        title="سرویس پیامک"
+        hint="سوییچ سراسری خاموش باشد، هیچ پیامکی به سرویس‌دهنده نمی‌رود و پیامک‌ها فقط در صف می‌مانند."
+        saveLabel="ذخیره تنظیمات پیامک"
+        testLabel="تست اعتبار درگاه"
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    )
+  }
 
   const set = <K extends keyof SmsConnectionSettings>(key: K) => (value: SmsConnectionSettings[K]) => setDraft({ ...draft, [key]: value })
 
@@ -420,6 +526,7 @@ function SmsCard() {
       testLabel="تست اعتبار درگاه"
       testing={runBalance.isPending}
       busy={save.isPending}
+      disabled={query.isFetching}
       note={note}
       result={balance}
       error={error}
@@ -460,7 +567,7 @@ function SmsCard() {
           <div className="min-w-52 flex-1">
             <Text label="شماره برای پیامک آزمایشی" value={mobile} onChange={setMobile} />
           </div>
-          <button type="button" className="btn-ghost btn-sm" onClick={() => sendTest.mutate()} disabled={sendTest.isPending || !mobile.trim()}>
+          <button type="button" className="btn-ghost btn-sm" onClick={() => sendTest.mutate()} disabled={sendTest.isPending || !mobile.trim() || query.isFetching}>
             {sendTest.isPending ? 'در حال ثبت…' : 'ارسال آزمایشی'}
           </button>
         </div>
@@ -486,12 +593,26 @@ function OperationsCard() {
   }, [query.data])
 
   const save = useMutation({
-    mutationFn: () => api.put<SettingsSaveResult>('/api/settings/connections/operations', draft),
+    mutationFn: () => {
+      requireSettings(query.data, query.isError)
+      return api.put<SettingsSaveResult>('/api/settings/connections/operations', draft)
+    },
     onSuccess: setNote,
     onError: (e: unknown) => setError(message(e)),
   })
 
   if (query.isLoading) return <Busy text="در حال خواندن تنظیمات عملیات…" />
+  if (query.isError || !query.data) {
+    return (
+      <LoadFailure
+        title="عملیات"
+        hint="سطح لاگ و مسیر فونت با restart سرویس اعمال می‌شوند؛ اندازه کاغذ گزارش بی‌درنگ معتبر است."
+        saveLabel="ذخیره تنظیمات عملیات"
+        onRetry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    )
+  }
 
   const set = <K extends keyof OperationsSettings>(key: K) => (value: OperationsSettings[K]) => setDraft({ ...draft, [key]: value })
 
@@ -502,6 +623,7 @@ function OperationsCard() {
       onSave={() => save.mutate()}
       saveLabel="ذخیره تنظیمات عملیات"
       busy={save.isPending}
+      disabled={query.isFetching}
       note={note}
       error={error}
     >

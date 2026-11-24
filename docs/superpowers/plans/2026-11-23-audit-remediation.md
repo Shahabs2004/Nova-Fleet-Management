@@ -376,21 +376,29 @@ public sealed record ReportTableDto(
 - Consumes: `SettingWrite(Key, Value, IsSecret)` and `IRuntimeSettings.SetBatchAsync`.
 - Produces: stored recipients are comma-separated known tokens, where empty/null key means defaults and the explicit token `none` means no recipients. Unknown tokens are validation errors.
 
-- [ ] **Step 1: Write failing batch-write tests.** Use the SQLite test provider and a fake protector. Assert all supplied keys commit once; forced save failure leaves prior values unchanged; secret values are protected and never returned by ordinary reads.
-- [ ] **Step 2: Run tests and observe failure**, then implement `SetBatchAsync`. Protect all secret plaintext values before one `SaveChangesAsync`. A null `Value` means leave unchanged; non-secret null stores empty string to preserve existing behavior.
-- [ ] **Step 3: Write failing SMS-settings tests.** Assert enabling a real gateway with missing/invalid credentials fails and leaves `sms.enabled` false. Assert connection fields, mode, and secret are committed before enabled. Keep existing secret when the request omits it; blank submitted secret follows the existing clear behavior explicitly, never by accident.
-- [ ] **Step 4: Implement atomic SMS writes.** Validate the resulting combined configuration, then write connection/mode/secrets and enabled state through one `SetBatchAsync`. No network call is made while validating.
-- [ ] **Step 5: Write failing recipient tests.** Empty/unset setting returns defaults; `none` returns an empty list; `requester,driver` returns both; unknown or mixed unknown tokens throw `ValidationAppException`. Saving an intentionally empty UI selection stores `none`, not an empty string.
-- [ ] **Step 6: Implement recipient semantics in both read and write paths.** Update UI validation and labels so «بدون گیرنده» is explicit. Do not silently filter unknown values.
-- [ ] **Step 7: Write failing settings-form tests.** After GET failure, render a Persian error and Retry button; Save and Test are disabled; defaults are never submitted. After successful GET, re-enable them.
-- [ ] **Step 8: Verify.** Run backend and frontend tests, full build/lint, and inspect that no test invokes the real SMS gateway.
-- [ ] **Step 9: Report and wait.**
+- [x] **Step 1: Write failing batch-write tests.** Use the SQLite test provider and a fake protector. Assert all supplied keys commit once; forced save failure leaves prior values unchanged; secret values are protected and never returned by ordinary reads.
+- [x] **Step 2: Run tests and observe failure**, then implement `SetBatchAsync`. Protect all secret plaintext values before one `SaveChangesAsync`. A null `Value` means leave unchanged; non-secret null stores empty string to preserve existing behavior.
+- [x] **Step 3: Write failing SMS-settings tests.** Assert enabling a real gateway with missing/invalid credentials fails and leaves `sms.enabled` false. Assert connection fields, mode, and secret are committed before enabled. Keep existing secret when the request omits it; blank submitted secret follows the existing clear behavior explicitly, never by accident.
+- [x] **Step 4: Implement atomic SMS writes.** Validate the resulting combined configuration, then write connection/mode/secrets and enabled state through one `SetBatchAsync`. No network call is made while validating.
+- [x] **Step 5: Write failing recipient tests.** Empty/unset setting returns defaults; `none` returns an empty list; `requester,driver` returns both; unknown or mixed unknown tokens throw `ValidationAppException`. Saving an intentionally empty UI selection stores `none`, not an empty string.
+- [x] **Step 6: Implement recipient semantics in both read and write paths.** Update UI validation and labels so «بدون گیرنده» is explicit. Do not silently filter unknown values.
+- [x] **Step 7: Write failing settings-form tests.** After GET failure, render a Persian error and Retry button; Save and Test are disabled; defaults are never submitted. After successful GET, re-enable them.
+- [x] **Step 8: Verify.** Run backend and frontend tests, full build/lint, and inspect that no test invokes the real SMS gateway.
+- [x] **Step 9: Report and wait.**
 
 **Acceptance criteria:** Partial configuration writes are impossible; SMS cannot be enabled with unusable credentials; intentional no-recipient configuration remains empty; failed reads cannot overwrite settings.
 
 **Risk:** Secret blank/omitted semantics must match the existing form. Stage 5 depends on the explicit recipient and batch-write contracts.
 
 **Dependencies:** Stage 3 frontend test harness.
+
+**تأیید مرحله ۴ (۲۰۲۶-۱۱-۲۴):**
+- RED/GREEN برای batch، نویسنده تنظیمات پیامک، گیرندگان و فرم‌های اتصال ثبت شد؛ یک regression ممیزی نیز نشان داد پاک‌سازی صریح رمز باید `PasswordChanged=true` ثبت کند و پس از اصلاح سبز شد.
+- `SetBatchAsync` همه اسرار را پیش از یک `SaveChangesAsync` محافظت می‌کند؛ `null` سرّی بدون تغییر می‌ماند و `null` غیرسرّی رشته خالی ذخیره می‌کند. اعتبارسنجی پیامک روی تنظیم ترکیبی انجام می‌شود و `sms.enabled` آخرین نوشتن است.
+- توکن `none` صریحاً بدون گیرنده ذخیره می‌شود؛ مقادیر خالی به پیش‌فرض برمی‌گردند و توکن ناشناخته یا ترکیب نامعتبر خطای اعتبارسنجی است. انتخاب خالی UI نیز `none` می‌فرستد.
+- پس از شکست GET، هر چهار کارت اتصال خطای فارسی، دکمه تلاش مجدد و کنترل‌های ذخیره/تست غیرفعال نمایش می‌دهند؛ mutationهای guarded نیز جلوگیری از ارسال پیش‌فرض دارند. کلیدهای React Query و invalidationهای scoped Stage 3 دست‌نخورده ماندند.
+- ساخت Debug و Release با SDK نصب‌شده `11.0.100` بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۴۵۸ تست واحد و ۷۷ تست یکپارچه گذشت و ۱۰ تست SQL به‌علت نبود متغیرهای محیطی skip شدند. فرانت‌اند ۲۳/۲۳ تست سبک داشت؛ lint کامل ۰ خطا و ۶ هشدار موجود نامرتبط و build موفق با هشدار قبلی chunk بزرگ بود.
+- هیچ SMS واقعی، اعتبارسنجی شبکه‌ای درگاه، ورود مرورگر واقعی، دیتابیس production یا IIS زنده استفاده نشد؛ گزارش کامل در `.superpowers/sdd/2026-11-23-audit-remediation/stage-4-report.md` ثبت می‌شود.
 
 ## Stage 5 — SMS Queue Safety and Delivery Reconciliation
 

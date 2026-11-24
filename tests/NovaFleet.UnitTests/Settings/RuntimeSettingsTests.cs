@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Configuration;
@@ -102,13 +103,31 @@ public class RuntimeSettingsTests : MissionTestBase
         var manager = new FakeCurrentUser("demo.sysadmin", PermissionCatalog.Administration.ConnectionsManage);
         var service = ConnectionsFor(manager);
         await service.UpdateSmsAsync(new UpdateSmsConnectionSettingsDto(
-            true, "Wsdl", "https://sms.example/soap", null, "svc.user", null, 20, 5, 5, "original"));
+            true, "Wsdl", "https://sms.example/soap", "سازمان", "svc.user", "1000999", 20, 5, 5, "original"));
 
         await service.UpdateSmsAsync(new UpdateSmsConnectionSettingsDto(
-            true, "Wsdl", "https://sms.example/soap", null, "svc.user", null, 20, 5, 5, null));
+            true, "Wsdl", "https://sms.example/soap", "سازمان", "svc.user", "1000999", 20, 5, 5, null));
 
         Assert.Equal("original", await Runtime.GetSecretAsync(SettingKeys.SmsPassword));
+        Assert.False(LastSmsAuditPasswordChanged());
     }
+
+    [Fact]
+    public async Task Connections_SmsBlankPasswordClearsStoredSecretAndAuditsChange()
+    {
+        await Runtime.SetSecretAsync(SettingKeys.SmsPassword, "stored-secret");
+        var service = ConnectionsFor(new FakeCurrentUser("demo.sysadmin", PermissionCatalog.Administration.ConnectionsManage));
+
+        await service.UpdateSmsAsync(new UpdateSmsConnectionSettingsDto(
+            false, "Simulation", null, null, null, null, 20, 5, 5, "   "));
+
+        Assert.False(await Runtime.HasSecretAsync(SettingKeys.SmsPassword));
+        Assert.True(LastSmsAuditPasswordChanged());
+    }
+
+    private bool LastSmsAuditPasswordChanged() =>
+        JsonSerializer.SerializeToElement(Audit.Records.Last(record => record.Action == "UpdateSmsSettings").After)
+            .GetProperty("PasswordChanged").GetBoolean();
 
     [Fact]
     public async Task Connections_EnabledRealGatewayNeedsEndpointAndUsername()

@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { faNumber, formatFaDateTime, toFa } from '../lib/date'
 import { SMS_STATUS } from '../lib/labels'
-import type { PagedResult, SmsItem, SmsTemplate } from '../lib/types'
+import type { PagedResult, SmsItem, SmsRecipient, SmsTemplate } from '../lib/types'
 
 interface SmsSummary {
   queued: number
@@ -279,10 +279,10 @@ function TemplatesTab({ canEdit }: { canEdit: boolean }) {
   )
 }
 
-function TemplateForm({ template, onDone }: { template: SmsTemplate; onDone: () => Promise<void> }) {
+export function TemplateForm({ template, onDone }: { template: SmsTemplate; onDone: () => Promise<void> }) {
   const [body, setBody] = useState(template.body)
   const [isActive, setIsActive] = useState(template.isActive)
-  const [recipients, setRecipients] = useState(template.recipients.join('، '))
+  const [recipients, setRecipients] = useState<SmsRecipient[]>(template.recipients)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -293,10 +293,7 @@ function TemplateForm({ template, onDone }: { template: SmsTemplate; onDone: () 
       await api.put(`/api/sms/templates/${template.eventType}`, {
         body,
         isActive,
-        recipients: recipients
-          .split(/[,،\n]/)
-          .map((item) => item.trim())
-          .filter(Boolean),
+        recipients: recipients.length > 0 ? recipients : ['none'],
       })
       await onDone()
     } catch (e) {
@@ -313,10 +310,32 @@ function TemplateForm({ template, onDone }: { template: SmsTemplate; onDone: () 
         <textarea className="input min-h-28 resize-y" value={body} onChange={(e) => setBody(e.target.value)} />
         <p className="mt-1 text-[11px] text-slate-400">از جای‌نگهدارهای قالب مانند نام راننده و شماره مأموریت استفاده کنید.</p>
       </div>
-      <div>
-        <label className="label">گیرندگان (با کاما جدا کنید)</label>
-        <input className="input" value={recipients} onChange={(e) => setRecipients(e.target.value)} placeholder="requester، driver، manager" />
-      </div>
+      <fieldset>
+        <legend className="label mb-2">گیرندگان</legend>
+        <div className="flex flex-wrap gap-4">
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-emerald-700"
+              checked={recipients.includes('requester')}
+              onChange={(e) => setRecipients((current) => e.target.checked ? [...current, 'requester'] : current.filter((item) => item !== 'requester'))}
+            />
+            درخواست‌کننده
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-emerald-700"
+              checked={recipients.includes('driver')}
+              onChange={(e) => setRecipients((current) => e.target.checked ? [...current, 'driver'] : current.filter((item) => item !== 'driver'))}
+            />
+            راننده
+          </label>
+        </div>
+        {recipients.length === 0 && (
+          <p className="mt-2 text-xs text-amber-700">بدون گیرنده — برای این رویداد پیامکی ارسال نمی‌شود.</p>
+        )}
+      </fieldset>
       <label className="flex items-center gap-2 text-sm text-slate-600">
         <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4 accent-emerald-700" />
         این رویداد فعال باشد

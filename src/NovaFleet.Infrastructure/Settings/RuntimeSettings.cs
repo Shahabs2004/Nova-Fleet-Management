@@ -56,6 +56,56 @@ public sealed class RuntimeSettings(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task SetBatchAsync(IReadOnlyList<SettingWrite> writes, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(writes);
+        var pending = writes
+            .Where(write => write.Value is not null || !write.IsSecret)
+            .ToList();
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        var keys = pending.Select(write => write.Key).Distinct(StringComparer.Ordinal).ToArray();
+        var existing = await db.SystemSettings
+            .Where(item => keys.Contains(item.Key))
+            .ToDictionaryAsync(item => item.Key, cancellationToken);
+
+        // ابتدا همه متن‌های سرّی محافظت می‌شوند تا خطای محافظ پیش از تغییر ردیف‌ها رخ دهد.
+        var prepared = new List<(SettingWrite Write, string? ProtectedValue)>(pending.Count);
+        foreach (var write in pending)
+        {
+            var protectedValue = write.IsSecret && !string.IsNullOrWhiteSpace(write.Value)
+                ? protector.Protect(write.Value.Trim())
+                : null;
+            prepared.Add((write, protectedValue));
+        }
+
+        var now = clock.UtcNow;
+        foreach (var (write, protectedValue) in prepared)
+        {
+            if (!existing.TryGetValue(write.Key, out var setting))
+            {
+                setting = new SystemSetting(write.Key, string.Empty);
+                db.SystemSettings.Add(setting);
+                existing[write.Key] = setting;
+            }
+
+            if (write.IsSecret && protectedValue is not null)
+            {
+                setting.SetProtectedValue(protectedValue, now);
+            }
+            else
+            {
+                // برای سرّی، مقدار خالیِ صریح یعنی پاک کردن؛ برای کلید معمولی null رشته خالی است.
+                setting.SetValue(write.Value ?? string.Empty, now);
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task SetSecretAsync(string key, string? plaintext, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(plaintext))
