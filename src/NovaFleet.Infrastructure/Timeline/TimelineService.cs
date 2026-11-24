@@ -47,8 +47,8 @@ public sealed class TimelineService(NovaFleetDbContext db, ICurrentUser currentU
                 currentUser.Has(PermissionCatalog.Missions.View),
                 currentUser.Username)
             .Where(item => TimelineStatuses.Contains(item.Status)
-                && item.PlannedStartAtUtc <= toUtc
-                && item.PlannedEndAtUtc >= fromUtc);
+                && item.PlannedStartAtUtc < toUtc
+                && item.PlannedEndAtUtc > fromUtc);
         if (driverId.HasValue)
         {
             source = source.Where(item => item.DriverId == driverId.Value);

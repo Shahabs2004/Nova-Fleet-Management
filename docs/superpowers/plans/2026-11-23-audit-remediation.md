@@ -1,6 +1,8 @@
 # Nova Fleet Audit Remediation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. This repository adds a stricter gate: after each stage, report fresh evidence and wait for explicit user approval before committing or starting the next stage.
+>
+> **Authorization update (2026-11-24):** The user explicitly instructed the agent to complete all remaining stages autonomously, commit and push after each verified stage, and not request further approval. This supersedes the original approval/push gates below; scope isolation, fresh verification, and one scoped commit per stage remain mandatory.
 
 **Goal:** Fix every confirmed issue from the 2026-11-23 whole-repository audit without introducing paid SMS sends, exposing live data, weakening test guards, or overwriting pre-existing installer work.
 
@@ -190,10 +192,10 @@ public sealed record ReportTableDto(
     IReadOnlyList<IReadOnlyList<object?>> Rows,
     IReadOnlyDictionary<string, object?> Totals,
     DateTimeOffset GeneratedAtUtc,
+    string? Subtitle,
     int TotalCount,
-    string? Subtitle = null,
-    bool RowsTruncated = false,
-    int? MaxRows = null);
+    bool RowsTruncated,
+    int MaxRows);
 ```
 
 ## Stage 1 — First-Run and Production Bootstrap Security
@@ -619,21 +621,27 @@ public sealed record ReportTableDto(
 - Consumes: `MissionVisibility.Apply`, `ReportTableDto(..., RowsTruncated, MaxRows)`.
 - Produces: report rows are capped at 1,000 only for transfer, totals/counts use the full filtered set, `RowsTruncated=true` and `MaxRows=1000` when capped; end date is next-day start with backend exclusive `<`.
 
-- [ ] **Step 1: Write failing spreadsheet tests.** Include values beginning with `=`, `+`, `-`, `@`, tab, and carriage return in titles, headers, user-supplied cells, and totals. Reopen the generated XLSX and assert the cell data type is Text and the exact string is preserved.
-- [ ] **Step 2: Run tests and observe failure.** Set every untrusted string cell to `XLDataType.Text` before assigning its value; keep numeric/date cells typed. Do not prepend an apostrophe that changes displayed data.
-- [ ] **Step 3: Write failing totals tests.** Seed more than 1,000 matching SMS/session rows with known totals. Assert `TotalCount` and aggregates cover all filtered rows, `Items.Count == 1000`, `RowsTruncated == true`, and `MaxRows == 1000`. Also test fewer than 1,000 rows.
-- [ ] **Step 4: Implement full totals plus explicit truncation.** Run count/aggregate over the complete filtered query, then page/cap rows. Return the new metadata and show a Persian «نمایش ۱۰۰۰ ردیف اول از مجموع ...» notice.
-- [ ] **Step 5: Write failing date tests.** A mission at 23:30 Tehran on the selected end date must be included; one at next-day 00:00 must be excluded. UI computes next-day start in Tehran/Jalali and sends UTC; backend uses `< exclusiveEndUtc`.
-- [ ] **Step 6: Fix date boundaries and extension time.** Use the existing Jalali date/hour controls and `jalaliValueToUtc` for extension; remove browser-local `datetime-local` conversion and minute zeroing. Apply the same end-boundary helper to reports and timeline.
-- [ ] **Step 7: Fix search contracts.** Change SMS and locations frontend requests to send `search`, matching `EndpointMapper.cs`. Add tests asserting the query string and backend filtering.
-- [ ] **Step 8: Verify.** Run focused tests, full backend tests, frontend tests/lint/build, and generate/open representative XLSX files locally without user data.
-- [ ] **Step 9: Report and wait.**
+- [x] **Step 1: Write failing spreadsheet tests.** Include values beginning with `=`, `+`, `-`, `@`, tab, and carriage return in titles, headers, user-supplied cells, and totals. Reopen the generated XLSX and assert the cell data type is Text and the exact string is preserved.
+- [x] **Step 2: Run tests and observe failure.** Set every untrusted string cell to `XLDataType.Text` before assigning its value; keep numeric/date cells typed. Do not prepend an apostrophe that changes displayed data.
+- [x] **Step 3: Write failing totals tests.** Seed more than 1,000 matching SMS/session rows with known totals. Assert `TotalCount` and aggregates cover all filtered rows, `Items.Count == 1000`, `RowsTruncated == true`, and `MaxRows == 1000`. Also test fewer than 1,000 rows.
+- [x] **Step 4: Implement full totals plus explicit truncation.** Run count/aggregate over the complete filtered query, then page/cap rows. Return the new metadata and show a Persian «نمایش ۱۰۰۰ ردیف اول از مجموع ...» notice.
+- [x] **Step 5: Write failing date tests.** A mission at 23:30 Tehran on the selected end date must be included; one at next-day 00:00 must be excluded. UI computes next-day start in Tehran/Jalali and sends UTC; backend uses `< exclusiveEndUtc`.
+- [x] **Step 6: Fix date boundaries and extension time.** Use the existing Jalali date/hour controls and `jalaliValueToUtc` for extension; remove browser-local `datetime-local` conversion and minute zeroing. Apply the same end-boundary helper to reports and timeline.
+- [x] **Step 7: Fix search contracts.** Change SMS and locations frontend requests to send `search`, matching `EndpointMapper.cs`. Add tests asserting the query string and backend filtering.
+- [x] **Step 8: Verify.** Run focused tests, full backend tests, frontend tests/lint/build, and generate/open representative XLSX files locally without user data.
+- [x] **Step 9: Report and wait.**
 
 **Acceptance criteria:** No untrusted string becomes an Excel formula; totals are complete and truncation visible; selected end day includes all 24 hours in Tehran; extension preserves Jalali hour precision; search filters work.
 
 **Risk:** Report DTO metadata changes all consumers; update frontend types and tests in the same stage. Stage 3 visibility predicates must remain applied before all aggregates.
 
 **Dependencies:** Stage 3 visibility. Stage 7 timeline bounds.
+
+**تأیید مرحله ۱۰ (۲۰۲۶-۱۱-۲۵):**
+- RED/GREEN برای ایمنی متن Excel، totals کامل با سقف انتقال ۱۰۰۰ ردیف، مرز نیمه‌باز روز تهران، تمدید شمسی/ساعت تهران و پارامتر `search` ثبت شد؛ تست XLSX فایل تولیدشده را دوباره باز و نوع متن/عدد را بررسی می‌کند.
+- `ReportTableDto` و `ReportTable` اکنون `TotalCount/RowsTruncated/MaxRows` اجباری دارند؛ هر هشت گزارش از سقف مرکزی استفاده می‌کنند و پیام فارسی truncation در UI دیده می‌شود. تاریخ پایان انتخابی با نیمه‌شب فردای تهران به‌صورت exclusive ارسال می‌شود، اما برچسب گزارش همان روز انتخابی را نشان می‌دهد.
+- ساخت Release با SDK نصب‌شده `11.0.100` بدون هشدار/خطا انجام شد؛ ۵۳۱ تست واحد و ۹۵ تست یکپارچه گذشت و ۱۵ تست SQL موجود به‌علت نبود محیط‌های guarded skip شدند. فرانت‌اند ۴۰/۴۰ تست سبک داشت؛ lint ۰ خطا و ۶ هشدار موجود و build موفق با هشدار قبلی chunk بزرگ بود.
+- هیچ migration، SMS واقعی، ورود کاربر، AD واقعی، SQL مشترک/تولیدی یا IIS زنده استفاده نشد. decode نمایش `\r` در Excel/LibreOffice دسکتاپ مستقل آزمایش نشده و به‌عنوان concern در `.superpowers/sdd/2026-11-23-audit-remediation/stage-10-report.md` ثبت شده است.
 
 ## Stage 11 — Atomic UI Saves and Lean Application Cleanup
 

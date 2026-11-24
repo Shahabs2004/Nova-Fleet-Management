@@ -118,7 +118,8 @@ export function TimelinePage() {
   const hideTip = () => setTip(null)
 
   const fromUtc = jalaliValueToUtc(from, 0)
-  const toUtc = jalaliValueToUtc(to, 23)
+  const toDayStart = jalaliValueToUtc(to, 0)
+  const toUtc = toDayStart ? new Date(Date.parse(toDayStart) + DAY_MS).toISOString() : null
 
   const drivers = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
   const vehicles = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })

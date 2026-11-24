@@ -417,4 +417,7 @@ export interface ReportTable {
   totals: Record<string, string | number>
   generatedAtUtc: string
   subtitle?: string
+  totalCount: number
+  rowsTruncated: boolean
+  maxRows: number
 }

@@ -557,7 +557,7 @@ function LocationsTab() {
 
   const params = new URLSearchParams()
   if (status) params.set('status', status)
-  if (search) params.set('q', search)
+  if (search) params.set('search', search)
 
   const locations = useQuery({
     queryKey: ['locations', user?.username, status, search],

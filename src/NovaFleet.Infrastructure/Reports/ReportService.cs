@@ -20,6 +20,7 @@ namespace NovaFleet.Infrastructure.Reports;
 /// <summary>هشت گزارش مصوب؛ اجرای هر گزارش مجوز خودش را می‌خواهد و خروجی فقط با مجوز صادر می‌شود.</summary>
 public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUser) : IReportService
 {
+    private const int MaxReportRows = 1000;
     private static readonly IReadOnlyList<ReportDefinitionDto> Definitions =
     [
         new("missions", "گزارش مأموریت‌ها", "فهرست مأموریت‌ها با فیلتر وضعیت، نوع، راننده، خودرو و بازه زمانی."),
@@ -60,19 +61,19 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
         sheet.RightToLeft = true;
 
         var titleCell = sheet.Cell(1, 1);
-        titleCell.Value = table.Title;
+        SetTextCell(titleCell, table.Title);
         titleCell.Style.Font.SetBold().Font.SetFontSize(14);
         titleCell.Style.Font.SetFontColor(XLColor.FromHtml("#0F766E"));
         if (!string.IsNullOrWhiteSpace(table.Subtitle))
         {
-            sheet.Cell(2, 1).Value = table.Subtitle;
+            SetTextCell(sheet.Cell(2, 1), table.Subtitle);
         }
 
         var headerRow = string.IsNullOrWhiteSpace(table.Subtitle) ? 4 : 5;
         for (var column = 0; column < table.Columns.Count; column++)
         {
             var cell = sheet.Cell(headerRow, column + 1);
-            cell.Value = table.Columns[column].Title;
+            SetTextCell(cell, table.Columns[column].Title);
             cell.Style.Font.SetBold();
             cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0F766E");
             cell.Style.Font.SetFontColor(XLColor.White);
@@ -83,27 +84,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             for (var column = 0; column < table.Columns.Count; column++)
             {
                 var cell = sheet.Cell(headerRow + 1 + row, column + 1);
-                var value = table.Rows[row][column];
-                if (value is null)
-                {
-                    cell.Value = string.Empty;
-                }
-                else if (value is double number)
-                {
-                    cell.Value = number;
-                }
-                else if (value is int integer)
-                {
-                    cell.Value = integer;
-                }
-                else if (value is long longNumber)
-                {
-                    cell.Value = longNumber;
-                }
-                else
-                {
-                    cell.Value = value.ToString();
-                }
+                SetCellValue(cell, table.Rows[row][column]);
             }
         }
 
@@ -117,7 +98,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
         if (totals.Count > 0)
         {
             var cell = sheet.Cell(totalsRow, 1);
-            cell.Value = string.Join("   |   ", totals);
+            SetTextCell(cell, string.Join("   |   ", totals));
             cell.Style.Font.SetBold();
         }
 
@@ -125,6 +106,62 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         return stream.ToArray();
+    }
+
+    private static void SetCellValue(IXLCell cell, object? value)
+    {
+        switch (value)
+        {
+            case null:
+                SetTextCell(cell, string.Empty);
+                break;
+            case double number:
+                cell.Value = number;
+                break;
+            case float number:
+                cell.Value = number;
+                break;
+            case decimal number:
+                cell.Value = number;
+                break;
+            case int integer:
+                cell.Value = integer;
+                break;
+            case long integer:
+                cell.Value = integer;
+                break;
+            case DateTimeOffset date:
+                cell.Value = date.UtcDateTime;
+                break;
+            case DateTime date:
+                cell.Value = date;
+                break;
+            default:
+                SetTextCell(cell, Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty);
+                break;
+        }
+    }
+
+    private static void SetTextCell(IXLCell cell, string value)
+    {
+        // OOXML normalizes raw carriage returns; the escape sequence preserves them for spreadsheet readers.
+        var escaped = value.Replace("\r", "_x000D_", StringComparison.Ordinal);
+        cell.SetValue(XLCellValue.FromObject(escaped, CultureInfo.InvariantCulture));
+    }
+
+    private static ReportTableDto CreateTable(
+        string key,
+        string title,
+        IReadOnlyList<ReportColumnDto> columns,
+        IReadOnlyList<IReadOnlyList<object?>> rows,
+        IReadOnlyDictionary<string, object?> totals,
+        string? subtitle,
+        int? totalCount = null)
+    {
+        var count = totalCount ?? rows.Count;
+        var transferred = rows.Take(MaxReportRows).ToList();
+        return new ReportTableDto(key, title, columns, transferred, totals, DateTimeOffset.UtcNow, subtitle,
+            count, count > transferred.Count, MaxReportRows);
     }
 
     public async Task<byte[]> ExportPdfAsync(string key, ReportQuery query, CancellationToken cancellationToken = default)
@@ -238,7 +275,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             ["تعداد"] = missions.Count,
             ["مجموع مسافت"] = missions.Sum(item => item.DistanceKm ?? 0)
         };
-        return new ReportTableDto("missions", "گزارش مأموریت‌ها", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("missions", "گزارش مأموریت‌ها", columns, rows, totals, SubtitleOf(query));
     }
 
     private async Task<ReportTableDto> DistanceReport(ReportQuery query, CancellationToken cancellationToken)
@@ -267,7 +304,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             ["تعداد خودرو"] = rows.Count,
             ["مجموع مسافت"] = rows.Sum(row => (long)row[2]!)
         };
-        return new ReportTableDto("missions-distance", "کارکرد کیلومتری", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("missions-distance", "کارکرد کیلومتری", columns, rows, totals, SubtitleOf(query));
     }
 
     private async Task<ReportTableDto> DriverActivityReport(ReportQuery query, CancellationToken cancellationToken)
@@ -298,7 +335,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             ["تعداد راننده"] = rows.Count,
             ["مجموع مأموریت"] = rows.Sum(row => (int)row[1]!)
         };
-        return new ReportTableDto("driver-activity", "فعالیت رانندگان", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("driver-activity", "فعالیت رانندگان", columns, rows, totals, SubtitleOf(query));
     }
 
     private async Task<ReportTableDto> VehicleUsageReport(ReportQuery query, CancellationToken cancellationToken)
@@ -330,7 +367,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             ["تعداد خودرو"] = rows.Count,
             ["مجموع مأموریت"] = rows.Sum(row => (int)row[1]!)
         };
-        return new ReportTableDto("vehicle-usage", "بهره‌برداری خودروها", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("vehicle-usage", "بهره‌برداری خودروها", columns, rows, totals, SubtitleOf(query));
     }
 
     private async Task<ReportTableDto> OrgUnitReport(ReportQuery query, CancellationToken cancellationToken)
@@ -358,7 +395,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             new("Distance", "مسافت (کیلومتر)", true)
         };
         var totals = new Dictionary<string, object?> { ["مجموع مأموریت"] = missions.Count };
-        return new ReportTableDto("org-unit", "مأموریت واحدهای سازمانی", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("org-unit", "مأموریت واحدهای سازمانی", columns, rows, totals, SubtitleOf(query));
     }
 
     private async Task<ReportTableDto> StatusReport(ReportQuery query, CancellationToken cancellationToken)
@@ -376,7 +413,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
             new("Count", "تعداد", true)
         };
         var totals = new Dictionary<string, object?> { ["مجموع"] = missions.Count };
-        return new ReportTableDto("mission-status", "توزیع وضعیت مأموریت‌ها", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("mission-status", "توزیع وضعیت مأموریت‌ها", columns, rows, totals, SubtitleOf(query));
     }
 
     private async Task<ReportTableDto> SmsLogReport(ReportQuery query, CancellationToken cancellationToken)
@@ -390,10 +427,12 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
         if (query.ToUtc.HasValue)
         {
-            source = source.Where(item => item.CreatedAtUtc <= query.ToUtc.Value);
+            source = source.Where(item => item.CreatedAtUtc < query.ToUtc.Value);
         }
 
-        var items = await source.OrderByDescending(item => item.CreatedAtUtc).Take(1000).ToListAsync(cancellationToken);
+        var totalCount = await source.CountAsync(cancellationToken);
+        var deliveredCount = await source.CountAsync(item => item.Status == SmsQueueStatus.Delivered, cancellationToken);
+        var items = await source.OrderByDescending(item => item.CreatedAtUtc).Take(MaxReportRows).ToListAsync(cancellationToken);
         var columns = new ReportColumnDto[]
         {
             new("Event", "رویداد"),
@@ -416,10 +455,10 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
         }).ToList();
         var totals = new Dictionary<string, object?>
         {
-            ["تعداد"] = items.Count,
-            ["تحویل‌شده"] = items.Count(item => item.Status == SmsQueueStatus.Delivered)
+            ["تعداد"] = totalCount,
+            ["تحویل‌شده"] = deliveredCount
         };
-        return new ReportTableDto("sms-log", "گزارش پیامک‌ها", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("sms-log", "گزارش پیامک‌ها", columns, rows, totals, SubtitleOf(query), totalCount);
     }
 
     private async Task<ReportTableDto> SessionsReport(ReportQuery query, CancellationToken cancellationToken)
@@ -438,10 +477,12 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
         if (query.ToUtc.HasValue)
         {
-            source = source.Where(item => item.LoginAtUtc <= query.ToUtc.Value);
+            source = source.Where(item => item.LoginAtUtc < query.ToUtc.Value);
         }
 
-        var items = await source.OrderByDescending(item => item.LoginAtUtc).Take(1000).ToListAsync(cancellationToken);
+        var totalCount = await source.CountAsync(cancellationToken);
+        var successCount = await source.CountAsync(item => item.Status != UserSessionStatus.Failed, cancellationToken);
+        var items = await source.OrderByDescending(item => item.LoginAtUtc).Take(MaxReportRows).ToListAsync(cancellationToken);
         var columns = new ReportColumnDto[]
         {
             new("Username", "کاربر"),
@@ -464,10 +505,10 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
         }).ToList();
         var totals = new Dictionary<string, object?>
         {
-            ["تعداد"] = items.Count,
-            ["موفق"] = items.Count(item => item.Status != UserSessionStatus.Failed)
+            ["تعداد"] = totalCount,
+            ["موفق"] = successCount
         };
-        return new ReportTableDto("sessions", "گزارش نشست‌ها", columns, rows, totals, DateTimeOffset.UtcNow, SubtitleOf(query));
+        return CreateTable("sessions", "گزارش نشست‌ها", columns, rows, totals, SubtitleOf(query), totalCount);
     }
 
     private IQueryable<Mission> Filtered(ReportQuery query)
@@ -484,7 +525,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
 
         if (query.ToUtc.HasValue)
         {
-            source = source.Where(item => item.PlannedStartAtUtc <= query.ToUtc.Value);
+            source = source.Where(item => item.PlannedStartAtUtc < query.ToUtc.Value);
         }
 
         if (query.DriverId.HasValue)
@@ -549,7 +590,7 @@ public sealed class ReportService(NovaFleetDbContext db, ICurrentUser currentUse
         if (query.FromUtc.HasValue || query.ToUtc.HasValue)
         {
             var from = query.FromUtc.HasValue ? JalaliDate.FormatDate(query.FromUtc.Value) : "ابتدا";
-            var to = query.ToUtc.HasValue ? JalaliDate.FormatDate(query.ToUtc.Value) : "اکنون";
+            var to = query.ToUtc.HasValue ? JalaliDate.FormatDate(query.ToUtc.Value.AddTicks(-1)) : "اکنون";
             parts.Add($"بازه: {from} تا {to}");
         }
 

@@ -143,6 +143,9 @@ public sealed class MissionVisibilityIntegrationTests
         var table = await service.RunAsync(key, ReportQuery);
 
         Assert.Equal(expectedRows, table.Rows.Count);
+        Assert.Equal(expectedRows, table.TotalCount);
+        Assert.False(table.RowsTruncated);
+        Assert.Equal(1000, table.MaxRows);
         AssertNoOtherRequesterData(table);
         if (key is "missions" or "org-unit" or "mission-status")
             Assert.Equal(2, table.Totals.Values.First());

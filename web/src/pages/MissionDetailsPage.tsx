@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
-import { faNumber, formatFaDateTime, toFa } from '../lib/date'
+import { faNumber, formatFaDateTime, jalaliOf, tehranHour, toFa } from '../lib/date'
+import { JalaliDateField, jalaliValueToUtc, type JalaliDateValue } from '../components/JalaliDateField'
 import { MISSION_TYPE } from '../lib/labels'
 import type { DriverDto, MissionDetails, VehicleDto } from '../lib/types'
 import { Modal, PageHeader, Spinner, StatusBadge } from '../components/ui'
@@ -27,7 +28,9 @@ export function MissionDetailsPage() {
   const [driverId, setDriverId] = useState('')
   const [vehicleId, setVehicleId] = useState('')
   const [reason, setReason] = useState('')
-  const [newEnd, setNewEnd] = useState('')
+  const [newEnd, setNewEnd] = useState<JalaliDateValue | null>(null)
+  const [newEndHour, setNewEndHour] = useState('')
+  const [extensionYear] = useState(() => jalaliOf(new Date())[0])
   const [odometerStart, setOdometerStart] = useState('')
   const [odometerEnd, setOdometerEnd] = useState('')
 
@@ -106,7 +109,12 @@ export function MissionDetailsPage() {
   }
   if ((m.status === 3 || m.status === 4) && can('missions.extend')) {
     actions.push(
-      <button key="extend" className="btn-ghost" onClick={() => setAction('extend')}>
+      <button key="extend" className="btn-ghost" onClick={() => {
+        const [jy, jm, jd] = jalaliOf(new Date(m.plannedEndAtUtc))
+        setNewEnd({ jy, jm, jd })
+        setNewEndHour(String(tehranHour(m.plannedEndAtUtc)))
+        setAction('extend')
+      }}>
         تمدید
       </button>,
     )
@@ -337,20 +345,26 @@ export function MissionDetailsPage() {
       <Modal open={action === 'extend'} title="تمدید مأموریت" onClose={closeModal}>
         <div className="space-y-4">
           <div>
-            <label className="label">زمان پایان جدید (UTC)</label>
-            <input className="input" dir="ltr" type="datetime-local" value={newEnd} onChange={(e) => setNewEnd(e.target.value)} />
-            <p className="mt-1 text-[11px] text-slate-400">زمان به‌صورت ساعت کامل به وقت تهران ذخیره می‌شود؛ اگر دقیقه وارد کردید گرد می‌شود.</p>
+            <label className="label">زمان پایان جدید (تهران)</label>
+            <JalaliDateField value={newEnd} onChange={setNewEnd} startYear={newEnd?.jy ?? extensionYear} yearsBack={5} yearsForward={2} />
+            <label className="label mt-3" htmlFor="extension-end-hour">ساعت پایان</label>
+            <select id="extension-end-hour" className="input" value={newEndHour} onChange={(e) => setNewEndHour(e.target.value)}>
+              <option value="">ساعت</option>
+              {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{toFa(String(hour).padStart(2, '0'))}</option>)}
+            </select>
+            <p className="mt-1 text-[11px] text-slate-400">تاریخ و ساعت کامل به وقت تهران.</p>
           </div>
           <div>
-            <label className="label">علت تمدید</label>
-            <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} />
+            <label className="label" htmlFor="extension-reason">علت تمدید</label>
+            <input id="extension-reason" className="input" value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           {actionError && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{actionError}</div>}
           <button
             className="btn-primary w-full"
-            disabled={!newEnd || !reason.trim() || act.isPending}
+            disabled={!newEnd || newEndHour === '' || !reason.trim() || act.isPending}
             onClick={() => {
-              const utc = new Date(newEnd).toISOString().replace(/:\d\d\.\d+/, ':00')
+              const utc = jalaliValueToUtc(newEnd, Number(newEndHour))
+              if (!utc) return
               runAction(`/api/missions/${id}/extend`, { newPlannedEndAtUtc: utc, reason })
             }}
           >

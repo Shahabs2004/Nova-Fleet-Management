@@ -23,7 +23,10 @@ public sealed record ReportTableDto(
     IReadOnlyList<IReadOnlyList<object?>> Rows,
     IReadOnlyDictionary<string, object?> Totals,
     DateTimeOffset GeneratedAtUtc,
-    string? Subtitle = null);
+    string? Subtitle,
+    int TotalCount,
+    bool RowsTruncated,
+    int MaxRows);
 
 /// <summary>هشت گزارش مصوب SPEC؛ خروجی Excel و PDF فقط با مجوز صادر می‌شود.</summary>
 public interface IReportService

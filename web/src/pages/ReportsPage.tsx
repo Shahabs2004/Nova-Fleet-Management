@@ -59,19 +59,19 @@ export function ReportsPage() {
     queryFn: () => api.get<{ id: string; name: string; isActive: boolean }[]>('/api/organization-units'),
   })
 
-  const filters = useMemo<ReportFilters>(
-    () => ({
+  const filters = useMemo<ReportFilters>(() => {
+    const toDayStart = jalaliValueToUtc(to, 0)
+    return {
       ...EMPTY_FILTERS,
       fromUtc: jalaliValueToUtc(from, 0),
-      toUtc: jalaliValueToUtc(to, 23),
+      toUtc: toDayStart ? new Date(Date.parse(toDayStart) + DAY_MS).toISOString() : null,
       driverId: driverId || null,
       vehicleId: vehicleId || null,
       type: type ? Number(type) : null,
       organizationalUnit: orgUnit || null,
       status: status ? Number(status) : null,
-    }),
-    [from, to, driverId, vehicleId, type, orgUnit, status],
-  )
+    }
+  }, [from, to, driverId, vehicleId, type, orgUnit, status])
 
   const run = useMutation({
     mutationFn: (key: string) => api.post<ReportTable>(`/api/reports/${key}/run`, filters),
@@ -232,6 +232,11 @@ function ReportTableCard({ table }: { table: ReportTable }) {
           <p className="num mt-0.5">{toFa(table.rows.length)} سطر</p>
         </div>
       </div>
+      {table.rowsTruncated && (
+        <p className="border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs font-medium text-amber-800">
+          نمایش {toFa(table.maxRows)} ردیف اول از مجموع {toFa(table.totalCount)} ردیف
+        </p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>

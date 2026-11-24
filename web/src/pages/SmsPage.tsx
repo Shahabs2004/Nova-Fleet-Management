@@ -26,7 +26,7 @@ export function SmsPage() {
   const summary = useQuery({ queryKey: ['sms-summary', user?.username], queryFn: () => api.get<SmsStatusSummary>('/api/sms/summary') })
 
   const params = new URLSearchParams()
-  if (search) params.set('q', search)
+  if (search) params.set('search', search)
   if (status) params.set('status', status)
   params.set('page', String(page))
   params.set('pageSize', String(pageSize))
