@@ -113,6 +113,87 @@ public sealed class SmsQueueClaimIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Downgrade_RemapsIndeterminateToUnderstoodFailureWithSafeAuditExplanation()
+    {
+        var now = clock.NowUtc;
+        var item = new SmsQueueItem(SmsEventType.ManualTest, "09121112233", "آزمون", "متن", nowUtc: now);
+        item.MarkSending(now);
+        item.MarkIndeterminate("raw-provider-secret", "raw-status", now, "700123");
+        db.SmsQueueItems.Add(item);
+        await db.SaveChangesAsync();
+
+        try
+        {
+            await db.Database.MigrateAsync("20261123201500_AddLoginLockout");
+            await using var connection = new SqlConnection(connectionString);
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
+            var status = await ScalarAsync<int>(connection,
+                "SELECT [Status] FROM [SmsQueueItems] WHERE [Id] = @id", new SqlParameter("@id", item.Id));
+            var lastError = await ScalarAsync<string>(connection,
+                "SELECT [LastError] FROM [SmsQueueItems] WHERE [Id] = @id", new SqlParameter("@id", item.Id));
+            var unknownStatuses = await ScalarAsync<int>(connection,
+                "SELECT COUNT(*) FROM [SmsQueueItems] WHERE [Status] NOT IN (1, 2, 3, 4, 5, 6, 7, 8)");
+
+            Assert.Equal((int)SmsQueueStatus.Failed, status);
+            Assert.Equal(0, unknownStatuses);
+            Assert.Contains("نامشخص", lastError, StringComparison.Ordinal);
+            Assert.Contains("اپراتور", lastError, StringComparison.Ordinal);
+            Assert.DoesNotContain("raw-provider-secret", lastError, StringComparison.Ordinal);
+        }
+        finally
+        {
+            db.ChangeTracker.Clear();
+            await db.Database.MigrateAsync();
+        }
+    }
+
+    [Fact]
+    public async Task ReconciliationRetry_StartsFreshPollingBudgetAndCanDeliver()
+    {
+        var now = clock.NowUtc;
+        var item = new SmsQueueItem(SmsEventType.ManualTest, "09121112233", "آزمون", "متن", nowUtc: now);
+        item.MarkSending(now, (int)SmsGatewayMode.Simulation);
+        item.MarkAccepted("700-old", now);
+        item.RecordDeliveryPoll(now, now.AddSeconds(10));
+        db.SmsQueueItems.Add(item);
+        await db.SaveChangesAsync();
+        await db.SmsQueueItems
+            .Where(row => row.Id == item.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(row => row.Status, IndeterminateStatus)
+                .SetProperty(row => row.NextDeliveryPollAtUtc, (DateTimeOffset?)null)
+                .SetProperty(row => row.LastError, "نتیجه اولیه نامشخص است."));
+        db.ChangeTracker.Clear();
+        var retry = await db.SmsQueueItems.SingleAsync(row => row.Id == item.Id);
+        retry.ReconcileForRetry("اپراتور ارسال مجدد را تأیید کرد.", now);
+        await db.SaveChangesAsync();
+        settings.Values[SettingKeys.SmsMaxPollingAttempts] = "1";
+        using var dispatcherDb = CreateContext();
+        var gateway = new RecordingGateway(() => { },
+            deliveryResult: new SmsDeliveryResult(SmsDeliveryState.Delivered, "Delivered"));
+        var dispatcher = new SmsDispatcher(dispatcherDb, gateway, settings, clock,
+            NullLogger<SmsDispatcher>.Instance);
+
+        Assert.Equal(1, await dispatcher.ProcessQueueAsync(1));
+        var accepted = await ReadStoredAsync(item.Id);
+        Assert.Equal(SmsQueueStatus.Accepted, accepted.Status);
+        Assert.Equal("700123", accepted.ProviderReference);
+        Assert.Equal(now, accepted.AcceptedAtUtc);
+
+        clock.NowUtc = now.AddSeconds(10);
+        Assert.Equal(1, await dispatcher.PollDeliveryAsync(1));
+
+        var delivered = await ReadStoredAsync(item.Id);
+        Assert.Equal(SmsQueueStatus.Delivered, delivered.Status);
+        Assert.Equal(1, delivered.DeliveryPollCount);
+        Assert.Equal(now.AddSeconds(10), delivered.DeliveredAtUtc);
+    }
+
+    [Fact]
     public async Task ProviderTimeoutAfterAcceptance_RecordsIndeterminateAndNeverAutomaticallyResends()
     {
         var item = await SeedAsync();
@@ -184,6 +265,65 @@ public sealed class SmsQueueClaimIntegrationTests : IAsyncLifetime
         await dispatcher.ProcessQueueAsync(1);
 
         Assert.Equal(SmsQueueStatus.Sending, observedStatus);
+    }
+
+    [Fact]
+    public async Task BlockedFirstSend_DoesNotExposeALaterUnstartedItemToStaleRecovery()
+    {
+        var firstItem = await SeedAsync();
+        var secondItem = await SeedAsync(row => row.ScheduleAt(clock.NowUtc.AddSeconds(1)));
+        clock.NowUtc = clock.NowUtc.AddSeconds(1);
+        var originalStart = clock.NowUtc;
+        var firstProviderEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseFirstProvider = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        SmsQueueStatus? secondObservedStatus = null;
+        DateTimeOffset? secondObservedSendStartedAt = null;
+        var recoveredCount = 0;
+        using var dispatcherDb = CreateContext();
+        var gateway = new RecordingGateway(() => { }, beforeResultWithMessage: async message =>
+        {
+            if (message.CorrelationId == firstItem.Id.ToString())
+            {
+                firstProviderEntered.SetResult();
+                await releaseFirstProvider.Task;
+                return;
+            }
+
+            Assert.Equal(secondItem.Id.ToString(), message.CorrelationId);
+            using var observer = CreateContext();
+            var observed = await observer.SmsQueueItems.AsNoTracking()
+                .SingleAsync(row => row.Id == secondItem.Id);
+            secondObservedStatus = observed.Status;
+            secondObservedSendStartedAt = observed.SendStartedAtUtc;
+        });
+        var dispatcher = new SmsDispatcher(dispatcherDb, gateway, settings, clock,
+            NullLogger<SmsDispatcher>.Instance);
+        var processing = dispatcher.ProcessQueueAsync(2);
+
+        try
+        {
+            await firstProviderEntered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            using var recoveryDb = CreateContext();
+            var recoveryDispatcher = new SmsDispatcher(recoveryDb, new RecordingGateway(() => { }),
+                settings, clock, NullLogger<SmsDispatcher>.Instance);
+            clock.NowUtc = originalStart.AddMinutes(11);
+
+            recoveredCount = await recoveryDispatcher.RecoverStaleSendsAsync(10);
+        }
+        finally
+        {
+            releaseFirstProvider.TrySetResult();
+        }
+
+        var processed = await processing.WaitAsync(TimeSpan.FromSeconds(15));
+        Assert.Equal(SmsQueueStatus.Sending, secondObservedStatus);
+        Assert.Equal(originalStart.AddMinutes(11), secondObservedSendStartedAt);
+        Assert.Equal(2, processed);
+        Assert.Equal(1, recoveredCount);
+        Assert.Equal(IndeterminateStatus, (await ReadStoredAsync(firstItem.Id)).Status);
+        var secondStored = await ReadStoredAsync(secondItem.Id);
+        Assert.Equal(SmsQueueStatus.Accepted, secondStored.Status);
+        Assert.Equal(originalStart.AddMinutes(11), secondStored.SendStartedAtUtc);
     }
 
     [Fact]
@@ -338,12 +478,20 @@ public sealed class SmsQueueClaimIntegrationTests : IAsyncLifetime
         public Task<SplitReasonDto> UpdateSplitReasonAsync(Guid id, UpdateSplitReasonRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
-    private sealed class RecordingGateway(Action onSend, Func<Task>? beforeResult = null) : ISmsGateway
+    private sealed class RecordingGateway(
+        Action onSend,
+        Func<Task>? beforeResult = null,
+        Func<SmsOutboundMessage, Task>? beforeResultWithMessage = null,
+        SmsDeliveryResult? deliveryResult = null) : ISmsGateway
     {
         public async Task<SmsSendResult> SendAsync(SmsOutboundMessage message, CancellationToken cancellationToken = default)
         {
             onSend();
-            if (beforeResult is not null)
+            if (beforeResultWithMessage is not null)
+            {
+                await beforeResultWithMessage(message);
+            }
+            else if (beforeResult is not null)
             {
                 await beforeResult();
             }
@@ -352,7 +500,7 @@ public sealed class SmsQueueClaimIntegrationTests : IAsyncLifetime
         }
 
         public Task<SmsDeliveryResult> GetDeliveryStatusAsync(string providerReference, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new SmsDeliveryResult(SmsDeliveryState.Unknown, "TestUnknown"));
+            Task.FromResult(deliveryResult ?? new SmsDeliveryResult(SmsDeliveryState.Unknown, "TestUnknown"));
 
         public Task<SmsBalanceResult> GetBalanceAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult(SmsBalanceResult.Of("0"));

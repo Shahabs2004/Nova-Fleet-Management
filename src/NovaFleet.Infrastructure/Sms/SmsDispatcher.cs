@@ -153,11 +153,19 @@ public sealed class SmsDispatcher(
             1, 24 * 60);
         var configuredMode = await settings.GetValueAsync(SettingKeys.SmsMode, cancellationToken);
         var mode = SmsGatewayModes.Parse(configuredMode);
-        var now = clock.UtcNow;
-        var items = await ClaimAsync(boundedBatch, now, mode, cancellationToken);
+        var processed = 0;
 
-        foreach (var item in items)
+        for (var index = 0; index < boundedBatch; index++)
         {
+            // فقط همین آیتم درست پیش از I/O برداشت می‌شود؛ آیتم‌های بعدی در صف امن می‌مانند.
+            var items = await ClaimAsync(1, clock.UtcNow, mode, cancellationToken);
+            if (items.Count == 0)
+            {
+                break;
+            }
+
+            var item = items[0];
+            processed++;
             try
             {
                 var selectedGateway = SelectGateway(item.GatewayMode);
@@ -199,7 +207,7 @@ public sealed class SmsDispatcher(
             }
         }
 
-        return items.Count;
+        return processed;
     }
 
     public async Task<int> PollDeliveryAsync(int batchSize, CancellationToken cancellationToken = default)
@@ -382,6 +390,8 @@ public sealed class SmsDispatcher(
                     [SendStartedAtUtc] = @now,
                     [NextAttemptAtUtc] = NULL,
                     [NextDeliveryPollAtUtc] = NULL,
+                    [DeliveryPollCount] = 0,
+                    [AcceptedAtUtc] = NULL,
                     [AttemptCount] = [AttemptCount] + 1,
                     [LastAttemptAtUtc] = @now,
                     [UpdatedAtUtc] = @now
@@ -431,8 +441,7 @@ public sealed class SmsDispatcher(
         var reference = providerReference.Trim();
         await referenceDb.SmsQueueItems
             .Where(row => row.Id == id
-                && row.SendStartedAtUtc == sendStartedAtUtc
-                && row.ProviderReference == null)
+                && row.SendStartedAtUtc == sendStartedAtUtc)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(row => row.ProviderReference, reference)
                 .SetProperty(row => row.UpdatedAtUtc, now), cancellationToken);

@@ -128,6 +128,8 @@ public sealed class SmsQueueItem : Entity
         SendStartedAtUtc = nowUtc;
         NextAttemptAtUtc = null;
         NextDeliveryPollAtUtc = null;
+        DeliveryPollCount = 0;
+        AcceptedAtUtc = null;
         AttemptCount++;
         LastAttemptAtUtc = nowUtc;
         UpdatedAtUtc = nowUtc;

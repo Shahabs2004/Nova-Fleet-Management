@@ -51,6 +51,36 @@ public sealed class SmsDispatcherRecoveryTests : MissionTestBase
     }
 
     [Fact]
+    public async Task ReconciledRetry_FinalSaveFailureStillPersistsNewProviderReference()
+    {
+        var now = Clock.UtcNow;
+        var item = new SmsQueueItem(SmsEventType.ManualTest, "09121112233", "آزمون", "متن", nowUtc: now);
+        item.MarkSending(now);
+        item.MarkIndeterminate("نتیجه اولیه نامشخص است.", "timeout", now, "700-old");
+        item.ReconcileForRetry("اپراتور ارسال مجدد را تأیید کرد.", now);
+        Db.SmsQueueItems.Add(item);
+        await Db.SaveChangesAsync();
+        Settings.Values[SettingKeys.SmsEnabled] = bool.TrueString;
+        var saveInterceptor = new ThrowingSaveInterceptor();
+        var failingOptions = new DbContextOptionsBuilder<NovaFleetDbContext>(Options)
+            .AddInterceptors(saveInterceptor)
+            .Options;
+        await using var failingDb = new NovaFleetDbContext(failingOptions);
+        var gateway = new TestGateway(
+            onSend: () => saveInterceptor.FailNext = true,
+            result: SmsSendResult.Success("700-new", "TestAccepted"));
+        var dispatcher = new SmsDispatcher(failingDb, gateway, Settings, Clock,
+            NullLogger<SmsDispatcher>.Instance);
+
+        await dispatcher.ProcessQueueAsync(1);
+
+        var stranded = await Db.SmsQueueItems.AsNoTracking().SingleAsync(row => row.Id == item.Id);
+        Assert.Equal(SmsQueueStatus.Sending, stranded.Status);
+        Assert.Equal("700-new", stranded.ProviderReference);
+        Assert.Equal(1, gateway.SendCount);
+    }
+
+    [Fact]
     public async Task LateProviderResult_DoesNotOverwriteAConcurrentCancellationDecision()
     {
         var item = await SeedAsync();
@@ -122,6 +152,25 @@ public sealed class SmsDispatcherRecoveryTests : MissionTestBase
         Assert.Null(stored.NextAttemptAtUtc);
         Assert.Contains("شناسه", stored.LastError, StringComparison.Ordinal);
         Assert.Equal(1, gateway.SendCount);
+    }
+
+    [Fact]
+    public void MarkSending_ResetsPollingStateFromAnEarlierAttempt()
+    {
+        var now = Clock.UtcNow;
+        var item = new SmsQueueItem(SmsEventType.ManualTest, "09121112233", "آزمون", "متن", nowUtc: now);
+        item.MarkSending(now, (int)SmsGatewayMode.Simulation);
+        item.MarkAccepted("700-old", now);
+        item.RecordDeliveryPoll(now, now.AddHours(24));
+        item.MarkFailed("تلاش دستی لازم است.", now);
+        item.QueueManualRetry(now);
+
+        item.MarkSending(now.AddMinutes(1), (int)SmsGatewayMode.Simulation);
+
+        Assert.Equal(0, item.DeliveryPollCount);
+        Assert.Null(item.AcceptedAtUtc);
+        Assert.Null(item.NextDeliveryPollAtUtc);
+        Assert.Equal("700-old", item.ProviderReference);
     }
 
     [Fact]

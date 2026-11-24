@@ -56,6 +56,16 @@ namespace NovaFleet.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Older applications do not understand status 9; retain a safe audit explanation as terminal failure.
+            migrationBuilder.Sql("""
+                UPDATE [SmsQueueItems]
+                SET [Status] = 6,
+                    [LastError] = N'نتیجه ارسال پیش از بازگشت به نسخه قبلی نامشخص است؛ اپراتور باید پیام را بررسی کند.',
+                    [NextAttemptAtUtc] = NULL,
+                    [UpdatedAtUtc] = SYSDATETIMEOFFSET()
+                WHERE [Status] = 9;
+                """);
+
             migrationBuilder.DropIndex(
                 name: "IX_SmsQueueItems_Status_NextDeliveryPollAtUtc",
                 table: "SmsQueueItems");
