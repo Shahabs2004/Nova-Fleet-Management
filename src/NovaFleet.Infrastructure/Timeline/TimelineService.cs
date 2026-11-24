@@ -59,14 +59,9 @@ public sealed class TimelineService(NovaFleetDbContext db, ICurrentUser currentU
             source = source.Where(item => item.VehicleId == vehicleId.Value);
         }
 
-        var count = await source.CountAsync(cancellationToken);
-        if (count > 2000)
-        {
-            throw new ValidationAppException("تعداد مأموریت‌های تایم‌لاین بیش از ۲۰۰۰ است؛ بازه را محدود کنید.");
-        }
-
-        return await source
+        var items = await source
             .OrderBy(item => item.PlannedStartAtUtc)
+            .Take(2001)
             .Select(item => new TimelineMissionDto(
                 item.Id,
                 item.MissionNumber,
@@ -83,5 +78,11 @@ public sealed class TimelineService(NovaFleetDbContext db, ICurrentUser currentU
                 item.Origin,
                 item.Destination))
             .ToListAsync(cancellationToken);
+        if (items.Count > 2000)
+        {
+            throw new ValidationAppException("تعداد مأموریت‌های تایم‌لاین بیش از ۲۰۰۰ است؛ بازه را محدود کنید.");
+        }
+
+        return items;
     }
 }

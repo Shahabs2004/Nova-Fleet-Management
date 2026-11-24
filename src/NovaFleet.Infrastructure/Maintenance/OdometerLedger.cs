@@ -88,11 +88,8 @@ internal static class OdometerLedger
         }
     }
 
-    public static async Task LockVehicleAsync(NovaFleetDbContext db, Guid vehicleId, CancellationToken ct)
-    {
-        if (db.Database.IsSqlServer())
-            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT [Id] FROM [Vehicles] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = {vehicleId}", ct);
-    }
+    public static Task LockVehicleAsync(NovaFleetDbContext db, Guid vehicleId, CancellationToken ct) =>
+        ResourceLocks.LockVehicleAsync(db, vehicleId, ct);
 
     public static HashSet<Guid> ConflictIds(IEnumerable<VehicleOdometerReading> readings) => Conflicts(readings).Ids;
 

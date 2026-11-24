@@ -371,7 +371,7 @@ public sealed class Mission : Entity
             ActualEndAtUtc = nowUtc;
         }
 
-        DecisionReason = "درخواست انصراف تا پایان زمان برنامه‌ریزی‌شده تعیین تکلیف نشد.";
+        DecisionReason = "درخواست انصراف تا پایان مهلت تعیین‌تکلیف نشد.";
         Status = MissionStatus.Cancelled;
         StatusBeforeWithdrawal = null;
         UpdatedAtUtc = nowUtc;

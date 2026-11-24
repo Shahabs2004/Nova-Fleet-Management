@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
@@ -126,10 +127,22 @@ public sealed class VehicleService(
         CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Vehicles.Manage);
-        var vehicle = await LoadAsync(id, cancellationToken);
-        db.ApplyRowVersion(vehicle, rowVersion);
-        vehicle.ChangeManualStatus(status, await HasActiveMissionAsync(id, cancellationToken));
-        await db.SaveChangesAsync(cancellationToken);
+        Vehicle vehicle;
+        try
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            await ResourceLocks.LockVehicleAsync(db, id, cancellationToken);
+            vehicle = await LoadAsync(id, cancellationToken);
+            db.ApplyRowVersion(vehicle, rowVersion);
+            vehicle.ChangeManualStatus(status, await HasActiveMissionAsync(id, cancellationToken));
+            await db.SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ResourceLocks.IsSqlContention(ex))
+        {
+            throw new ConflictAppException("وضعیت خودرو هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
+        }
+
         await audit.WriteAsync(new AuditRecord("ChangeVehicleStatus", "Vehicle", id.ToString(), "Success", After: new { status }), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -137,22 +150,34 @@ public sealed class VehicleService(
     public async Task<VehicleDto> SetArchivedAsync(Guid id, bool archived, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Vehicles.Manage);
-        var vehicle = await LoadAsync(id, cancellationToken);
-        if (archived)
+        Vehicle vehicle;
+        try
         {
-            if (await HasActiveMissionAsync(id, cancellationToken))
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            await ResourceLocks.LockVehicleAsync(db, id, cancellationToken);
+            vehicle = await LoadAsync(id, cancellationToken);
+            if (archived)
             {
-                throw new ConflictAppException("خودروی دارای مأموریت فعال قابل بایگانی نیست.");
+                if (await HasActiveMissionAsync(id, cancellationToken))
+                {
+                    throw new ConflictAppException("خودروی دارای مأموریت فعال قابل بایگانی نیست.");
+                }
+
+                vehicle.Archive();
+            }
+            else
+            {
+                vehicle.Reactivate();
             }
 
-            vehicle.Archive();
+            await db.SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
         }
-        else
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ResourceLocks.IsSqlContention(ex))
         {
-            vehicle.Reactivate();
+            throw new ConflictAppException("بایگانی خودرو هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
         }
 
-        await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord(archived ? "ArchiveVehicle" : "ReactivateVehicle", "Vehicle", id.ToString(), "Success"), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }

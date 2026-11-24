@@ -516,21 +516,28 @@ public sealed record ReportTableDto(
 - Consumes: existing serializable mission transaction, eligibility checks, lifecycle worker.
 - Produces: withdrawal timing uses `WithdrawalRequestedAtUtc`; timeline accepts at most 31 days and at most 2,000 missions; exact-gap adjacency is valid.
 
-- [ ] **Step 1: Write failing boundary/eligibility tests.** Exact end/start adjacency with zero padding must be allowed; any positive padded overlap must be rejected. Split must reject inactive/ineligible assigned driver or vehicle using the same rules as create. Vehicle archive/status change must fail while an active/future allocation exists.
-- [ ] **Step 2: Run tests and observe failure.** Fix padded comparison to `item.PlannedStartAtUtc < endAtUtc + pad && item.PlannedEndAtUtc > startAtUtc - pad`. Reuse the existing eligibility validator in split.
-- [ ] **Step 3: Write failing concurrency tests.** In a guarded SQL test database, run extension and vehicle archive/status operations concurrently with mission allocation. Assert one operation succeeds and the conflicting operation returns conflict; no inactive/archived resource is allocated.
-- [ ] **Step 4: Implement a shared serializable allocation protocol.** Put extension conflict checks and save in one serializable transaction. Make vehicle status/archive changes use the same locking order and recheck active/future missions before save. Keep transactions short and do not perform external calls inside them.
-- [ ] **Step 5: Write failing withdrawal tests.** Set planned end far in the future but request withdrawal in the past; timeout is calculated from request time. Every new withdrawal must persist `WithdrawalRequestedAtUtc`; the worker never invents a request time from planned end. Legacy rows with null request time are reported for manual review rather than auto-completed.
-- [ ] **Step 6: Add the withdrawal timestamp and bounded worker.** Persist it when withdrawal is requested. Process at most 100 due missions per tick in deterministic order, isolate failures per row, and save each row or small independent batch. Log row ID/error without sensitive payloads.
-- [ ] **Step 7: Add timeline limits.** Validate `fromUtc < toUtc`, maximum inclusive range 31 days, and maximum 2,000 results. Return a Persian validation error with the allowed range rather than silently truncating.
-- [ ] **Step 8: Verify.** Run focused tests, guarded SQL concurrency tests, full backend tests, frontend build/lint, and migration checks. Report any unavailable SQL integration execution honestly.
-- [ ] **Step 9: Report and wait.**
+- [x] **Step 1: Write failing boundary/eligibility tests.** Exact end/start adjacency with zero padding must be allowed; any positive padded overlap must be rejected. Split must reject inactive/ineligible assigned driver or vehicle using the same rules as create. Vehicle archive/status change must fail while an active/future allocation exists.
+- [x] **Step 2: Run tests and observe failure.** Fix padded comparison to `item.PlannedStartAtUtc < endAtUtc + pad && item.PlannedEndAtUtc > startAtUtc - pad`. Reuse the existing eligibility validator in split.
+- [x] **Step 3: Write failing concurrency tests.** In a guarded SQL test database, run extension and vehicle archive/status operations concurrently with mission allocation. Assert one operation succeeds and the conflicting operation returns conflict; no inactive/archived resource is allocated.
+- [x] **Step 4: Implement a shared serializable allocation protocol.** Put extension conflict checks and save in one serializable transaction. Make vehicle status/archive changes use the same locking order and recheck active/future missions before save. Keep transactions short and do not perform external calls inside them.
+- [x] **Step 5: Write failing withdrawal tests.** Set planned end far in the future but request withdrawal in the past; timeout is calculated from request time. Every new withdrawal must persist `WithdrawalRequestedAtUtc`; the worker never invents a request time from planned end. Legacy rows with null request time are reported for manual review rather than auto-completed.
+- [x] **Step 6: Add the withdrawal timestamp and bounded worker.** Persist it when withdrawal is requested. Process at most 100 due missions per tick in deterministic order, isolate failures per row, and save each row or small independent batch. Log row ID/error without sensitive payloads.
+- [x] **Step 7: Add timeline limits.** Validate `fromUtc < toUtc`, maximum inclusive range 31 days, and maximum 2,000 results. Return a Persian validation error with the allowed range rather than silently truncating.
+- [x] **Step 8: Verify.** Run focused tests, guarded SQL concurrency tests, full backend tests, frontend build/lint, and migration checks. Report any unavailable SQL integration execution honestly.
+- [x] **Step 9: Report and continue under the user's autonomous authorization.**
 
 **Acceptance criteria:** Concurrent allocation cannot select conflicting resources; exact-gap adjacency works; split obeys eligibility; archive/status cannot race allocation; worker memory is bounded and one bad row does not block all; withdrawal and timeline time rules are correct.
 
 **Risk:** SQL locking tests require LocalDB and careful transaction isolation. Stage 8 migration ordering must account for the new withdrawal column.
 
 **Dependencies:** Stage 6 validation/transaction helpers. Stage 10 reuses timeline validation but handles frontend date boundaries.
+
+**تأیید مرحله ۷ (۲۰۲۶-۱۱-۲۵):**
+- تخصیص، تمدید، تأیید تغییر و تقسیم اکنون منبع را به ترتیب راننده سپس خودرو و پیش از ردیف مأموریت داخل تراکنش serializable قفل و پس از قفل دوباره اعتبارسنجی می‌کنند؛ وضعیت/بایگانی خودرو و شمارندهٔ کیلومتر از همان primitive مشترک استفاده می‌کنند. تداخل 1205/1222 و concurrency به conflict فارسی/409 تبدیل می‌شود و side effectها پس از commit هستند.
+- پنج آزمون مسابقهٔ LocalDB گذشت؛ چهار حالت پیش از اصلاح RED ثبت شد. فاصلهٔ صفر، صلاحیت بخش دوم، مأموریت آیندهٔ خودرو، زمان انصراف، سقف ۱۰۰ کار در tick، لغو و جداسازی خطای ردیف پوشش داده شدند. رکورد audit ناموفق نیز از tracker detach می‌شود تا SaveChanges بعدی را مسموم نکند.
+- تایم‌لاین حداکثر ۳۱ روز و ۲۰۰۰ نتیجه را با پیام فارسی رد می‌کند؛ مسابقهٔ count/read با یک کوئری `.Take(2001)` بسته شد و آزمون درج ردیف ۲۰۰۱ پیش از خواندن، RED سپس GREEN ثبت کرد.
+- ساخت Release بدون هشدار/خطا انجام شد؛ ۵۴۸ تست واحد و ۱۰۵ تست یکپارچه گذشت و ۱۰ تست SQL موجود login/protected-administrator/maintenance به‌علت نبود محیط guarded skip شدند. آزمون‌های اختصاصی allocation و Stage 6 در همان ۱۰۵ تست هستند؛ EF pending model change نداشت.
+- هیچ SMS واقعی، ورود کاربر، AD واقعی، SQL مشترک/تولیدی یا IIS زنده استفاده نشد. گزارش کامل و محدودیت‌ها در `.superpowers/sdd/2026-11-23-audit-remediation/stage-7-report.md` است؛ کارهای installer و `publish-new/` عمداً از این مرحله کنار ماندند.
 
 ## Stage 8 — Requesting-Group Migration Preservation
 

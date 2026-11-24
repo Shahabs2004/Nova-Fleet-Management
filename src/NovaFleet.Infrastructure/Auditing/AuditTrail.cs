@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Domain.Auditing;
@@ -15,10 +16,11 @@ public sealed class AuditTrail(
 {
     public async Task WriteAsync(AuditRecord record, CancellationToken cancellationToken = default)
     {
+        AuditEntry? entry = null;
         try
         {
             var actor = currentUser.IsAuthenticated ? currentUser.Username : "system";
-            var entry = new AuditEntry(
+            entry = new AuditEntry(
                 actor,
                 record.Action,
                 record.EntityType,
@@ -35,6 +37,9 @@ public sealed class AuditTrail(
         }
         catch (Exception ex)
         {
+            // A failed audit row must not be retried by the next unrelated SaveChanges call.
+            if (entry is not null)
+                db.Entry(entry).State = EntityState.Detached;
             logger.LogError(ex, "ثبت رکورد ممیزی برای {Action} روی {EntityType} ناموفق بود.", record.Action, record.EntityType);
         }
     }

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Data;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
@@ -268,32 +267,30 @@ public sealed class MissionService(
         var now = clock.UtcNow;
         var gap = await GetGapMinutesAsync(cancellationToken);
 
-        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-        var mission = await LoadAsync(id, cancellationToken);
-        var driver = await db.Drivers.FirstOrDefaultAsync(item => item.Id == request.DriverId, cancellationToken)
-            ?? throw new NotFoundAppException("راننده انتخاب‌شده پیدا نشد.");
-        var vehicle = await db.Vehicles.FirstOrDefaultAsync(item => item.Id == request.VehicleId, cancellationToken)
-            ?? throw new NotFoundAppException("خودروی انتخاب‌شده پیدا نشد.");
-
-        if (!driver.CanBeAssignedToMission())
+        Mission mission;
+        Driver driver;
+        Vehicle vehicle;
+        try
         {
-            throw new ConflictAppException("راننده انتخاب‌شده فعال نیست یا بایگانی شده است.");
-        }
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            await ResourceLocks.LockAsync(db, request.DriverId, request.VehicleId, cancellationToken);
+            mission = await LoadAsync(id, cancellationToken);
+            (driver, vehicle) = await LoadEligibleResourcesAsync(request.DriverId, request.VehicleId, cancellationToken);
 
-        if (!vehicle.IsReadyForAssignment)
+            var conflict = await FindConflictAsync(driver.Id, vehicle.Id, mission.PlannedStartAtUtc, mission.PlannedEndAtUtc, gap, mission.Id, cancellationToken);
+            if (conflict is not null)
+            {
+                throw new ConflictAppException($"تخصیص ممکن نیست؛ تداخل با مأموریت {conflict.MissionNumber}. راننده و خودرو باید حداقل {gap} دقیقه فاصله زمانی بین مأموریت‌ها داشته باشند.");
+            }
+
+            Run(() => mission.Approve(driver.Id, vehicle.Id, currentUser.Username, now));
+            await SaveAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ResourceLocks.IsSqlContention(ex))
         {
-            throw new ConflictAppException("خودروی انتخاب‌شده بایگانی شده یا در تعمیرگاه/خارج از سرویس است.");
+            throw new ConflictAppException("این درخواست هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
         }
-
-        var conflict = await FindConflictAsync(driver.Id, vehicle.Id, mission.PlannedStartAtUtc, mission.PlannedEndAtUtc, gap, mission.Id, cancellationToken);
-        if (conflict is not null)
-        {
-            throw new ConflictAppException($"تخصیص ممکن نیست؛ تداخل با مأموریت {conflict.MissionNumber}. راننده و خودرو باید حداقل {gap} دقیقه فاصله زمانی بین مأموریت‌ها داشته باشند.");
-        }
-
-        Run(() => mission.Approve(driver.Id, vehicle.Id, currentUser.Username, now));
-        await SaveAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
 
         await audit.WriteAsync(new AuditRecord("ApproveMission", "Mission", id.ToString(), "Success", Reason: request.Note, After: new { mission.MissionNumber, Driver = driver.DisplayName, Vehicle = vehicle.PlateDisplay }), cancellationToken);
         await NotifyRequesterAsync(mission, "مأموریت تأیید شد", $"مأموریت «{mission.Title}» با شماره {mission.MissionNumber} تأیید و راننده/خودرو تخصیص یافت.", "mission.approved", cancellationToken);
@@ -332,21 +329,49 @@ public sealed class MissionService(
     public async Task<MissionDetailsDto> ExtendAsync(Guid id, MissionExtensionRequest request, CancellationToken cancellationToken = default)
     {
         currentUser.Require(PermissionCatalog.Missions.Extend);
-        var mission = await LoadAsync(id, cancellationToken);
-        var gap = await GetGapMinutesAsync(cancellationToken);
-        if (mission.DriverId.HasValue && mission.VehicleId.HasValue)
+        Mission mission;
+        DateTimeOffset previousEnd = default;
+        try
         {
-            var conflict = await FindConflictAsync(mission.DriverId.Value, mission.VehicleId.Value, mission.PlannedStartAtUtc, request.NewPlannedEndAtUtc, gap, mission.Id, cancellationToken);
-            if (conflict is not null)
+            var allocation = await db.Missions.AsNoTracking()
+                .Where(item => item.Id == id)
+                .Select(item => new { item.DriverId, item.VehicleId })
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new NotFoundAppException("مأموریت پیدا نشد.");
+            var gap = await GetGapMinutesAsync(cancellationToken);
+
+            await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            if (allocation.DriverId.HasValue)
+                await ResourceLocks.LockDriverAsync(db, allocation.DriverId.Value, cancellationToken);
+            if (allocation.VehicleId.HasValue)
+                await ResourceLocks.LockVehicleAsync(db, allocation.VehicleId.Value, cancellationToken);
+
+            mission = await LoadAsync(id, cancellationToken);
+            if (mission.DriverId != allocation.DriverId || mission.VehicleId != allocation.VehicleId)
             {
-                throw new ConflictAppException($"تمدید ممکن نیست؛ تداخل با مأموریت {conflict.MissionNumber}.");
+                throw new ConflictAppException("منابع مأموریت هم‌زمان تغییر کرده‌اند؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
             }
+
+            if (mission.DriverId.HasValue && mission.VehicleId.HasValue)
+            {
+                var conflict = await FindConflictAsync(mission.DriverId.Value, mission.VehicleId.Value, mission.PlannedStartAtUtc, request.NewPlannedEndAtUtc, gap, mission.Id, cancellationToken);
+                if (conflict is not null)
+                {
+                    throw new ConflictAppException($"تمدید ممکن نیست؛ تداخل با مأموریت {conflict.MissionNumber}.");
+                }
+            }
+
+            previousEnd = mission.PlannedEndAtUtc;
+            Run(() => mission.Extend(request.NewPlannedEndAtUtc, request.Reason, clock.UtcNow));
+            await SaveAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ResourceLocks.IsSqlContention(ex))
+        {
+            throw new ConflictAppException("این درخواست هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
         }
 
-        var before = new { mission.PlannedEndAtUtc };
-        Run(() => mission.Extend(request.NewPlannedEndAtUtc, request.Reason, clock.UtcNow));
-        await SaveAsync(cancellationToken);
-        await audit.WriteAsync(new AuditRecord("ExtendMission", "Mission", id.ToString(), "Success", Reason: request.Reason, Before: before, After: new { mission.PlannedEndAtUtc }), cancellationToken);
+        await audit.WriteAsync(new AuditRecord("ExtendMission", "Mission", id.ToString(), "Success", Reason: request.Reason, Before: new { PlannedEndAtUtc = previousEnd }, After: new { mission.PlannedEndAtUtc }), cancellationToken);
         await NotifyRequesterAsync(mission, "مأموریت تمدید شد", $"زمان پایان مأموریت {mission.MissionNumber} تمدید شد.", "mission.extended", cancellationToken);
         await sms.QueueForMissionAsync(id, SmsEventType.MissionChanged, request.Reason, cancellationToken);
         return await ToDetailsAsync(mission, cancellationToken);
@@ -515,15 +540,32 @@ public sealed class MissionService(
         var oldVehicleId = default(Guid?);
         var oldStart = default(DateTimeOffset);
         MissionChangeInput proposed = null!;
-
+        MissionChangeInput? proposedForLock = null;
         try
         {
+            if (approve)
+            {
+                var proposedChange = await db.MissionChangeRequests.AsNoTracking()
+                    .FirstOrDefaultAsync(item => item.Id == changeRequestId && item.MissionId == id, cancellationToken)
+                    ?? throw new NotFoundAppException("درخواست تغییر پیدا نشد.");
+                proposedForLock = JsonSerializer.Deserialize<MissionChangeInput>(proposedChange.ProposedValuesJson, ChangeJson)
+                    ?? throw new ValidationAppException("محتوای درخواست تغییر قابل خواندن نیست.");
+                ValidateProposedResources(proposedForLock);
+            }
+
             await using (var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken))
             {
+                if (proposedForLock is not null)
+                    await ResourceLocks.LockAsync(db, proposedForLock.DriverId!.Value, proposedForLock.VehicleId!.Value, cancellationToken);
+
                 mission = await LoadAsync(id, cancellationToken);
                 change = await LoadChangeAsync(mission, changeRequestId, cancellationToken);
                 proposed = JsonSerializer.Deserialize<MissionChangeInput>(change.ProposedValuesJson, ChangeJson)
                     ?? throw new ValidationAppException("محتوای درخواست تغییر قابل خواندن نیست.");
+                if (approve && (proposed.DriverId != proposedForLock!.DriverId || proposed.VehicleId != proposedForLock.VehicleId))
+                {
+                    throw new ConflictAppException("منابع پیشنهادی هم‌زمان تغییر کرده‌اند؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
+                }
 
                 if (!approve)
                 {
@@ -593,7 +635,7 @@ public sealed class MissionService(
                 }
             }
         }
-        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ContainsSqlContention(ex))
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ResourceLocks.IsSqlContention(ex))
         {
             throw new ConflictAppException("این درخواست هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
         }
@@ -622,62 +664,80 @@ public sealed class MissionService(
     {
         currentUser.Require(PermissionCatalog.Missions.Split);
         var now = clock.UtcNow;
-
         Mission first;
         Mission second;
-        await using (var tx = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, cancellationToken))
+        try
         {
-            first = await LoadAsync(id, cancellationToken);
-            var originalEndAtUtc = first.PlannedEndAtUtc;
-            var secondDriverId = request.SecondDriverId ?? first.DriverId;
-            var secondVehicleId = request.SecondVehicleId ?? first.VehicleId;
+            var allocation = await db.Missions.AsNoTracking()
+                .Where(item => item.Id == id)
+                .Select(item => new { item.DriverId, item.VehicleId })
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new NotFoundAppException("مأموریت پیدا نشد.");
+            var secondDriverId = request.SecondDriverId ?? allocation.DriverId;
+            var secondVehicleId = request.SecondVehicleId ?? allocation.VehicleId;
             if (secondDriverId is null || secondVehicleId is null)
             {
                 throw new ValidationAppException("برای بخش دوم مأموریت، راننده و خودرو باید مشخص باشند.");
             }
 
-            await LoadEligibleResourcesAsync(secondDriverId.Value, secondVehicleId.Value, cancellationToken);
-            var gap = await GetGapMinutesAsync(cancellationToken);
-            var conflict = await FindConflictAsync(secondDriverId.Value, secondVehicleId.Value, request.SplitAtUtc, originalEndAtUtc, gap, first.Id, cancellationToken);
-            if (conflict is not null)
+            await using (var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken))
             {
-                throw new ConflictAppException($"تقسیم ممکن نیست؛ منابع بخش دوم با مأموریت {conflict.MissionNumber} تداخل دارند.");
+                await ResourceLocks.LockAsync(db, secondDriverId.Value, secondVehicleId.Value, cancellationToken);
+                first = await LoadAsync(id, cancellationToken);
+                if (request.SecondDriverId is null && first.DriverId != allocation.DriverId
+                    || request.SecondVehicleId is null && first.VehicleId != allocation.VehicleId)
+                {
+                    throw new ConflictAppException("منابع مأموریت هم‌زمان تغییر کرده‌اند؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
+                }
+
+                var originalEndAtUtc = first.PlannedEndAtUtc;
+                await LoadEligibleResourcesAsync(secondDriverId.Value, secondVehicleId.Value, cancellationToken);
+                var gap = await GetGapMinutesAsync(cancellationToken);
+                var conflict = await FindConflictAsync(secondDriverId.Value, secondVehicleId.Value, request.SplitAtUtc, originalEndAtUtc, gap, first.Id, cancellationToken);
+                if (conflict is not null)
+                {
+                    throw new ConflictAppException($"تقسیم ممکن نیست؛ منابع بخش دوم با مأموریت {conflict.MissionNumber} تداخل دارند.");
+                }
+
+                var stops = first.GetIntermediateStops();
+                Run(() => first.CloseFirstSegmentForSplit(request.SplitAtUtc, request.OdometerEndKm, request.Reason, currentUser.Username, now));
+
+                var secondMissionNumber = await NextMissionNumberAsync(now, cancellationToken);
+                second = Run(() => new Mission(
+                    secondMissionNumber,
+                    first.Title,
+                    first.RequesterUsername,
+                    first.RequesterName,
+                    first.RequesterPhoneSnapshot,
+                    first.RequesterOrganizationalUnit,
+                    first.Type,
+                    first.Purpose,
+                    first.Origin,
+                    first.Destination,
+                    stops,
+                    request.SplitAtUtc,
+                    originalEndAtUtc,
+                    first.Description,
+                    first.PassengerCount,
+                    first.MissionOrderNumber,
+                    first.MissionOrderDate,
+                    first.CargoDescription,
+                    first.ConsigneeName,
+                    first.PassengerNames));
+                Run(() => second.SetResourcesForSplitSegment(secondDriverId.Value, secondVehicleId.Value));
+                if (secondVehicleId != first.VehicleId && request.SecondOdometerStartKm is null)
+                    throw new ValidationAppException("برای خودروی متفاوت، کیلومتر شروع بخش دوم را جداگانه وارد کنید.");
+                Run(() => second.SetOdometerStart(secondVehicleId == first.VehicleId ? request.OdometerEndKm : request.SecondOdometerStartKm!.Value));
+                Run(() => second.MarkAsSecondSplitSegment(first.Id, request.SplitAtUtc, request.Reason, currentUser.Username, now));
+                Run(() => first.SetRelatedMission(second.Id));
+                db.Missions.Add(second);
+                await SaveAsync(cancellationToken);
+                await tx.CommitAsync(cancellationToken);
             }
-
-            var stops = first.GetIntermediateStops();
-            Run(() => first.CloseFirstSegmentForSplit(request.SplitAtUtc, request.OdometerEndKm, request.Reason, currentUser.Username, now));
-
-            var secondMissionNumber = await NextMissionNumberAsync(now, cancellationToken);
-            second = Run(() => new Mission(
-                secondMissionNumber,
-                first.Title,
-                first.RequesterUsername,
-                first.RequesterName,
-                first.RequesterPhoneSnapshot,
-                first.RequesterOrganizationalUnit,
-                first.Type,
-                first.Purpose,
-                first.Origin,
-                first.Destination,
-                stops,
-                request.SplitAtUtc,
-                originalEndAtUtc,
-                first.Description,
-                first.PassengerCount,
-                first.MissionOrderNumber,
-                first.MissionOrderDate,
-                first.CargoDescription,
-                first.ConsigneeName,
-                first.PassengerNames));
-            Run(() => second.SetResourcesForSplitSegment(secondDriverId.Value, secondVehicleId.Value));
-            if (secondVehicleId != first.VehicleId && request.SecondOdometerStartKm is null)
-                throw new ValidationAppException("برای خودروی متفاوت، کیلومتر شروع بخش دوم را جداگانه وارد کنید.");
-            Run(() => second.SetOdometerStart(secondVehicleId == first.VehicleId ? request.OdometerEndKm : request.SecondOdometerStartKm!.Value));
-            Run(() => second.MarkAsSecondSplitSegment(first.Id, request.SplitAtUtc, request.Reason, currentUser.Username, now));
-            Run(() => first.SetRelatedMission(second.Id));
-            db.Missions.Add(second);
-            await SaveAsync(cancellationToken);
-            await tx.CommitAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateConcurrencyException || ResourceLocks.IsSqlContention(ex))
+        {
+            throw new ConflictAppException("این درخواست هم‌زمان با تغییر دیگری روبه‌رو شده است؛ صفحه را تازه‌سازی و دوباره تلاش کنید.");
         }
 
         await audit.WriteAsync(new AuditRecord("SplitMission", "Mission", id.ToString(), "Success", Reason: request.Reason, After: new { First = first.MissionNumber, Second = second.MissionNumber, request.OdometerEndKm }), cancellationToken);
@@ -782,19 +842,6 @@ public sealed class MissionService(
                 : "درخواست تغییر باید خودروی پیشنهادی را شامل شود.";
             throw new ValidationAppException(message);
         }
-    }
-
-    private static bool ContainsSqlContention(Exception exception)
-    {
-        for (Exception? current = exception; current is not null; current = current.InnerException)
-        {
-            if (current is SqlException { Number: 1205 or 1222 })
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private static void EnsureCurrentBaseSnapshot(Mission mission, MissionChangeRequest change)

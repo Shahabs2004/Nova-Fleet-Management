@@ -18,6 +18,8 @@ public sealed class MissionLifecycleWorker(
     private const int MaxDuePerTick = 100;
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
+    private enum LifecycleAction { Start, Complete, CloseWithdrawal }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -31,12 +33,15 @@ public sealed class MissionLifecycleWorker(
                 var audit = scope.ServiceProvider.GetRequiredService<IAuditTrail>();
                 var now = clock.UtcNow;
 
+                var due = new List<(Mission Mission, DateTimeOffset DueAtUtc, LifecycleAction Action)>(MaxDuePerTick * 3);
                 var toStart = await db.Missions
                     .Where(item => item.Status == MissionStatus.Confirmed && item.PlannedStartAtUtc <= now)
                     .OrderBy(item => item.PlannedStartAtUtc)
                     .ThenBy(item => item.Id)
                     .Take(MaxDuePerTick)
                     .ToListAsync(stoppingToken);
+                foreach (var mission in toStart)
+                    due.Add((mission, mission.PlannedStartAtUtc, LifecycleAction.Start));
 
                 var toComplete = await db.Missions
                     .Where(item => item.Status == MissionStatus.Running && item.PlannedEndAtUtc <= now)
@@ -44,6 +49,8 @@ public sealed class MissionLifecycleWorker(
                     .ThenBy(item => item.Id)
                     .Take(MaxDuePerTick)
                     .ToListAsync(stoppingToken);
+                foreach (var mission in toComplete)
+                    due.Add((mission, mission.PlannedEndAtUtc, LifecycleAction.Complete));
 
                 var autoCloseHours = Parse(await settings.GetValueAsync(SettingKeys.WithdrawalAutoCloseHours, stoppingToken), SettingKeys.DefaultWithdrawalAutoCloseHours);
                 var closeBefore = now.AddHours(-autoCloseHours);
@@ -53,9 +60,20 @@ public sealed class MissionLifecycleWorker(
                     .ThenBy(item => item.Id)
                     .Take(MaxDuePerTick)
                     .ToListAsync(stoppingToken);
+                foreach (var mission in toClose)
+                    due.Add((mission, mission.WithdrawalRequestedAtUtc!.Value.AddHours(autoCloseHours), LifecycleAction.CloseWithdrawal));
+
+                var batch = due
+                    .OrderBy(item => item.DueAtUtc)
+                    .ThenBy(item => item.Action)
+                    .ThenBy(item => item.Mission.Id)
+                    .Take(MaxDuePerTick)
+                    .ToList();
 
                 var legacy = await db.Missions
                     .Where(item => item.Status == MissionStatus.WithdrawalPending && item.WithdrawalRequestedAtUtc == null)
+                    .OrderBy(item => item.Id)
+                    .Take(MaxDuePerTick)
                     .ToListAsync(stoppingToken);
                 foreach (var mission in legacy)
                 {
@@ -66,48 +84,34 @@ public sealed class MissionLifecycleWorker(
                 var completed = 0;
                 var closed = 0;
 
-                foreach (var mission in toStart)
+                foreach (var item in batch)
                 {
+                    var mission = item.Mission;
                     try
                     {
-                        mission.StartAutomatically(now);
+                        (Action Mutate, string Audit) operation = item.Action switch
+                        {
+                            LifecycleAction.Start => (() => mission.StartAutomatically(now), "AutoStartMission"),
+                            LifecycleAction.Complete => (() => mission.CompleteAutomatically(now), "AutoCompleteMission"),
+                            LifecycleAction.CloseWithdrawal => (() => mission.AutoCloseExpiredWithdrawal(now), "AutoCloseWithdrawal"),
+                            _ => throw new InvalidOperationException("Unknown mission lifecycle action.")
+                        };
+                        operation.Mutate();
                         await db.SaveChangesAsync(stoppingToken);
-                        await audit.WriteAsync(new AuditRecord("AutoStartMission", "Mission", mission.Id.ToString(), "Success", After: new { mission.MissionNumber }), stoppingToken);
-                        started++;
+                        await audit.WriteAsync(new AuditRecord(operation.Audit, "Mission", mission.Id.ToString(), "Success", After: new { mission.MissionNumber }), stoppingToken);
+                        if (item.Action == LifecycleAction.Start) started++;
+                        else if (item.Action == LifecycleAction.Complete) completed++;
+                        else closed++;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
-                        logger.LogError(ex, "Mission lifecycle worker: failed to auto-start mission {MissionId}.", mission.Id);
-                    }
-                }
-
-                foreach (var mission in toComplete)
-                {
-                    try
-                    {
-                        mission.CompleteAutomatically(now);
-                        await db.SaveChangesAsync(stoppingToken);
-                        await audit.WriteAsync(new AuditRecord("AutoCompleteMission", "Mission", mission.Id.ToString(), "Success", After: new { mission.MissionNumber }), stoppingToken);
-                        completed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Mission lifecycle worker: failed to auto-complete mission {MissionId}.", mission.Id);
-                    }
-                }
-
-                foreach (var mission in toClose)
-                {
-                    try
-                    {
-                        mission.AutoCloseExpiredWithdrawal(now);
-                        await db.SaveChangesAsync(stoppingToken);
-                        await audit.WriteAsync(new AuditRecord("AutoCloseWithdrawal", "Mission", mission.Id.ToString(), "Success", After: new { mission.MissionNumber }), stoppingToken);
-                        closed++;
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Mission lifecycle worker: failed to auto-close withdrawal for mission {MissionId}.", mission.Id);
+                        // A failed mutation must not be retried by the next row's SaveChanges call.
+                        db.Entry(mission).State = EntityState.Detached;
+                        logger.LogError(ex, "Mission lifecycle worker: failed to process mission {MissionId}.", mission.Id);
                     }
                 }
 

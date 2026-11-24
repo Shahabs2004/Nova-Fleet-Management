@@ -299,11 +299,12 @@ public sealed class MissionChangeSnapshotMigrationIntegrationTests : IAsyncLifet
     [MissionChangeSqlFact]
     public async Task UpgradeAndDowngrade_LegacyPendingRequestKeepsDataAndGetsStaleNullableSnapshot()
     {
-        await db.Database.MigrateAsync(PreviousMigration);
         var now = new DateTimeOffset(2026, 11, 24, 8, 0, 0, TimeSpan.FromMinutes(210));
         var mission = NewMission(now);
         db.Missions.Add(mission);
         await db.SaveChangesAsync();
+        await db.Database.MigrateAsync(PreviousMigration);
+        db.ChangeTracker.Clear();
         var changeId = Guid.NewGuid();
         const string proposedJson = "{\"title\":\"legacy proposal\"}";
         await db.Database.ExecuteSqlInterpolatedAsync($"""

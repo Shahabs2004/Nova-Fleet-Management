@@ -43,6 +43,7 @@ public sealed class MissionWithdrawalTimingTests : MissionTestBase
 
         var stored = Reload(confirmed.Id);
         Assert.Equal(MissionStatus.Cancelled, stored.Status);
+        Assert.Equal("درخواست انصراف تا پایان مهلت تعیین‌تکلیف نشد.", stored.DecisionReason);
         Assert.Null(stored.ActualEndAtUtc);
     }
 
