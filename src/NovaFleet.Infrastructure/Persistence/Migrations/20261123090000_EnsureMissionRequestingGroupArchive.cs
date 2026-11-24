@@ -20,11 +20,14 @@ BEGIN
 END
 IF COL_LENGTH(N'dbo.Missions', N'RequestingGroup') IS NOT NULL
 BEGIN
-    INSERT INTO dbo.MissionRequestingGroupArchive (MissionId, RequestingGroup)
-    SELECT m.Id, m.RequestingGroup
-    FROM dbo.Missions m
-    WHERE m.RequestingGroup IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM dbo.MissionRequestingGroupArchive a WHERE a.MissionId = m.Id);
+    -- Dynamic SQL avoids compile-time failure when the historical drop already removed the column.
+    EXEC(N'
+INSERT INTO dbo.MissionRequestingGroupArchive (MissionId, RequestingGroup)
+SELECT m.Id, m.RequestingGroup
+FROM dbo.Missions m
+WHERE m.RequestingGroup IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM dbo.MissionRequestingGroupArchive a WHERE a.MissionId = m.Id);
+');
 END
 ");
         }

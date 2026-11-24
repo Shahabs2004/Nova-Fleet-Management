@@ -547,7 +547,8 @@ public sealed record ReportTableDto(
 - Modify: `src/NovaFleet.Infrastructure/Persistence/Migrations/20261115091010_DropMissionRequestingGroupOptionalPurpose.cs`
 - Modify the original drop migration so fresh upgrades archive before dropping
 - Create: `20261123090000_EnsureMissionRequestingGroupArchive.cs` for databases that already applied the old drop; it conditionally creates an empty archive when the column is absent and otherwise creates/copies it, without failing on either schema
-- Modify: `src/NovaFleet.Infrastructure/Persistence/Migrations/NovaFleetDbContextModelSnapshot.cs`
+- Create: `20261123090000_EnsureMissionRequestingGroupArchive.Designer.cs` so EF discovers the compatibility migration and uses the preceding model snapshot
+- Verify: `src/NovaFleet.Infrastructure/Persistence/Migrations/NovaFleetDbContextModelSnapshot.cs`; the archive remains migration-only raw SQL, so no model snapshot diff is required
 - Create: `tests/NovaFleet.IntegrationTests/MissionRequestingGroupMigrationTests.cs` (LocalDB only)
 - Update the existing migration snapshot/generator output through EF tooling where available
 - Modify: `README.md` only with verified rollback limitations
@@ -556,20 +557,27 @@ public sealed record ReportTableDto(
 - Consumes: EF migrations, isolated LocalDB test database.
 - Produces: archive table keyed by `MissionId`; rollback restores archived values when present, backfills empty `Purpose`, and only then removes the archive.
 
-- [ ] **Step 1: Create a guarded LocalDB migration test.** Use a unique database name matching `^NovaFleet_Migration_Test_[a-f0-9]{32}$` and require `(localdb)\MSSQLLocalDB`. Apply migrations only through the pre-drop version, insert missions with non-null and null group/purpose values, then upgrade and rollback.
-- [ ] **Step 2: Run the test and observe failure.** The current rollback should either fail on NULL `Purpose` or lose the group.
-- [ ] **Step 3: Archive inside the original drop migration.** Before `DropColumn`, create `MissionRequestingGroupArchive` with primary key `MissionId` and `INSERT ... SELECT` non-null `RequestingGroup` values. This protects fresh upgrades and databases that have not yet applied the drop.
-- [ ] **Step 4: Add the compatibility migration for already-dropped databases.** In `20261123090000_EnsureMissionRequestingGroupArchive`, use SQL `COL_LENGTH`/object checks: if `Missions.RequestingGroup` exists, create the archive if absent and copy values; if the column is absent, create only an empty archive. Its `Down` is a no-op so the original migration's rollback can still restore from the archive. Never insert a new earlier migration ID that would run after an already-applied drop and reference a missing column.
-- [ ] **Step 5: Repair rollback.** Backfill `Purpose=''` where NULL; restore `RequestingGroup` from archive where available; make `Purpose` non-null; drop the archive only after restoration. Keep rollback deterministic and idempotent within EF's migration transaction.
-- [ ] **Step 6: Test both upgrade paths and rollback.** From a pre-drop schema, assert archive values exist after upgrade and rollback restores them with NULL purposes backfilled. From a schema that already applied the old drop, assert the compatibility migration succeeds with an empty archive. Document that already-lost values cannot be reconstructed without backup/audit data.
-- [ ] **Step 7: Verify.** Run the guarded migration test, model/build checks, full backend tests, and inspect generated SQL. Never run against the organization database.
-- [ ] **Step 8: Report and wait.**
+- [x] **Step 1: Create a guarded LocalDB migration test.** Use a unique database name matching `^NovaFleet_Migration_Test_[a-f0-9]{32}$` and require `(localdb)\MSSQLLocalDB`. Apply migrations only through the pre-drop version, insert missions with non-null and null group/purpose values, then upgrade and rollback.
+- [x] **Step 2: Run the test and observe failure.** The current rollback should either fail on NULL `Purpose` or lose the group.
+- [x] **Step 3: Archive inside the original drop migration.** Before `DropColumn`, create `MissionRequestingGroupArchive` with primary key `MissionId` and `INSERT ... SELECT` non-null `RequestingGroup` values. This protects fresh upgrades and databases that have not yet applied the drop.
+- [x] **Step 4: Add the compatibility migration for already-dropped databases.** In `20261123090000_EnsureMissionRequestingGroupArchive`, use SQL `COL_LENGTH`/object checks: if `Missions.RequestingGroup` exists, create the archive if absent and copy values; if the column is absent, create only an empty archive. Its `Down` is a no-op so the original migration's rollback can still restore from the archive. Never insert a new earlier migration ID that would run after an already-applied drop and reference a missing column.
+- [x] **Step 5: Repair rollback.** Backfill `Purpose=''` where NULL; restore `RequestingGroup` from archive where available; make `Purpose` non-null; drop the archive only after restoration. Keep rollback deterministic and idempotent within EF's migration transaction.
+- [x] **Step 6: Test both upgrade paths and rollback.** From a pre-drop schema, assert archive values exist after upgrade and rollback restores them with NULL purposes backfilled. From a schema that already applied the old drop, assert the compatibility migration succeeds with an empty archive. Document that already-lost values cannot be reconstructed without backup/audit data.
+- [x] **Step 7: Verify.** Run the guarded migration test, model/build checks, full backend tests, and inspect generated SQL. Never run against the organization database.
+- [x] **Step 8: Report and continue under the user's autonomous authorization.**
 
 **Acceptance criteria:** Future upgrades preserve requesting-group history; rollback succeeds and restores available values; limitations for already-upgraded installations are explicit; test database guard is unchanged in strength.
 
 **Risk:** Editing an already-applied migration protects fresh/pre-drop databases but cannot recreate lost values on installations that already applied the old drop. The compatibility migration creates an empty archive for those installations; historical recovery requires backup and must not be overclaimed.
 
 **Dependencies:** None. Stage 9 installer backup must include the archive table automatically through SQL backup.
+
+**تأیید مرحله ۸ (۲۰۲۶-۱۱-۲۵):**
+- چهار آزمون guarded LocalDB گذشت: نصب تازه/pre-drop، نصب قدیمی با ستون حذف‌شده، تاریخچهٔ Stage 2/5 بدون migration سازگاری، و ستون هنوز موجود با کپی مقادیر غیرخالی. rollback مقادیر archive را بازمی‌گرداند، `Purpose` خالی را backfill می‌کند و archive را تنها پس از restore حذف می‌کند.
+- دو RED ثبت شد: نبود designer باعث اجرا نشدن migration سازگاری می‌شد و batch مشترک `ALTER TABLE ADD`/`UPDATE` در SQL Server با `Invalid column name 'RequestingGroup'` می‌شکست. designer اضافه شد، rollback به batchهای جدا تقسیم شد و شرط ستون غایب با dynamic SQL از خطای compile-time جلوگیری کرد.
+- اسکریپت‌های ارتقا و برگشت تولید و بررسی شدند؛ هیچ `USE`، ساخت/حذف دیتابیس، ارجاع به `master`، `NovaFleetDb` یا سرور سازمان در آن‌ها نیست. EF هیچ pending model change نداشت و migration سازگاری در فهرست migrations دیده می‌شود.
+- ساخت Release بدون خطا/هشدار انجام شد؛ ۵۴۸ تست واحد و ۱۰۹ تست یکپارچه گذشت و ۱۰ تست SQL موجود login/protected-administrator/maintenance به‌علت نبود محیط guarded skip شدند. README محدودیت بازیابی مقادیر از دست‌رفتهٔ نصب‌های قدیمی را صریح می‌کند.
+- هیچ SQL مشترک/تولیدی، IIS زنده، ورود کاربر، SMS واقعی یا AD واقعی استفاده نشد. گزارش کامل در `.superpowers/sdd/2026-11-23-audit-remediation/stage-8-report.md` است؛ تغییرات installer و `publish-new/` عمداً کنار ماندند.
 
 ## Stage 9 — Reproducible, Recoverable Production Installer
 

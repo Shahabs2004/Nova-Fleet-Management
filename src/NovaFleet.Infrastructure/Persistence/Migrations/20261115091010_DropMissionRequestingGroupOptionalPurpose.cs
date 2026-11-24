@@ -43,20 +43,23 @@ WHERE m.RequestingGroup IS NOT NULL
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Separate batches: SQL Server resolves columns before a conditional ALTER TABLE executes.
+            migrationBuilder.Sql("UPDATE dbo.Missions SET Purpose = N'' WHERE Purpose IS NULL;");
             migrationBuilder.Sql(@"
-UPDATE dbo.Missions SET Purpose = N'' WHERE Purpose IS NULL;
 IF COL_LENGTH(N'dbo.Missions', N'RequestingGroup') IS NULL
 BEGIN
     ALTER TABLE dbo.Missions ADD RequestingGroup nvarchar(200) NULL;
 END
+");
+            migrationBuilder.Sql(@"
 IF OBJECT_ID(N'dbo.MissionRequestingGroupArchive', N'U') IS NOT NULL
 BEGIN
     UPDATE m SET m.RequestingGroup = a.RequestingGroup
     FROM dbo.Missions m
     INNER JOIN dbo.MissionRequestingGroupArchive a ON a.MissionId = m.Id;
 END
-UPDATE dbo.Missions SET RequestingGroup = N'' WHERE RequestingGroup IS NULL;
 ");
+            migrationBuilder.Sql("UPDATE dbo.Missions SET RequestingGroup = N'' WHERE RequestingGroup IS NULL;");
 
             migrationBuilder.AlterColumn<string>(
                 name: "Purpose",
