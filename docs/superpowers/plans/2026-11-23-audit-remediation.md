@@ -347,10 +347,12 @@ public sealed record ReportTableDto(
 **Dependencies:** None. Stage 10 consumes `MissionVisibility.Apply`.
 
 **تأیید مرحله ۳ (۲۰۲۶-۱۱-۲۴):**
-- شواهد RED به‌ارث‌رسیده شامل ۱۴ شکست انتظار شده برای دسترسی own-only و یک regression داشبورد (Expected `0`، Actual `1`) بود؛ پس از اصلاح، تست‌های متمرکز visibility و رگرسیون GREEN شدند.
-- ساخت Debug و Release با SDK نصب‌شده `11.0.100` بدون هشدار/خطا انجام شد؛ در هر پیکربندی ۴۲۸ تست واحد و ۷۶ تست یکپارچه گذشت و ۱۰ تست به‌علت نبود متغیرهای SQL محیطی skip شدند.
-- `npm test` در `web/` با ۱۵/۱۵ تست سبز شد. lint کامل ۰ خطا و ۶ هشدار موجود و نامرتبط داشت؛ ۲۲ فایل تغییرکرده Stage 3 با lint بر اساس فهرست صریح، ۰ هشدار/۰ خطا داشتند. `npm run build` موفق بود و فقط هشدار قبلی chunk بزرگ را نشان داد.
-- فقط HTTP 401 پاک‌سازی احراز هویت را فعال می‌کند؛ خطای شبکه/403/500 کاربر را حفظ می‌کند. خروج، 401 و تغییر حساب پس از `cancelQueries()` کش را `clear()` می‌کنند و `setup-status` بدون scope عمومی باقی ماند. هیچ ورود واقعی، SMS واقعی، دیتابیس production یا IIS زنده استفاده نشد.
+- شواهد RED شامل ۱۴ شکست انتظار شده برای دسترسی own-only، یک regression داشبورد (Expected `0`، Actual `1`) و اجرای کامل تست‌های فرانت‌اند روی base پیش از Stage 3 بود؛ در اجرای base، ۱۲ تست از ۱۳ تست auth/cache و query-key شکست خوردند و فقط کنترل مثبت same-user موفق بود. تست file-download 401 نیز روی base شکست خورد.
+- بازبینی مستقل دو-round انجام شد. یافتن‌های refresh حساب، ساعت‌های freeze‌شده، RED ناقص و assertion ناقص PDF رفع شدند؛ mutation-proof ثابت کرد assertion mission-status نشت approved=1/pending=2/total=3 را می‌گیرد. بازبینی نهایی بدون finding Critical/Important تأیید شد.
+- تأیید نهایی تازه با SDK نصب‌شده `11.0.100`: ساخت Debug و Release بدون هشدار/خطا؛ در هر پیکربندی ۴۲۸ تست واحد و ۷۷ تست یکپارچه گذشت و ۱۰ تست به‌علت نبود متغیرهای SQL محیطی skip شدند.
+- `npm test` در `web/` با ۱۷/۱۷ تست سبز شد. lint کامل ۰ خطا و ۶ هشدار موجود و نامرتبط داشت؛ فایل‌های تغییرکرده Stage 3 بدون هشدار/خطا lint شدند. `npm run build` موفق بود و فقط هشدار قبلی chunk بزرگ را نشان داد.
+- فقط HTTP 401 پاک‌سازی احراز هویت را فعال می‌کند؛ خطای شبکه/403/500 کاربر را حفظ می‌کند. خروج، 401 و تغییر حساب از جمله تغییر مشاهده‌شده در `refresh()` پس از `cancelQueries()` کش را `clear()` می‌کنند و `setup-status` بدون scope عمومی باقی ماند. هیچ ورود واقعی، SMS واقعی، دیتابیس production یا IIS زنده استفاده نشد.
+- کامیت‌های Stage 3: `15df70e` (پیاده‌سازی)، `5247c11` (رفع یافتن‌های round اول) و `fe52c51` (تقویت شواهد و assertion‌های round دوم).
 
 ## Stage 4 — Atomic Service Settings and Recipient Semantics
 
