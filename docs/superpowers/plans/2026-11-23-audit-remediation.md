@@ -599,20 +599,28 @@ public sealed record ReportTableDto(
 - Consumes: existing upgrade journal, backup/restore and verification middleware from pre-existing work.
 - Produces: production requires an existing trusted certificate thumbprint in the local machine store and creates an HTTPS binding; HTTP is either absent or redirects to HTTPS. Fresh install uses the same prepare/finish/recover journal model as upgrade. `AllowInsecureHttp` is not a production option.
 
-- [ ] **Step 1: Extend the mock installer tests first.** Add cases for Production environment, missing certificate thumbprint, HTTPS binding, fresh-install failure recovery, obsolete-file cleanup, and preserved configuration/data. Run and observe new cases fail.
-- [ ] **Step 2: Implement HTTPS-only production setup.** Require `CertificateThumbprint`; validate the certificate exists in `LocalMachine\My`, has a private key, is not expired, and covers the hostname used by the installer. Create the IIS HTTPS binding and `netsh` SSL binding for the selected port, and change health checks to `https://<certificate-hostname>:<port>/health` with normal certificate validation against the trusted certificate store. Do not silently fall back to HTTP. Open setup on the server using the certificate hostname; remote administration uses an approved remote-desktop/admin path.
-- [ ] **Step 3: Add fresh-install recovery.** Reuse the existing journal structure for file copy, IIS creation, configuration write, and verification. On pre-acceptance failure, restore/remove only resources created by this installer and restore prior files. Never delete an existing unrelated site or pool.
-- [ ] **Step 4: Clean obsolete upgrade payload files safely.** Compare an explicit installer-owned file manifest from the previous and new package; remove only obsolete installer-owned files after backup and verification preparation. Never remove `data`, `.novafleet`, logs, configuration, user uploads, or `app_offline.htm`.
-- [ ] **Step 5: Make builds clean/reproducible.** Remove `installer/stage` before publish, use `npm ci` consistently, restore/build/test before packaging, run both installer test scripts, and fail on any error. Do not run integration tests against an unavailable database as if they passed; report the environment requirement.
-- [ ] **Step 6: Ignore generated publish output.** Add `publish-new/` to `.gitignore` without deleting the user's existing output.
-- [ ] **Step 7: Verify.** Run `installer/Test-Upgrade.ps1`, guarded `installer/Test-UpgradeSql.ps1`, `installer/build.ps1` when prerequisites are available, and inspect the generated `web.config`/package manifest. Do not install to the live IIS site.
-- [ ] **Step 8: Report and wait.**
+- [x] **Step 1: Extend the mock installer tests first.** Add cases for Production environment, missing certificate thumbprint, HTTPS binding, fresh-install failure recovery, obsolete-file cleanup, and preserved configuration/data. Run and observe new cases fail.
+- [x] **Step 2: Implement HTTPS-only production setup.** Require `CertificateThumbprint`; validate the certificate exists in `LocalMachine\My`, has a private key, is not expired, and covers the hostname used by the installer. Create the IIS HTTPS binding and `netsh` SSL binding for the selected port, and change health checks to `https://<certificate-hostname>:<port>/health` with normal certificate validation against the trusted certificate store. Do not silently fall back to HTTP. Open setup on the server using the certificate hostname; remote administration uses an approved remote-desktop/admin path.
+- [x] **Step 3: Add fresh-install recovery.** Reuse the existing journal structure for file copy, IIS creation, configuration write, and verification. On pre-acceptance failure, restore/remove only resources created by this installer and restore prior files. Never delete an existing unrelated site or pool.
+- [x] **Step 4: Clean obsolete upgrade payload files safely.** Compare an explicit installer-owned file manifest from the previous and new package; remove only obsolete installer-owned files after backup and verification preparation. Never remove `data`, `.novafleet`, logs, configuration, user uploads, or `app_offline.htm`.
+- [x] **Step 5: Make builds clean/reproducible.** Remove `installer/stage` before publish, use `npm ci` consistently, restore/build/test before packaging, run both installer test scripts, and fail on any error. Do not run integration tests against an unavailable database as if they passed; report the environment requirement.
+- [x] **Step 6: Ignore generated publish output.** Add `publish-new/` to `.gitignore` without deleting the user's existing output.
+- [x] **Step 7: Verify.** Run `installer/Test-Upgrade.ps1`, guarded `installer/Test-UpgradeSql.ps1`, `installer/build.ps1` when prerequisites are available, and inspect the generated `web.config`/package manifest. Do not install to the live IIS site.
+- [x] **Step 8: Report and wait.**
 
 **Acceptance criteria:** Production never silently starts HTTP/Development; certificate absence fails clearly; fresh failure restores prior state; upgrade removes only known obsolete files; clean stage builds reproducibly; existing upgrade work and test guards remain intact.
 
 **Risk:** HTTPS requires a certificate before installation. This is an intentional security requirement; the stage report must state supported certificate preparation and must not claim a self-signed fallback is trusted.
 
 **Dependencies:** Stage 1 Production template. Stage 12 adds CI enforcement around these scripts.
+
+**تأیید مرحله ۹ (۲۰۲۶-۱۱-۲۵):**
+- نصب تازه و ارتقا فقط HTTPS با گواهی معتبر `LocalMachine\My`، private key، تاریخ اعتبار و تطبیق DNS/SAN دارند؛ health check بدون fallback و با اعتماد TLS انجام می‌شود. journal نصب تازه پیش از کپی فایل‌ها ساخته می‌شود و recovery فقط payload دارای length/SHA-256 معتبر را حذف می‌کند.
+- manifest صریح قدیمی/جدید، prune امن فایل‌های obsolete، بازیابی thumbprint قبلی و حفظ config/data/logs/uploads آزمایش شد؛ بازبینی خود نیز نقص باقی‌ماندن SSL binding هنگام uninstall را با تست RED/GREEN بست.
+- بازبینی نهایی، ساخت سایت تازه را مستقیماً با `New-Website -Ssl -HostHeader` و بدون binding موقت HTTP کرد. همچنین همهٔ ورودی‌های تکراری `ASPNETCORE_ENVIRONMENT`/`DOTNET_ENVIRONMENT` به Production و همهٔ پرچم‌های تکراری verification هنگام پذیرش حذف می‌شوند تا یک ورودی دیرتر تنظیمات امن را بازنویسی نکند.
+- پیش از stop IIS، کپی فایل یا backup SQL، هش همهٔ فایل‌های متعلق به manifest نسخهٔ نصب‌شده بررسی می‌شود؛ فایل مفقود/تغییرکرده ارتقا را پیش از ساخت backup متوقف می‌کند. تشخیص SSL binding و firewall rule نیز به‌جای متن محلی‌شدهٔ `netsh` به exit code تکیه می‌کند.
+- آزمون mock نصاب ۲۴۰ بررسی سبز، آزمون guarded LocalDB سبز، `npm ci` با ۰ vulnerability، build Release با ۰ هشدار/خطا، ۵۴۸ تست واحد و ۹۵ تست یکپارچه گذشت؛ ۲۳ تست SQL وابسته به محیط skip شدند و به‌عنوان passed گزارش نمی‌شوند.
+- manifest نهایی ۵۶۱ فایل با ۰ فایل مفقود و ۰ hash mismatch، تطبیق hash اسکریپت‌های payload و config رندرشدهٔ Production/HTTPS بررسی شد؛ ISCC نسخهٔ ۱.۱.۰ را در ۵۶٫۳۵۹ ثانیه و بدون هشدار ساخت. IIS/`netsh` زنده، گواهی واقعی، SQL مشترک/تولیدی، ورود کاربر، AD و پیامک واقعی آزمایش نشدند.
 
 ## Stage 10 — Spreadsheet Safety, Report Totals, and UI/API Contracts
 

@@ -50,6 +50,7 @@ RegisterPersianFont();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables("NOVAFLEET_");
+var installerVerification = Environment.GetEnvironmentVariable("NOVAFLEET_INSTALLER_VERIFY") == "1";
 
 var bootstrap = new JsonBootstrapConfigurationStore();
 var connectionString = ResolveConnectionString(builder.Configuration, bootstrap);
@@ -144,8 +145,8 @@ builder.Services.AddScoped<ITimelineService, TimelineService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 
-// در حالت نصاب (بدون رشته اتصال) workerها به پایگاه داده نیاز دارند و ساخته نمی‌شوند.
-if (!string.IsNullOrWhiteSpace(connectionString))
+// Verification must not dispatch SMS or change operational data before the installer commits the upgrade.
+if (!installerVerification && !string.IsNullOrWhiteSpace(connectionString))
 {
     builder.Services.AddHostedService<SmsQueueWorker>();
     builder.Services.AddHostedService<MissionLifecycleWorker>();
@@ -157,6 +158,11 @@ var app = builder.Build();
 if (!string.IsNullOrWhiteSpace(connectionString))
 {
     await InitializeDatabaseAsync(app);
+}
+
+if (installerVerification)
+{
+    app.UseMiddleware<InstallerVerificationMiddleware>();
 }
 
 app.UseMiddleware<ApiExceptionHandlerMiddleware>();
@@ -180,7 +186,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapApiEndpoints();
-app.MapGet("/health", () => Results.Ok(new { status = "ok", time = DateTimeOffset.UtcNow }));
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    time = DateTimeOffset.UtcNow,
+    version = typeof(Program).Assembly.GetName().Version?.ToString(),
+    installerVerification,
+    databaseConfigured = !string.IsNullOrWhiteSpace(connectionString)
+}));
 
 if (Directory.Exists(Path.Combine(app.Environment.ContentRootPath, "wwwroot")))
 {

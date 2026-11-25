@@ -531,17 +531,72 @@ Vite مسیر `/api` را به `http://localhost:5192` پروکسی می‌کن�
 
 ## نصب‌و‌اجرا‌در‌محیط‌عملیاتی
 
-```bash
-cd web && npm run build          # خروجی: web/dist  (tsc -b && vite build)
-cp -r dist ../src/NovaFleet.Api/wwwroot   # پیش از publish
-dotnet publish src/NovaFleet.Api -c Release -o ./publish
+**نصب پیشنهادی با Setup و IIS است.** پیش از ساخت، SDK همان `global.json`، Node.js و Inno Setup 6 لازم است:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
 ```
 
-`Program.cs` تنها در صورتی از فرانت‌اند سرو می‌کند که پوشه `wwwroot` کنار API وجود داشته باشد؛ در آن حالت `UseDefaultFiles` + `UseStaticFiles` + `MapFallbackToFile("index.html")` فعال می‌شود و **یک‌دامنه‌ای** کار می‌کند: API و UI روی یک پورت، بدون نیاز به CORS. برای جداسازی، `Cors:AllowedOrigins` را روی آدرس دقیق فرانت‌اند تنظیم کنید.
+این اسکریپت `npm ci` را اجرا می‌کند، فرانت‌اند را می‌سازد، restore/build و تست‌های واحد و یکپارچه را انجام می‌دهد، هر دو آزمون نصاب را اجرا می‌کند، پوشه `installer/stage` را از صفر می‌سازد و manifest فایل‌های payload را تولید می‌کند. خروجی نهایی `installer/output/NovaFleet-Setup-<version>.exe` است. آزمون SQL نصاب فقط یک پایگاه موقت و ساختگی LocalDB می‌سازد؛ تست‌های SQL یکپارچهٔ وابسته به محیط، فقط با متغیرهای صریح پایگاه آزمایشی اجرا می‌شوند و در غیر این صورت skip گزارش می‌شوند.
 
-سپس `publish/NovaFleet.Api.exe` را به‌عنوان سرویس ویندوز یا زیر IIS اجرا کنید. اگر API و فرانت‌اند جداگانه مستقر می‌شوند، هر دو باید پشت HTTPS و زیر یک دامنه باشند تا کوکی نشست و هدر CSRF درست کار کنند.
+برای اجرای کامل ۹ تست SQL صف پیامک، پیش از ساخت متغیر زیر را فقط برای همان فرایند تنظیم کنید. این مقادیر مخصوص LocalDB و پایگاه آزمایشی‌اند و هرگز نباید به SQL Server سازمان اشاره کنند:
 
-**HTTPS در تولید اجباری است.** هر محیطی جز `Development` (یعنی وقتی `ASPNETCORE_ENVIRONMENT` روی `Development` نیست) با `UseHsts()` + `UseHttpsRedirection()` بالا می‌آید و کوکی نشست پرچم `Secure` می‌گیرد؛ پس باید یک اندپوینت `https` واقعی وجود داشته باشد — گره HTTPS در IIS یا `ASPNETCORE_URLS` شامل `https://host:port` با گواهی معتبر (برای تست داخلی `dotnet dev-certs https --trust`). بدون آن، درخواست‌های `http` تغییر مسیر می‌خورند ولی به جایی نمی‌رسند و ورود هیچ‌وقت کوکی نمی‌گیرد. اگر شبکه داخلی عمداً بدون TLS کار می‌کند، تنها راه همان `ASPNETCORE_ENVIRONMENT=Development` است؛ این تصمیم را آگاهانه بگیرید.
+```powershell
+$env:NOVAFLEET_SMS_TEST_SQL = 'Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_SmsQueue_Test_20261124'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
+```
+
+### گواهی HTTPS پیش‌نیاز است
+
+قبل از اجرای Setup، یک گواهی **معتبر و مورد اعتماد کلاینت‌ها** باید در `LocalMachine\My` ویندوز وجود داشته باشد، کلید خصوصی قابل استفاده داشته باشد و تاریخ اعتبارش باز باشد. نام DNS در SAN گواهی باید دقیقاً با hostname انتخابی یا wildcard تک‌برچسب آن یکی باشد. برای گواهی داخلی، ریشهٔ CA سازمان هم باید روی کلاینت‌ها نصب و مورد اعتماد باشد. Setup گواهی self-signed را خودکار اعتماد نمی‌کند و جایگزین HTTP بدون TLS ندارد.
+
+thumbprint را بدون نمایش کلید خصوصی از همین‌جا بردارید:
+
+```powershell
+Get-ChildItem Cert:\LocalMachine\My |
+  Where-Object { $_.HasPrivateKey -and $_.NotAfter -gt (Get-Date) } |
+  Select-Object Subject, DnsNameList, NotAfter, Thumbprint
+```
+
+در نصب تازه، نام سایت، پورت HTTPS (پیش‌فرض ۴۴۳)، hostname گواهی و thumbprint چهل‌رقمی hexadecimal را در Setup وارد کنید. Setup فقط binding HTTPS می‌سازد، فایروال را فقط برای همان پورت باز می‌کند و پس از بررسی سلامت، `https://<hostname>:<port>/setup` را روی سرور باز می‌کند. برای مدیریت از راه دور از مسیر مجاز Remote Desktop/مدیریت سرور استفاده کنید؛ HTTP عمومی را به‌عنوان جایگزین باز نکنید.
+
+اجرای silent نصب تازه:
+
+```powershell
+.\NovaFleet-Setup-1.0.0.exe /VERYSILENT /SITENAME=NovaFleet /PORT=443 `
+  /HOSTNAME=fleet.example.test /CERTIFICATETHUMBPRINT=40_HEX_DIGITS
+```
+
+برای ارتقا، همان Setup را روی نصب ثبت‌شده اجرا کنید. نام سایت، پورت و hostname ثبت‌شده حفظ می‌شوند؛ thumbprint جدید می‌تواند برای تمدید گواهی داده شود. گواهی جدید پیش از health check روی binding HTTPS موجود اعمال می‌شود و اگر verify شکست بخورد، thumbprint قبلی بازیابی می‌شود. ارتقا به مجوز backup SQL Server، فضای دیسک و manifest نصب‌شده `NovaFleet.payload.json` نیاز دارد. نصب‌های قدیمی بدون این manifest به‌صورت خودکار قابل prune نیستند، چون مالکیت فایل‌های قدیمی قابل اثبات نیست؛ ابتدا inventory و manifest بستهٔ Verified را برای آن‌ها ثبت کنید.
+
+`Program.cs` تنها در صورتی از فرانت‌اند سرو می‌کند که پوشه `wwwroot` کنار API وجود داشته باشد؛ در آن حالت `UseDefaultFiles` + `UseStaticFiles` + `MapFallbackToFile("index.html")` فعال می‌شود و API و UI روی یک دامنه کار می‌کنند. اگر مستقرسازی دستی انجام می‌شود، ابتدا `web/dist` را کامل جایگزین `src/NovaFleet.Api/wwwroot` کنید، سپس publish را اجرا کنید؛ کپی `dist` داخل `wwwroot/dist` مسیر اشتباه است.
+
+### Journal و بازیابی
+
+در طول نصب یا ارتقا، Setup تا زمانی که journal تمام نشده، نصب/uninstall دیگری را متوقف می‌کند:
+
+- `C:\ProgramData\NovaFleet\install-pending.json` برای نصب تازه
+- `C:\ProgramData\NovaFleet\upgrade-pending.json` برای ارتقا
+- پوشه‌های `installs\<id>` و `backups\<id>` برای نسخهٔ اسکریپت‌ها، پشتیبان فایل و وضعیت recovery
+
+پیش از پذیرش ترافیک عادی، شکست health check فقط منابعی را برمی‌گرداند که همین نصاب ساخته است. `data`، `.novafleet`، کلیدهای رمزنگاری، logs، uploads و تنظیمات کاربر حذف نمی‌شوند. پس از شروع ترافیک عادی، rollback خودکار پایگاه داده عمداً مسدود است تا داده‌های جدید از بین نروند؛ بازیابی دستی با مدیر و پشتیبان‌ها انجام می‌شود.
+
+نصب تازه پیش از کپی فایل‌ها، journal و نسخهٔ اسکریپت‌ها و manifest بستهٔ جدید را در `installs\<id>` ذخیره می‌کند. لغو Setup پس از این مرحله نیز payload کپی‌شده را فقط با تطبیق length/SHA-256 پاک می‌کند؛ فایل یا manifest تغییرکرده باعث توقف fail-closed می‌شود و فایل‌های ناشناخته حفظ می‌شوند.
+
+پس از قطع ناگهانی، ابتدا journal و اسکریپت ذخیره‌شده در پوشهٔ backup را بررسی کنید. برای نصب تازه، اسکریپت را از مسیر journal بخوانید تا حتی پیش از کپی کامل فایل‌ها نیز قابل بازیابی باشد:
+
+```powershell
+$journal = 'C:\ProgramData\NovaFleet\install-pending.json'
+$state = Get-Content -LiteralPath $journal -Raw | ConvertFrom-Json
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.BackupDir 'Install-Iis.ps1') `
+  -Phase Recover -StateFile $journal
+```
+
+برای ارتقا، `Upgrade-Iis.ps1` و `Installer-Common.ps1` موجود در همان پوشهٔ `backups\<id>` را با `-Phase Recover -StateFile "C:\ProgramData\NovaFleet\upgrade-pending.json"` اجرا کنید. تا بررسی administrator، پوشهٔ backup را حذف نکنید.
+
+پاک‌سازی فایل‌های قدیمی فقط پس از health موفق انجام می‌شود و فایل obsolete باید در manifest نسخهٔ قبلی باشد، در manifest جدید نباشد و length/SHA-256 فعلی‌اش همان مقدار قبلی باشد. فایل تغییرکرده، reparse point یا مسیر محافظت‌شده باعث توقف fail-closed می‌شود. هنگام uninstall نیز SSL binding فقط در صورتی حذف می‌شود که سایت دیگری روی همان پورت HTTPS از آن استفاده نکند.
+
+**HTTPS در تولید اجباری است.** `Production` با HSTS، HTTPS redirection و کوکی `Secure` اجرا می‌شود. `Development` فقط برای توسعهٔ محلی است، نه راه‌حل شبکهٔ داخلی بدون TLS.
 
 ## مدل‌امنیتی
 
@@ -770,6 +825,15 @@ dotnet ef database update --project src/NovaFleet.Infrastructure --startup-proje
 
 `NOVAFLEET_CONNECTION_STRING` را از متغیرهای `app.env` خود بسازید؛ `DesignTimeDbContextFactory` همین متغیر را می‌خواند و اگر تنظیم نباشد با پیام «متغیر محیطی NOVAFLEET_CONNECTION_STRING … تنظیم نشده است» خطا می‌دهد. رشته اتصال را به `appsettings.json` ننویسید.
 
+**آزمون‌های نصاب:**
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-Upgrade.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-UpgradeSql.ps1
+```
+
+آزمون اول IIS/SQL را mock می‌کند ولی فایل‌ها و manifest‌های واقعی را در پوشه‌های موقت می‌آزماید: گواهی و hostname، HTTPS-only binding، journal نصب تازه، بازیابی، حفظ داده/config و prune امن. آزمون دوم فقط با guard دقیق `(localdb)\MSSQLLocalDB` و نام `NovaFleet_Upgrade_Test_<guid>` backup/checksum و بازیابی schema/data را آزمایش می‌کند و پایگاه ساختگی را در پایان حذف می‌کند. هیچ‌کدام به IIS زنده، SQL Server سازمان، حساب کاربر، AD یا پیامک واقعی وصل نمی‌شوند.
+
 ## خط زمانی
 
 `GET /api/timeline?fromUtc=&toUtc=&driverId=&vehicleId=` مأموریت‌هایی را برمی‌گرداند که با بازه درخواست هم‌پوشانی زمانی دارند (وضعیت‌های ۱، ۲، ۳، ۴، ۵ و ۶؛ لغو و ردشده عمداً نمایش داده نمی‌شوند).
@@ -892,7 +956,9 @@ dotnet ef database update --project src/NovaFleet.Infrastructure --startup-proje
 | «رمز ذخیره‌شده» ولی خواندنش null برمی‌گردد | حلقه کلید `~/.novafleet/keys` پاک یا جابه‌جا شده؛ رمزگشایی ناموفق است و باید رمز از نو ثبت شود |
 | فارسی PDF نامفهوم | فونت Tahoma در دسترس سیستم نیست (مسیر `C:\Windows\Fonts\tahoma.ttf`) |
 | ۴۰۰ CSRF | هدر `X-Requested-With: XMLHttpRequest` روی متدهای تغییردهنده فراموش شده |
-| در نصب عملیاتی ورود هیچ‌وقت کوکی نمی‌گیرد | محیط `Production` است ولی اندپوینت HTTPS بسته نشده: `http` با ۳۰۷ به `https` می‌رود و کوکی `Secure` روی کانال روشن فرستاده نمی‌شود. گره HTTPS در IIS بسازید یا `ASPNETCORE_URLS` را با هر دو آدرس (`https://…;http://…`) پر کنید و `dotnet dev-certs https --trust` بزنید |
+| در نصب عملیاتی ورود هیچ‌وقت کوکی نمی‌گیرد | محیط `Production` است ولی HTTPS معتبر در دسترس نیست: `http` به `https` تغییر مسیر می‌دهد و کوکی `Secure` روی کانال روشن فرستاده نمی‌شود. گواهی معتبر با private key در `LocalMachine\My`، binding HTTPS و اعتماد کلاینت به صادرکننده را بررسی کنید؛ برای production به HTTP یا Development fallback نکنید |
+| Setup می‌گوید نصب/ارتقای ناتمام وجود دارد | پیش از هر کار journal را در `C:\ProgramData\NovaFleet` و اسکریپت ذخیره‌شده در `installs\<id>` یا `backups\<id>` بررسی کنید. نصب/uninstall هم‌زمان و حذف backup تا بازیابی Administrator ممنوع است |
+| ارتقا به‌علت manifest شکست می‌خورد | نسخهٔ نصب‌شده `NovaFleet.payload.json` ندارد؛ مالکیت payload قدیمی قابل اثبات نیست. inventory و manifest بستهٔ Verified را ثبت کنید؛ اسکریپت عمداً فایل ناشناخته را prune نمی‌کند |
 | `dotnet ef` با «متغیر محیطی NOVAFLEET_CONNECTION_STRING …» خطا می‌دهد | برای دستورات طراحی، رشته اتصال باید دقیقاً در همین متغیر باشد؛ `SQL_HOST/…` را نمی‌خواند |
 | خطای ترجمه LINQ در گزارش (۵۰۰) | پرتاب به رکورد گزارش پیش از `Where` انجام شده؛ فیلترها باید روی `IQueryable<Mission>` بمانند |
 

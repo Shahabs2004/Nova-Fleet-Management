@@ -8,6 +8,8 @@
       <aspNetCore processPath=".\NovaFleet.Api.exe" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" hostingModel="inprocess">
         <environmentVariables>
           <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
+          <environmentVariable name="DOTNET_ENVIRONMENT" value="Production" />
+          <environmentVariable name="ASPNETCORE_HTTPS_PORT" value="{{HTTPS_PORT}}" />
           <environmentVariable name="NOVAFLEET_HOME" value="{{DATA_DIR}}" />
         </environmentVariables>
       </aspNetCore>

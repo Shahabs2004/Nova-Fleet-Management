@@ -3,12 +3,13 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
-$Version = if ($env:VERSION) { $env:VERSION.TrimStart('v') } else { ((cmd /c "git describe --tags --abbrev=0 2>nul") -as [string]).Trim().TrimStart('v') }
+$Version = if ($env:VERSION) { $env:VERSION.TrimStart('v') } else {
+    $described = & git describe --tags --abbrev=0 2>$null
+    if ($LASTEXITCODE -eq 0) { ([string]$described).Trim().TrimStart('v') } else { '' }
+}
 if (-not $Version) { $Version = '0.0.0-dev' }
-# MSBuild inherits environment variables as properties. A tag build sets VERSION to
-# the ref_name "v1.0.0"; the leading 'v' makes MSBuild's Version property an invalid
-# NuGet version, which fails restore silently (bare MSB4181). Normalize it to the
-# trimmed version so every dotnet invocation sees a valid Version.
+# MSBuild inherits environment variables as properties. Normalize release tags so
+# the Version property remains a valid NuGet version (MSB4181).
 $env:VERSION = $Version
 
 # bundled .NET 10 IIS Hosting Bundle prerequisite; bump both when the runtime patch changes
@@ -19,6 +20,13 @@ $HBundleUrl = "https://builds.dotnet.microsoft.com/dotnet/aspnetcore/Runtime/$HB
 $HBundleSha512 = '48DD82516CAE1296FE8E6E6C0FBEB4A00033951966373BC1E8309ECD1E02F9F344DB701DADB2344568D7AE86EF968439A4708FEF5DF3CF742D207CF585B5BF5E'
 
 Write-Host "== version $Version =="
+Write-Host '::group installer verification'
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Test-Upgrade.ps1')
+if ($LASTEXITCODE -ne 0) { throw 'installer upgrade tests failed' }
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'Test-UpgradeSql.ps1')
+if ($LASTEXITCODE -ne 0) { throw 'guarded LocalDB installer SQL recovery tests failed' }
+Write-Host 'Guarded LocalDB SQL backup/recovery test executed; no shared or production SQL server is used.'
+Write-Host '::endgroup'
 
 Write-Host '::group ensure hosting bundle prereq'
 $prereqDir = Join-Path $PSScriptRoot 'prereq'
@@ -37,45 +45,51 @@ Write-Host '::endgroup'
 
 Write-Host '::group build frontend'
 Push-Location web
-# npm ci wipes node_modules; on dev machines native .node files may be locked
-# (dev server/antivirus). Keep the existing tree locally, clean install on CI.
-$ok = $false
-for ($try = 1; $try -le 3 -and -not $ok; $try++) {
-    if (Test-Path node_modules) { $npmOut = npm install --no-audit --no-fund }
-    else { $npmOut = npm ci }
-    $ok = ($LASTEXITCODE -eq 0)
-    if (-not $ok) {
-        Write-Host "npm attempt $try failed (locked files? stop any vite dev server)"
-        ($npmOut | Select-Object -Last 8) | ForEach-Object { Write-Host $_ }
-        Start-Sleep -Seconds 5
-    }
+try {
+    npm ci
+    if ($LASTEXITCODE -ne 0) { throw 'npm ci failed; stop the Vite dev server if it locks node_modules' }
+    npm run build
+    if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
+    if (-not (Test-Path dist/index.html)) { throw 'web/dist build missing' }
+    if (Test-Path ../src/NovaFleet.Api/wwwroot) { Remove-Item ../src/NovaFleet.Api/wwwroot -Recurse -Force }
+    Copy-Item dist ../src/NovaFleet.Api/wwwroot -Recurse
+} finally {
+    Pop-Location
 }
-if (-not $ok) { throw 'npm install/ci failed' }
-npm run build
-if ($LASTEXITCODE -ne 0) { throw 'frontend build failed' }
-if (-not (Test-Path dist/index.html)) { throw 'web/dist build missing' }
-if (Test-Path ../src/NovaFleet.Api/wwwroot) { Remove-Item ../src/NovaFleet.Api/wwwroot -Recurse -Force }
-Copy-Item dist ../src/NovaFleet.Api/wwwroot -Recurse
-Pop-Location
+Write-Host '::endgroup'
+
+Write-Host '::group restore, build and test'
+dotnet restore NovaFleet.sln --nologo
+if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
+dotnet build NovaFleet.sln -c Release --no-restore --nologo
+if ($LASTEXITCODE -ne 0) { throw 'solution build failed' }
+dotnet test tests/NovaFleet.UnitTests/NovaFleet.UnitTests.csproj -c Release --no-build --no-restore --nologo
+if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
+Write-Host 'Environment-dependent integration SQL tests run only when their explicit isolated-database variables are configured; otherwise they are reported as skipped.'
+dotnet test tests/NovaFleet.IntegrationTests/NovaFleet.IntegrationTests.csproj -c Release --no-build --no-restore --nologo
+if ($LASTEXITCODE -ne 0) { throw 'integration tests failed' }
 Write-Host '::endgroup'
 
 Write-Host '::group dotnet self-contained publish'
-dotnet restore tests/NovaFleet.UnitTests --nologo
-if ($LASTEXITCODE -ne 0) { throw 'restore failed' }
-dotnet test tests/NovaFleet.UnitTests -c Release --nologo --no-restore
-if ($LASTEXITCODE -ne 0) { throw 'unit tests failed' }
-dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -o installer/stage
+$stage = Join-Path $PSScriptRoot 'stage'
+if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+New-Item -ItemType Directory -Path $stage | Out-Null
+dotnet publish src/NovaFleet.Api -c Release -r win-x64 --self-contained true -p:Version=$Version -o $stage --nologo
 if ($LASTEXITCODE -ne 0) { throw 'publish failed' }
-# the installer renders its own web.config from the template
-Remove-Item installer/stage/web.config -ErrorAction SilentlyContinue
+# The installer renders its own web.config from the template.
+Remove-Item (Join-Path $stage 'web.config') -ErrorAction SilentlyContinue
+$installerPayload = Join-Path $stage 'installer'
+New-Item -ItemType Directory -Path $installerPayload | Out-Null
+foreach ($file in @('Install-Iis.ps1', 'Installer-Common.ps1', 'Uninstall-Iis.ps1', 'web.config.template')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $installerPayload
+}
+. (Join-Path $PSScriptRoot 'Installer-Common.ps1')
+$manifest = Join-Path $stage 'NovaFleet.payload.json'
+New-InstallerPayloadManifest $stage $manifest
+[void](Read-InstallerPayloadManifest $manifest $stage)
 Write-Host '::endgroup'
 
 Write-Host '::group inno setup compile'
-# Windows PowerShell 5.1 misreads UTF-8 without BOM and breaks the Persian strings
-foreach ($ps in Get-ChildItem "$PSScriptRoot\*.ps1","$PSScriptRoot\*.template") {
-    $text = [System.IO.File]::ReadAllText($ps.FullName, [System.Text.UTF8Encoding]::new($false))
-    [System.IO.File]::WriteAllText($ps.FullName, $text, [System.Text.UTF8Encoding]::new($true))
-}
 $iscc = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
@@ -84,6 +98,6 @@ $iscc = @(
 if (-not $iscc) { throw 'Inno Setup 6 not found. Run: winget install JRSoftware.InnoSetup' }
 & $iscc "/DAppVersion=$Version" "/DHBundleName=$HBundleName" installer\NovaFleet.iss
 if ($LASTEXITCODE -ne 0) { throw 'ISCC failed' }
-Write-Host "::endgroup"
+Write-Host '::endgroup'
 
 Write-Host "OK -> installer/output/NovaFleet-Setup-$Version.exe"
