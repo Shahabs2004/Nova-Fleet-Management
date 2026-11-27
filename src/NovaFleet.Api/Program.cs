@@ -32,7 +32,6 @@ using NovaFleet.Infrastructure.Missions;
 using NovaFleet.Infrastructure.Notifications;
 using NovaFleet.Infrastructure.Organization;
 using NovaFleet.Infrastructure.Persistence;
-using NovaFleet.Infrastructure.Realtime;
 using NovaFleet.Infrastructure.Reports;
 using NovaFleet.Infrastructure.Security;
 using NovaFleet.Infrastructure.Sessions;
@@ -101,7 +100,6 @@ builder.Services.AddAuthorization();
 // Application abstractions
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
-builder.Services.AddSingleton<IRealtimeNotifier, NoopRealtimeNotifier>();
 builder.Services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
 builder.Services.AddScoped<IRuntimeSettings, RuntimeSettings>();
 builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();

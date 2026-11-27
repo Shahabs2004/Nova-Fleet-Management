@@ -351,7 +351,6 @@ public sealed class MissionAllocationConcurrencyTests
     {
         public Task PublishAsync(NotificationMessage message, IEnumerable<string> usernames, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task PublishToPermissionAsync(NotificationMessage message, string permission, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task PublishToRolesAsync(NotificationMessage message, IReadOnlyList<string> roleNames, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class NoopSms : ISmsDispatcher

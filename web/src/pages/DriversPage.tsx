@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { api } from '../lib/api'
 import { formatFaDate } from '../lib/date'
 import { DRIVER_STATUS } from '../lib/labels'
-import type { DriverDto, PagedResult, VehicleDto } from '../lib/types'
+import type { DriverCompositeCreateRequest, DriverCompositeUpdateRequest, DriverDto, DriverListItem, PagedResult, VehicleOptionDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
 import { Plate } from '../components/Plate'
 import { Avatar } from '../components/Avatar'
@@ -14,7 +14,7 @@ export function DriversPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
-  const [edit, setEdit] = useState<DriverDto | 'new' | null>(null)
+  const [edit, setEdit] = useState<DriverListItem | 'new' | null>(null)
 
   const params = new URLSearchParams({ page: String(page), pageSize: '12' })
   if (search.trim()) params.set('search', search.trim())
@@ -22,17 +22,21 @@ export function DriversPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['drivers', params.toString()],
-    queryFn: () => api.get<PagedResult<DriverDto>>(`/api/drivers?${params}`),
+    queryFn: () => api.get<PagedResult<DriverListItem>>(`/api/drivers?${params}`),
   })
 
-  const vehicles = useQuery({ queryKey: ['vehicle-options'], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
+  const vehicles = useQuery({ queryKey: ['vehicle-options'], queryFn: () => api.get<VehicleOptionDto[]>('/api/vehicles/options') })
 
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: unknown }) =>
       body === undefined ? api.post(path) : api.post(path, body),
     onSuccess: async () => {
       setEdit(null)
-      await queryClient.invalidateQueries({ queryKey: ['drivers'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['drivers'] }),
+        queryClient.invalidateQueries({ queryKey: ['driver-options'] }),
+        queryClient.invalidateQueries({ queryKey: ['timeline'] }),
+      ])
     },
   })
 
@@ -85,7 +89,7 @@ export function DriversPage() {
                     <tr key={d.id} className="transition-colors hover:bg-emerald-50/40">
                       <td className="px-4 py-3.5 font-semibold text-slate-700">
                         <div className="flex items-center gap-2">
-                          <Avatar name={d.displayName} src={d.avatarDataUrl} />
+                          <Avatar name={d.displayName} />
                           <span>{d.displayName}</span>
                           {d.isArchived && <span className="badge mr-2 bg-slate-100 text-slate-500">بایگانی</span>}
                         </div>
@@ -132,19 +136,18 @@ export function DriversPage() {
         driver={edit}
         vehicles={vehicles.data ?? []}
         onClose={() => setEdit(null)}
-        onSave={async (body, rowVersion, defaultVehicleId) => {
-          const saved =
-            edit === 'new'
-              ? await api.post<DriverDto>('/api/drivers', body)
-              : await api.put<DriverDto>(`/api/drivers/${(edit as DriverDto).id}`, { ...(body as object), rowVersion })
-          const previous = edit === 'new' ? null : (edit as DriverDto).defaultVehicleId
-          if (defaultVehicleId !== previous) {
-            await api.post(`/api/drivers/${saved.id}/default-vehicle`, { vehicleId: defaultVehicleId, rowVersion: saved.rowVersion })
+        onSave={async (body: DriverCompositeCreateRequest | DriverCompositeUpdateRequest) => {
+          if (edit === 'new') {
+            await api.post<DriverDto>('/api/drivers/composite', body)
+          } else {
+            await api.put<DriverDto>(`/api/drivers/${edit!.id}/composite`, body)
           }
           setEdit(null)
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ['drivers'] }),
             queryClient.invalidateQueries({ queryKey: ['driver-options'] }),
+            queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
+            queryClient.invalidateQueries({ queryKey: ['vehicle-options'] }),
             queryClient.invalidateQueries({ queryKey: ['timeline'] }),
           ])
         }}
@@ -159,82 +162,109 @@ function DriverEditModal({
   onClose,
   onSave,
 }: {
-  driver: DriverDto | 'new' | null
-  vehicles: VehicleDto[]
+  driver: DriverListItem | 'new' | null
+  vehicles: VehicleOptionDto[]
   onClose: () => void
-  onSave: (
-    body: { firstName: string; lastName: string; mobilePhone: string; avatarDataUrl: string | null },
-    rowVersion: string | undefined,
-    defaultVehicleId: string | null,
-  ) => Promise<void>
+  onSave: (body: DriverCompositeCreateRequest | DriverCompositeUpdateRequest) => Promise<void>
 }) {
+  const detail = useQuery({
+    queryKey: ['drivers', 'details', driver === 'new' ? 'new' : driver?.id],
+    queryFn: () => api.get<DriverDto>(`/api/drivers/${driver === 'new' ? '' : driver?.id}`),
+    enabled: driver !== null && driver !== 'new',
+  })
+  if (driver === null) return null
+
   const isNew = driver === 'new'
-  const existing = driver !== 'new' ? driver : null
-  const [firstName, setFirstName] = useState(existing?.firstName ?? '')
-  const [lastName, setLastName] = useState(existing?.lastName ?? '')
-  const [mobile, setMobile] = useState(existing?.mobilePhone ?? '')
-  const [avatarDataUrl, setAvatarDataUrl] = useState(existing?.avatarDataUrl ?? null)
+  return (
+    <Modal open title={isNew ? 'افزودن راننده' : `ویرایش ${driver.displayName}`} onClose={onClose}>
+      {!isNew && detail.isLoading ? <Spinner /> : !isNew && (detail.isError || !detail.data) ? (
+        <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">
+          جزئیات راننده بارگذاری نشد. پنجره را ببندید و دوباره تلاش کنید.
+        </div>
+      ) : (
+        <DriverEditForm
+          key={isNew ? 'new' : driver.id}
+          driver={isNew ? null : detail.data!}
+          vehicles={vehicles}
+          onSave={onSave}
+        />
+      )}
+    </Modal>
+  )
+}
+
+function DriverEditForm({
+  driver,
+  vehicles,
+  onSave,
+}: {
+  driver: DriverDto | null
+  vehicles: VehicleOptionDto[]
+  onSave: (body: DriverCompositeCreateRequest | DriverCompositeUpdateRequest) => Promise<void>
+}) {
+  const [firstName, setFirstName] = useState(driver?.firstName ?? '')
+  const [lastName, setLastName] = useState(driver?.lastName ?? '')
+  const [mobile, setMobile] = useState(driver?.mobilePhone ?? '')
+  const [avatarDataUrl, setAvatarDataUrl] = useState(driver?.avatarDataUrl ?? null)
   const [cropping, setCropping] = useState(false)
-  const [defaultVehicleId, setDefaultVehicleId] = useState(existing?.defaultVehicleId ?? '')
+  const [defaultVehicleId, setDefaultVehicleId] = useState(driver?.defaultVehicleId ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   return (
-    <Modal open={driver !== null} title={isNew ? 'افزودن راننده' : `ویرایش ${existing?.displayName}`} onClose={onClose}>
-      <form
-        className="space-y-4"
-        onSubmit={async (e) => {
-          e.preventDefault()
-          if (cropping || busy) return
-          setBusy(true)
-          setError(null)
-          try {
-            await onSave(
-              { firstName, lastName, mobilePhone: mobile, avatarDataUrl },
-              existing?.rowVersion,
-              defaultVehicleId === '' ? null : defaultVehicleId,
-            )
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'ذخیره ناموفق بود.')
-          } finally {
-            setBusy(false)
-          }
-        }}
-      >
-        <AvatarEditor name={`${firstName} ${lastName}`} value={avatarDataUrl} onChange={setAvatarDataUrl} onEditingChange={setCropping} disabled={busy} />
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">نام</label>
-            <input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
-          </div>
-          <div>
-            <label className="label">نام خانوادگی</label>
-            <input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-          </div>
+    <form
+      className="space-y-4"
+      onSubmit={async (e) => {
+        e.preventDefault()
+        if (cropping || busy) return
+        setBusy(true)
+        setError(null)
+        try {
+          const profile = { firstName, lastName, mobilePhone: mobile, avatarDataUrl }
+          await onSave({
+            profile: driver ? { ...profile, rowVersion: driver.rowVersion } : profile,
+            defaultVehicleId: defaultVehicleId === '' ? null : defaultVehicleId,
+          })
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'ذخیره ناموفق بود.')
+        } finally {
+          setBusy(false)
+        }
+      }}
+    >
+      <AvatarEditor name={`${firstName} ${lastName}`} value={avatarDataUrl} onChange={setAvatarDataUrl} onEditingChange={setCropping} disabled={busy} />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label">نام</label>
+          <input className="input" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
         </div>
         <div>
-          <label className="label">شماره موبایل</label>
-          <input className="input num" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="09xxxxxxxxx" required />
+          <label className="label">نام خانوادگی</label>
+          <input className="input" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
         </div>
-        <div>
-          <label className="label">خودروی پیش‌فرض</label>
-          <select className="input" value={defaultVehicleId} onChange={(e) => setDefaultVehicleId(e.target.value)}>
-            <option value="">بدون خودرو</option>
-            {existing?.defaultVehicleId && !vehicles.some((v) => v.id === existing.defaultVehicleId) && (
-              <option value={existing.defaultVehicleId}>{existing.defaultVehiclePlate ?? 'خودروی بایگانی‌شده'}</option>
-            )}
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.displayName}
-              </option>
-            ))}
-          </select>
-        </div>
-        {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
-        <button type="submit" disabled={busy || cropping} className="btn-primary w-full">
-          {busy ? 'در حال ذخیره…' : 'ذخیره'}
-        </button>
-      </form>
-    </Modal>
+      </div>
+      <div>
+        <label className="label">شماره موبایل</label>
+        <input className="input num" dir="ltr" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="09xxxxxxxxx" required />
+      </div>
+      <div>
+        <label className="label">خودروی پیش‌فرض</label>
+        <select className="input" value={defaultVehicleId} onChange={(e) => setDefaultVehicleId(e.target.value)}>
+          <option value="">بدون خودرو</option>
+          {driver?.defaultVehicleId && !vehicles.some((v) => v.id === driver.defaultVehicleId) && (
+            <option value={driver.defaultVehicleId}>{driver.defaultVehiclePlate ?? 'خودروی بایگانی‌شده'}</option>
+          )}
+          {vehicles.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.displayName}
+            </option>
+          ))}
+        </select>
+      </div>
+      {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
+      <button type="submit" disabled={busy || cropping} className="btn-primary w-full">
+        {busy ? 'در حال ذخیره…' : 'ذخیره'}
+      </button>
+    </form>
   )
 }

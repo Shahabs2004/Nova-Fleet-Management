@@ -75,7 +75,6 @@ public class RuntimeSettingsTests : MissionTestBase
 
         await Assert.ThrowsAsync<ForbiddenAppException>(() => service.GetSmsAsync());
         await Assert.ThrowsAsync<ForbiddenAppException>(() => service.GetDirectoryAsync());
-        await Assert.ThrowsAsync<ForbiddenAppException>(() => service.GetOperationsAsync());
         await Assert.ThrowsAsync<ForbiddenAppException>(() => service.GetDatabaseAsync());
     }
 
@@ -155,19 +154,6 @@ public class RuntimeSettingsTests : MissionTestBase
 
         await Assert.ThrowsAsync<ValidationAppException>(() => service.UpdateSmsAsync(
             new UpdateSmsConnectionSettingsDto(true, "Wsdl", "sms.example/soap", null, "user", null, 20, 5, 5, "x")));
-    }
-
-    [Fact]
-    public async Task Connections_OperationsSaveReportsRestart()
-    {
-        var service = ConnectionsFor(new FakeCurrentUser("demo.sysadmin", PermissionCatalog.Administration.ConnectionsManage));
-
-        var saved = await service.UpdateOperationsAsync(new UpdateOperationsSettingsDto("Debug", null, "A5"));
-
-        Assert.True(saved.RestartRequired);
-        Assert.NotNull(saved.Hint);
-        Assert.Equal("Debug", (await service.GetOperationsAsync()).LogLevel);
-        Assert.True(Audit.Wrote("UpdateOperationsSettings"));
     }
 
     [Fact]

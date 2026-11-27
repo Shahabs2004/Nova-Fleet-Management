@@ -46,8 +46,8 @@ public sealed class Vehicle : Entity
     public void UpdateDetails(string brand, string model, IranianLicensePlate licensePlate)
     {
         ArgumentNullException.ThrowIfNull(licensePlate);
-        Brand = Required(brand, 100, nameof(brand));
-        Model = Required(model, 100, nameof(model));
+        Brand = TextRules.Required(brand, 100, nameof(brand));
+        Model = TextRules.Required(model, 100, nameof(model));
         PlateFirstTwo = licensePlate.FirstTwo;
         PlateLetter = licensePlate.Letter;
         PlateNextThree = licensePlate.NextThree;
@@ -102,16 +102,4 @@ public sealed class Vehicle : Entity
 
     public bool CanBeAssignedToMission(bool hasActiveMission)
         => IsReadyForAssignment && !hasActiveMission;
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
-    }
 }

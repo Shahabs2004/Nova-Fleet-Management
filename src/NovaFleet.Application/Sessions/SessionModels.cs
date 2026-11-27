@@ -35,6 +35,4 @@ public interface ISessionService
 
     /// <summary>پایان اجباری نشست توسط مدیر؛ کاربر در درخواست بعدی خارج می‌شود.</summary>
     Task ForceEndAsync(Guid id, CancellationToken cancellationToken = default);
-
-    Task<int> ActiveCountAsync(CancellationToken cancellationToken = default);
 }

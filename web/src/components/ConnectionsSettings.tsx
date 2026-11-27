@@ -6,14 +6,11 @@ import type {
   ConnectionTestResult,
   DatabaseSettings,
   DirectorySettings,
-  OperationsSettings,
   SettingsSaveResult,
   SmsConnectionSettings,
 } from '../lib/types'
 
 const SMS_MODES = ['Simulation', 'Wsdl', 'Api']
-const LOG_LEVELS = ['Critical', 'Error', 'Warning', 'Information', 'Debug', 'Trace']
-const PAPER_SIZES = ['A4', 'A5', 'Letter']
 
 const EMPTY_DIRECTORY: DirectorySettings = {
   enabled: false,
@@ -41,8 +38,6 @@ const EMPTY_SMS: SmsConnectionSettings = {
   hasPassword: false,
 }
 
-const EMPTY_OPERATIONS: OperationsSettings = { logLevel: 'Information', pdfFontPath: '', reportPaperSize: 'A4' }
-
 const READ_ERROR = 'خطا در دریافت تنظیمات؛ برای جلوگیری از ذخیره مقادیر پیش‌فرض، دوباره تلاش کنید.'
 const message = (error: unknown) => (error as Error)?.message ?? 'عملیات ناموفق بود.'
 
@@ -57,7 +52,6 @@ export function ConnectionsSettingsTab() {
       <DatabaseCard />
       <DirectoryCard />
       <SmsCard />
-      <OperationsCard />
     </div>
   )
 }
@@ -603,72 +597,6 @@ function SmsCard() {
           </button>
         </div>
         {sendNote && <p className="rounded-xl bg-sky-50 px-4 py-3 text-xs leading-6 text-sky-900 ring-1 ring-sky-100">{sendNote}</p>}
-      </div>
-    </Card>
-  )
-}
-
-function OperationsCard() {
-  const { user } = useAuth()
-  const query = useQuery({
-    queryKey: ['connections-operations', user?.username],
-    queryFn: () => api.get<OperationsSettings>('/api/settings/connections/operations'),
-  })
-  const [draft, setDraft] = useState<OperationsSettings>(EMPTY_OPERATIONS)
-  const [note, setNote] = useState<SettingsSaveResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable draft after the async read.
-    if (query.data) setDraft(query.data)
-  }, [query.data])
-
-  const save = useMutation({
-    mutationFn: () => {
-      requireSettings(query.data, query.isError)
-      return api.put<SettingsSaveResult>('/api/settings/connections/operations', draft)
-    },
-    onSuccess: setNote,
-    onError: (e: unknown) => setError(message(e)),
-  })
-
-  if (query.isLoading) return <Busy text="در حال خواندن تنظیمات عملیات…" />
-  if (query.isError || !query.data) {
-    return (
-      <LoadFailure
-        title="عملیات"
-        hint="سطح لاگ و مسیر فونت با restart سرویس اعمال می‌شوند؛ اندازه کاغذ گزارش بی‌درنگ معتبر است."
-        saveLabel="ذخیره تنظیمات عملیات"
-        onRetry={() => void query.refetch()}
-        retrying={query.isFetching}
-      />
-    )
-  }
-
-  const set = <K extends keyof OperationsSettings>(key: K) => (value: OperationsSettings[K]) => setDraft({ ...draft, [key]: value })
-
-  return (
-    <Card
-      title="عملیات"
-      hint="سطح لاگ و مسیر فونت با restart سرویس اعمال می‌شوند؛ اندازه کاغذ گزارش بی‌درنگ معتبر است."
-      onSave={() => save.mutate()}
-      saveLabel="ذخیره تنظیمات عملیات"
-      busy={save.isPending}
-      disabled={query.isFetching}
-      note={note}
-      error={error}
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Choice label="سطح لاگ" value={draft.logLevel} options={LOG_LEVELS} onChange={set('logLevel')} />
-        <Choice label="اندازه کاغذ گزارش" value={draft.reportPaperSize} options={PAPER_SIZES} onChange={set('reportPaperSize')} />
-      </div>
-      <div className="mt-4">
-        <Text
-          label="مسیر فونت فارسی PDF"
-          value={draft.pdfFontPath ?? ''}
-          onChange={set('pdfFontPath')}
-          hint="مسیر کامل؛ با خالی گذاشتن، فونت پیش‌فرض ویندوز به کار می‌رود."
-        />
       </div>
     </Card>
   )

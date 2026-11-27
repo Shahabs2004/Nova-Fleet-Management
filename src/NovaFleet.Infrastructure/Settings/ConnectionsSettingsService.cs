@@ -104,30 +104,6 @@ public sealed class ConnectionsSettingsService(
         return new SettingsSaveResultDto(false, null);
     }
 
-    public async Task<OperationsSettingsDto> GetOperationsAsync(CancellationToken cancellationToken = default)
-    {
-        RequireConnections();
-        var values = await settings.ReadAllAsync(cancellationToken);
-        return new OperationsSettingsDto(
-            ReadText(values, SettingKeys.OperationsLogLevel, SettingKeys.DefaultLogLevel),
-            ReadText(values, SettingKeys.BrandingPdfFontPath),
-            ReadText(values, SettingKeys.BrandingReportPaperSize, SettingKeys.DefaultReportPaperSize));
-    }
-
-    public async Task<SettingsSaveResultDto> UpdateOperationsAsync(
-        UpdateOperationsSettingsDto request,
-        CancellationToken cancellationToken = default)
-    {
-        RequireConnections();
-        var (level, paper, fontPath) = await SettingsWriters.WriteOperationsAsync(settings, request, cancellationToken);
-
-        await RecordAsync("UpdateOperationsSettings", new { LogLevel = level, PdfFontPath = fontPath, PaperSize = paper },
-            cancellationToken);
-
-        return new SettingsSaveResultDto(true,
-            $"سطح لاگ و مسیر فونت پس از راه‌اندازی مجدد اعمال می‌شوند؛ اندازه کاغذ از {paper} از همین حالا معتبر است.");
-    }
-
     public Task<DatabaseSettingsDto> GetDatabaseAsync(CancellationToken cancellationToken = default)
     {
         RequireConnections();

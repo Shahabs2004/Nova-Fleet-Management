@@ -84,7 +84,7 @@ public sealed class MissionChangeRequest : Entity
     public void StartReview(string reviewer, DateTimeOffset nowUtc)
     {
         EnsureStatus(MissionChangeRequestStatus.Pending);
-        ReviewerUsername = Required(reviewer, 64, nameof(reviewer));
+        ReviewerUsername = TextRules.Required(reviewer, 64, nameof(reviewer));
         ReviewStartedAtUtc = nowUtc;
         Status = MissionChangeRequestStatus.UnderReview;
     }
@@ -102,7 +102,7 @@ public sealed class MissionChangeRequest : Entity
     {
         EnsureReviewer(reviewer);
         EnsureStatus(MissionChangeRequestStatus.UnderReview);
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         ReviewedAtUtc = nowUtc;
         Status = MissionChangeRequestStatus.Rejected;
     }
@@ -121,17 +121,5 @@ public sealed class MissionChangeRequest : Entity
         {
             throw new InvalidOperationException("عملیات با وضعیت فعلی درخواست تغییر سازگار نیست.");
         }
-    }
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
     }
 }

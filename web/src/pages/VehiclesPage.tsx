@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { formatFaDate } from '../lib/date'
 import { VEHICLE_STATUS } from '../lib/labels'
-import type { DriverDto, PagedResult, VehicleDto } from '../lib/types'
+import type { DriverOptionDto, PagedResult, VehicleCompositeCreateRequest, VehicleCompositeUpdateRequest, VehicleDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
 import { Plate, PLATE_LETTER_GROUPS } from '../components/Plate'
 
@@ -28,7 +28,7 @@ export function VehiclesPage() {
     queryFn: () => api.get<PagedResult<VehicleDto>>(`/api/vehicles?${params}`),
   })
 
-  const drivers = useQuery({ queryKey: ['driver-options'], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
+  const drivers = useQuery({ queryKey: ['driver-options'], queryFn: () => api.get<DriverOptionDto[]>('/api/drivers/options') })
 
   const mutation = useMutation({
     mutationFn: ({ path, body }: { path: string; body?: unknown }) => api.post(path, body),
@@ -132,6 +132,8 @@ export function VehiclesPage() {
           await queryClient.invalidateQueries({ queryKey: ['vehicles'] })
           await queryClient.invalidateQueries({ queryKey: ['drivers'] })
           await queryClient.invalidateQueries({ queryKey: ['driver-options'] })
+          await queryClient.invalidateQueries({ queryKey: ['vehicle-options'] })
+          await queryClient.invalidateQueries({ queryKey: ['timeline'] })
         }}
       />
     </div>
@@ -146,7 +148,7 @@ function VehicleEditModal({
   onSaved,
 }: {
   vehicle: VehicleDto | 'new' | null
-  drivers: DriverDto[]
+  drivers: DriverOptionDto[]
   driversLoaded: boolean
   onClose: () => void
   onSaved: () => Promise<void>
@@ -156,9 +158,8 @@ function VehicleEditModal({
   const [form, setForm] = useState(existing ?? emptyPlate)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const holder = drivers.find((d) => d.defaultVehicleId === existing?.id)
   const [driverOverride, setDriverOverride] = useState<string | undefined>(undefined)
-  const driverId = driverOverride !== undefined ? driverOverride : holder?.id ?? ''
+  const driverId = driverOverride !== undefined ? driverOverride : existing?.driverId ?? ''
 
   const set = (field: keyof typeof emptyPlate) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -172,15 +173,18 @@ function VehicleEditModal({
           setBusy(true)
           setError(null)
           try {
-            const saved = isNew
-              ? await api.post<VehicleDto>('/api/vehicles', form)
-              : await api.put<VehicleDto>(`/api/vehicles/${existing!.id}`, { ...form, rowVersion: existing!.rowVersion })
-            if (driversLoaded) {
-              const previousId = holder?.id ?? null
-              const targetId = driverId === '' ? null : driverId
-              if (targetId !== previousId) {
-                await api.post(`/api/vehicles/${saved.id}/driver`, { driverId: targetId })
-              }
+            if (!driversLoaded) {
+              setError('فهرست رانندگان هنوز بارگذاری نشده است؛ دوباره تلاش کنید.')
+              return
+            }
+            const body: VehicleCompositeCreateRequest | VehicleCompositeUpdateRequest = {
+              profile: isNew ? form : { ...form, rowVersion: existing!.rowVersion },
+              driverId: driverId === '' ? null : driverId,
+            }
+            if (isNew) {
+              await api.post<VehicleDto>('/api/vehicles/composite', body)
+            } else {
+              await api.put<VehicleDto>(`/api/vehicles/${existing!.id}/composite`, body)
             }
             await onSaved()
           } catch (err) {
@@ -236,6 +240,9 @@ function VehicleEditModal({
             onChange={(e) => setDriverOverride(e.target.value)}
           >
             <option value="">بدون راننده</option>
+            {existing?.driverId && !drivers.some((driver) => driver.id === existing.driverId) && (
+              <option value={existing.driverId}>{existing.driverDisplayName ?? 'راننده فعلی'}</option>
+            )}
             {drivers.map((d) => (
               <option key={d.id} value={d.id}>{d.displayName}</option>
             ))}
@@ -243,8 +250,8 @@ function VehicleEditModal({
           <p className="mt-1 text-[11px] text-slate-400">با انتخاب راننده، این خودرو به‌عنوان خودروی پیش‌فرض او ثبت می‌شود.</p>
         </div>
         {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
-        <button type="submit" disabled={busy} className="btn-primary w-full">
-          {busy ? 'در حال ذخیره…' : 'ذخیره'}
+        <button type="submit" disabled={busy || !driversLoaded} className="btn-primary w-full">
+          {busy ? 'در حال ذخیره…' : driversLoaded ? 'ذخیره' : 'در حال بارگذاری رانندگان…'}
         </button>
       </form>
     </Modal>

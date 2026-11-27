@@ -79,15 +79,6 @@ public sealed class FakeNotificationPublisher : INotificationPublisher
         return Task.CompletedTask;
     }
 
-    public Task PublishToRolesAsync(
-        NotificationMessage message,
-        IReadOnlyList<string> roleNames,
-        CancellationToken cancellationToken = default)
-    {
-        Delivered.Add(new DeliveredNotification(message, roleNames.Select(role => $"role:{role}").ToList()));
-        return Task.CompletedTask;
-    }
-
     public string? LastEventKeyFor(string username) => Delivered
         .Where(item => item.Targets.Contains(username))
         .Select(item => item.Message.EventKey)

@@ -128,15 +128,15 @@ public sealed class Mission : Entity
         string? passengerNames = null,
         bool isBackdated = false)
     {
-        MissionNumber = Required(missionNumber, 20, nameof(missionNumber));
-        Title = Required(title, 200, nameof(title));
-        RequesterUsername = Required(requesterUsername, 64, nameof(requesterUsername));
-        RequesterName = Required(requesterName, 200, nameof(requesterName));
-        RequesterPhoneSnapshot = Required(requesterPhoneSnapshot, 20, nameof(requesterPhoneSnapshot));
+        MissionNumber = TextRules.Required(missionNumber, 20, nameof(missionNumber));
+        Title = TextRules.Required(title, 200, nameof(title));
+        RequesterUsername = TextRules.Required(requesterUsername, 64, nameof(requesterUsername));
+        RequesterName = TextRules.Required(requesterName, 200, nameof(requesterName));
+        RequesterPhoneSnapshot = TextRules.Required(requesterPhoneSnapshot, 20, nameof(requesterPhoneSnapshot));
         RequesterOrganizationalUnit = Optional(requesterOrganizationalUnit, 200) ?? string.Empty;
         Purpose = Optional(purpose, 500);
-        Origin = Required(origin, 200, nameof(origin));
-        Destination = Required(destination, 200, nameof(destination));
+        Origin = TextRules.Required(origin, 200, nameof(origin));
+        Destination = TextRules.Required(destination, 200, nameof(destination));
 
         ValidateType(type);
         ValidateHour(plannedStartAtUtc, nameof(plannedStartAtUtc));
@@ -191,7 +191,7 @@ public sealed class Mission : Entity
 
         DriverId = driverId;
         VehicleId = vehicleId;
-        ApprovedBy = Required(approver, 64, nameof(approver));
+        ApprovedBy = TextRules.Required(approver, 64, nameof(approver));
         ApprovedAtUtc = nowUtc;
         ReviewStartedAtUtc ??= nowUtc;
         Status = MissionStatus.Confirmed;
@@ -205,7 +205,7 @@ public sealed class Mission : Entity
             throw new InvalidOperationException("فقط درخواست در انتظار بررسی قابل رد است.");
         }
 
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         Status = MissionStatus.Rejected;
         UpdatedAtUtc = nowUtc;
     }
@@ -241,7 +241,7 @@ public sealed class Mission : Entity
             throw new ArgumentException("زمان جدید باید بعد از زمان پایان فعلی باشد.", nameof(newPlannedEndAtUtc));
         }
 
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         PlannedEndAtUtc = newPlannedEndAtUtc;
         UpdatedAtUtc = nowUtc;
     }
@@ -261,7 +261,7 @@ public sealed class Mission : Entity
         }
 
         ActualEndAtUtc = endedAtUtc;
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         Status = MissionStatus.Completed;
         UpdatedAtUtc = nowUtc;
     }
@@ -324,7 +324,7 @@ public sealed class Mission : Entity
         }
 
         StatusBeforeWithdrawal = Status;
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         Status = MissionStatus.WithdrawalPending;
         WithdrawalRequestedAtUtc = nowUtc;
         UpdatedAtUtc = nowUtc;
@@ -347,7 +347,7 @@ public sealed class Mission : Entity
     public void RejectWithdrawal(string reason, DateTimeOffset nowUtc)
     {
         EnsureStatus(MissionStatus.WithdrawalPending);
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         Status = StatusBeforeWithdrawal ?? MissionStatus.Confirmed;
         StatusBeforeWithdrawal = null;
         UpdatedAtUtc = nowUtc;
@@ -389,7 +389,7 @@ public sealed class Mission : Entity
             ActualEndAtUtc = nowUtc;
         }
 
-        DecisionReason = Required(reason, 1000, nameof(reason));
+        DecisionReason = TextRules.Required(reason, 1000, nameof(reason));
         Status = MissionStatus.Cancelled;
         StatusBeforeWithdrawal = null;
         UpdatedAtUtc = nowUtc;
@@ -426,8 +426,8 @@ public sealed class Mission : Entity
         ActualEndAtUtc = splitAtUtc;
         PlannedEndAtUtc = splitAtUtc;
         SplitAtUtc = splitAtUtc;
-        SplitReason = Required(reason, 1000, nameof(reason));
-        SplitBy = Required(actor, 64, nameof(actor));
+        SplitReason = TextRules.Required(reason, 1000, nameof(reason));
+        SplitBy = TextRules.Required(actor, 64, nameof(actor));
         DecisionReason = SplitReason;
         Status = MissionStatus.Completed;
         UpdatedAtUtc = nowUtc;
@@ -437,8 +437,8 @@ public sealed class Mission : Entity
     {
         SetRelatedMission(relatedMissionId);
         SplitAtUtc = splitAtUtc;
-        SplitReason = Required(reason, 1000, nameof(reason));
-        SplitBy = Required(actor, 64, nameof(actor));
+        SplitReason = TextRules.Required(reason, 1000, nameof(reason));
+        SplitBy = TextRules.Required(actor, 64, nameof(actor));
         DecisionReason = SplitReason;
         UpdatedAtUtc = nowUtc;
     }
@@ -512,18 +512,18 @@ public sealed class Mission : Entity
             throw new InvalidOperationException("برای تغییر خودرو باید کیلومترشمار شروع خودروی جدید مشخص شود.");
         }
 
-        Title = Required(changes.Title, 200, nameof(changes.Title));
+        Title = TextRules.Required(changes.Title, 200, nameof(changes.Title));
         Type = changes.Type;
         Purpose = Optional(changes.Purpose, 500);
-        Origin = Required(changes.Origin, 200, nameof(changes.Origin));
-        Destination = Required(changes.Destination, 200, nameof(changes.Destination));
+        Origin = TextRules.Required(changes.Origin, 200, nameof(changes.Origin));
+        Destination = TextRules.Required(changes.Destination, 200, nameof(changes.Destination));
         RouteJson = JsonSerializer.Serialize(NormalizeStops(changes.IntermediateStops));
         PlannedStartAtUtc = changes.PlannedStartAtUtc;
         PlannedEndAtUtc = changes.PlannedEndAtUtc;
         DriverId = changes.DriverId;
         VehicleId = changes.VehicleId;
-        RequesterName = Required(changes.RequesterName, 200, nameof(changes.RequesterName));
-        RequesterPhoneSnapshot = Required(changes.RequesterPhoneSnapshot, 20, nameof(changes.RequesterPhoneSnapshot));
+        RequesterName = TextRules.Required(changes.RequesterName, 200, nameof(changes.RequesterName));
+        RequesterPhoneSnapshot = TextRules.Required(changes.RequesterPhoneSnapshot, 20, nameof(changes.RequesterPhoneSnapshot));
         RequesterOrganizationalUnit = Optional(changes.RequesterOrganizationalUnit, 200) ?? string.Empty;
         Description = Optional(changes.Description, 2000);
         PassengerCount = changes.PassengerCount;
@@ -571,12 +571,12 @@ public sealed class Mission : Entity
             throw new ArgumentOutOfRangeException(nameof(changes.PassengerCount), "تعداد همراهان نمی‌تواند منفی باشد.");
         }
 
-        Title = Required(changes.Title, 200, nameof(changes.Title));
-        RequesterPhoneSnapshot = Required(changes.RequesterPhoneSnapshot, 20, nameof(changes.RequesterPhoneSnapshot));
+        Title = TextRules.Required(changes.Title, 200, nameof(changes.Title));
+        RequesterPhoneSnapshot = TextRules.Required(changes.RequesterPhoneSnapshot, 20, nameof(changes.RequesterPhoneSnapshot));
         Type = changes.Type;
         Purpose = Optional(changes.Purpose, 500);
-        Origin = Required(changes.Origin, 200, nameof(changes.Origin));
-        Destination = Required(changes.Destination, 200, nameof(changes.Destination));
+        Origin = TextRules.Required(changes.Origin, 200, nameof(changes.Origin));
+        Destination = TextRules.Required(changes.Destination, 200, nameof(changes.Destination));
         RouteJson = JsonSerializer.Serialize(NormalizeStops(changes.IntermediateStops));
         PlannedStartAtUtc = changes.PlannedStartAtUtc;
         PlannedEndAtUtc = changes.PlannedEndAtUtc;
@@ -610,18 +610,6 @@ public sealed class Mission : Entity
             .Where(stop => !string.IsNullOrWhiteSpace(stop))
             .Select(stop => stop.Trim())
             .ToList();
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
-    }
 
     private static string? Optional(string? value, int maxLength)
     {

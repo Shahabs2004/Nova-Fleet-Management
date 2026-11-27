@@ -42,8 +42,7 @@ public sealed record UserListItemDto(
     bool IsDisabled,
     bool IsDirectoryUser,
     bool IsLocalAdmin,
-    IReadOnlyList<string> Roles,
-    string? AvatarDataUrl = null);
+    IReadOnlyList<string> Roles);
 
 public sealed record PermissionAssignmentDto(string Permission, PermissionEffect Effect);
 

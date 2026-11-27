@@ -46,8 +46,8 @@ public sealed class Driver : Entity
 
     public void UpdateProfile(string firstName, string lastName, string mobilePhone)
     {
-        FirstName = Required(firstName, 100, nameof(firstName));
-        LastName = Required(lastName, 100, nameof(lastName));
+        FirstName = TextRules.Required(firstName, 100, nameof(firstName));
+        LastName = TextRules.Required(lastName, 100, nameof(lastName));
         MobilePhone = NormalizeMobile(mobilePhone);
     }
 
@@ -88,18 +88,6 @@ public sealed class Driver : Entity
 
     public bool CanBeAssignedToMission()
         => !IsArchived && EmploymentStatus == DriverEmploymentStatus.Active;
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
-    }
 
     private static string NormalizeMobile(string value)
     {

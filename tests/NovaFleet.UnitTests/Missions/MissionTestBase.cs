@@ -23,7 +23,7 @@ namespace NovaFleet.UnitTests.Missions;
 /// ستون‌های nvarchar(max) که در SQLite ساخته نمی‌شوند، ستون‌های rowversion که خودکار مقدار می‌گیرند،
 /// و ستون‌های DateTimeOffset که SQLite در ORDER BY از آن‌ها پشتیبانی نمی‌کند.
 /// </summary>
-internal sealed class SqliteProviderColumnTypesModelCustomizer(ModelCustomizerDependencies dependencies)
+internal class SqliteProviderColumnTypesModelCustomizer(ModelCustomizerDependencies dependencies)
     : RelationalModelCustomizer(dependencies)
 {
     private static readonly ValueConverter DateTimeToUnixMilliseconds = new ValueConverter<DateTimeOffset, long>(

@@ -90,8 +90,8 @@ public sealed class ApplicationUser : Entity
     public ApplicationUser(string username, string firstName, string lastName, bool isLocalAdmin = false, bool isDirectoryUser = false)
     {
         Username = NormalizeUsername(username);
-        FirstName = Required(firstName, 100, nameof(firstName));
-        LastName = Required(lastName, 100, nameof(lastName));
+        FirstName = TextRules.Required(firstName, 100, nameof(firstName));
+        LastName = TextRules.Required(lastName, 100, nameof(lastName));
         IsLocalAdmin = isLocalAdmin;
         IsDirectoryUser = isDirectoryUser;
     }
@@ -105,8 +105,8 @@ public sealed class ApplicationUser : Entity
 
     public void UpdateProfile(string firstName, string lastName, string? mobilePhone, string? email, string? organizationalUnit)
     {
-        FirstName = Required(firstName, 100, nameof(firstName));
-        LastName = Required(lastName, 100, nameof(lastName));
+        FirstName = TextRules.Required(firstName, 100, nameof(firstName));
+        LastName = TextRules.Required(lastName, 100, nameof(lastName));
         MobilePhone = Optional(mobilePhone, 30);
         Email = Optional(email, 200);
         OrganizationalUnit = Optional(organizationalUnit, 200);
@@ -115,8 +115,8 @@ public sealed class ApplicationUser : Entity
 
     public void SyncDirectory(string firstName, string lastName, string? organizationalUnit, string? groupsJson, string distinguishedName)
     {
-        FirstName = string.IsNullOrWhiteSpace(firstName) ? FirstName : Required(firstName, 100, nameof(firstName));
-        LastName = string.IsNullOrWhiteSpace(lastName) ? LastName : Required(lastName, 100, nameof(lastName));
+        FirstName = string.IsNullOrWhiteSpace(firstName) ? FirstName : TextRules.Required(firstName, 100, nameof(firstName));
+        LastName = string.IsNullOrWhiteSpace(lastName) ? LastName : TextRules.Required(lastName, 100, nameof(lastName));
         OrganizationalUnit = Optional(organizationalUnit, 200) ?? OrganizationalUnit;
         DirectoryGroupsJson = groupsJson;
         DirectoryDistinguishedName = Optional(distinguishedName, 1000);
@@ -156,20 +156,8 @@ public sealed class ApplicationUser : Entity
 
     private static string NormalizeUsername(string username)
     {
-        var normalized = Required(username, 64, nameof(username));
+        var normalized = TextRules.Required(username, 64, nameof(username));
         return normalized.Contains('\\') ? normalized[(normalized.LastIndexOf('\\') + 1)..] : normalized;
-    }
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
     }
 
     private static string? Optional(string? value, int maxLength)

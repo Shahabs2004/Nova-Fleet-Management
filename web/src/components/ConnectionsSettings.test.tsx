@@ -37,18 +37,12 @@ const routes: Record<string, unknown> = {
     maxAttempts: 5,
     hasPassword: false,
   },
-  '/api/settings/connections/operations': {
-    logLevel: 'Warning',
-    pdfFontPath: 'C:\\Fonts\\persian.ttf',
-    reportPaperSize: 'A4',
-  },
 }
 
 const cases = [
   { title: 'پایگاه داده', save: 'ذخیره رشته اتصال', tests: ['تست اتصال'] },
   { title: 'دامنه (Active Directory)', save: 'ذخیره تنظیمات دامنه', tests: ['تست اتصال'] },
   { title: 'سرویس پیامک', save: 'ذخیره تنظیمات پیامک', tests: ['تست اعتبار درگاه'] },
-  { title: 'عملیات', save: 'ذخیره تنظیمات عملیات', tests: [] },
 ] as const
 
 function response(status: number, body: unknown): Response {
@@ -69,6 +63,43 @@ function card(title: string): HTMLElement {
   if (!section) throw new Error(`Missing settings card: ${title}`)
   return section
 }
+
+describe('connection settings surface', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('does not expose or request the removed operations settings', async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const path = String(input)
+      if (path in routes) return response(200, routes[path])
+      return response(500, { message: 'unexpected request' })
+    })
+
+    setup()
+    await screen.findByRole('heading', { name: 'پایگاه داده' })
+    await waitFor(() => expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).toEqual(
+      expect.arrayContaining([
+        '/api/settings/connections/database',
+        '/api/settings/connections/directory',
+        '/api/settings/connections/sms',
+      ]),
+    ))
+
+    expect(screen.queryByRole('heading', { name: 'عملیات' })).not.toBeInTheDocument()
+    expect(screen.queryByText('سطح لاگ')).not.toBeInTheDocument()
+    expect(screen.queryByText('مسیر فونت فارسی PDF')).not.toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.map(([input]) => String(input))).not.toContain(
+      '/api/settings/connections/operations',
+    )
+  })
+})
 
 describe('connection settings failed reads', () => {
   beforeEach(() => {

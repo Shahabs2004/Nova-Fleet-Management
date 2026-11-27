@@ -17,15 +17,32 @@ public sealed record DriverDto(
     string RowVersion,
     string? AvatarDataUrl = null);
 
-public sealed record DriverOptionDto(Guid Id, string DisplayName, string MobilePhone, Guid? DefaultVehicleId, string? AvatarDataUrl = null);
+public sealed record DriverListItemDto(
+    Guid Id,
+    string FirstName,
+    string LastName,
+    string DisplayName,
+    string MobilePhone,
+    DriverEmploymentStatus EmploymentStatus,
+    Guid? DefaultVehicleId,
+    string? DefaultVehiclePlate,
+    bool IsArchived,
+    DateTimeOffset CreatedAtUtc,
+    string RowVersion);
+
+public sealed record DriverOptionDto(Guid Id, string DisplayName, string MobilePhone, Guid? DefaultVehicleId);
 
 public sealed record DriverCreateRequest(string FirstName, string LastName, string MobilePhone, string? AvatarDataUrl = null);
 
 public sealed record DriverUpdateRequest(string FirstName, string LastName, string MobilePhone, string? RowVersion, string? AvatarDataUrl = null);
 
+public sealed record DriverCompositeCreateRequest(DriverCreateRequest Profile, Guid? DefaultVehicleId);
+
+public sealed record DriverCompositeUpdateRequest(DriverUpdateRequest Profile, Guid? DefaultVehicleId);
+
 public interface IDriverService
 {
-    Task<PagedResult<DriverDto>> SearchAsync(
+    Task<PagedResult<DriverListItemDto>> SearchAsync(
         string? search,
         bool includeArchived,
         int page,
@@ -39,6 +56,10 @@ public interface IDriverService
     Task<DriverDto> CreateAsync(DriverCreateRequest request, CancellationToken cancellationToken = default);
 
     Task<DriverDto> UpdateAsync(Guid id, DriverUpdateRequest request, CancellationToken cancellationToken = default);
+
+    Task<DriverDto> CreateCompositeAsync(DriverCompositeCreateRequest request, CancellationToken cancellationToken = default);
+
+    Task<DriverDto> UpdateCompositeAsync(Guid id, DriverCompositeUpdateRequest request, CancellationToken cancellationToken = default);
 
     Task<DriverDto> SetEmploymentStatusAsync(Guid id, DriverEmploymentStatus status, string? rowVersion, CancellationToken cancellationToken = default);
 

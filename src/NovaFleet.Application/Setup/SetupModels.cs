@@ -1,6 +1,6 @@
-namespace NovaFleet.Application.Setup;
-
 using NovaFleet.Application.Settings;
+
+namespace NovaFleet.Application.Setup;
 
 public sealed record SetupStatusDto(bool IsCompleted, bool HasLocalAdmin, int UserCount, string? OrganizationName);
 
@@ -18,7 +18,6 @@ public sealed record SetupRequest(
     string? LogoDataUrl = null,
     UpdateDirectorySettingsDto? Directory = null,
     UpdateSmsConnectionSettingsDto? Sms = null,
-    UpdateOperationsSettingsDto? Operations = null,
     MissionRulesDto? Rules = null,
     SessionPolicyDto? Session = null,
     MissionOrderTemplateDto? Template = null);

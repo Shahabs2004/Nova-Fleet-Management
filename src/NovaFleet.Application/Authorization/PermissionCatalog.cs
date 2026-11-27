@@ -184,12 +184,6 @@ public static class PermissionCatalog
         return code.EndsWith(".*", StringComparison.Ordinal)
             && WildcardPrefixes.Contains(code[..^1], StringComparer.OrdinalIgnoreCase);
     }
-
-    public static string Policy(string permission)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(permission);
-        return $"Permission:{permission}";
-    }
 }
 
 /// <summary>مشخصات نمایشی و فنی یک مجوز ثبت‌شده در کاتالوگ مرکزی.</summary>

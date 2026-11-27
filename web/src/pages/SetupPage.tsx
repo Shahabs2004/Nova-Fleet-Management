@@ -11,7 +11,7 @@ const STEPS: { key: StepKey; title: string; hint: string }[] = [
   { key: 'directory', title: 'دامنه', hint: 'ورود با حساب‌های Active Directory' },
   { key: 'sms', title: 'پیامک', hint: 'درگاه اطلاع‌رسانی' },
   { key: 'organization', title: 'سازمان و مدیر', hint: 'هویت سامانه و حساب اضطراری' },
-  { key: 'policy', title: 'قواعد و ظاهر', hint: 'قواعد مأموریت، نشست، حکم و لاگ' },
+  { key: 'policy', title: 'قواعد و ظاهر', hint: 'قواعد مأموریت، نشست و حکم' },
   { key: 'summary', title: 'تأیید', hint: 'مرور و ایجاد سامانه' },
 ]
 
@@ -66,9 +66,6 @@ const initialForm = {
   orderHeader: '',
   orderFooter: '',
   orderShowLogo: true,
-  logLevel: 'Information',
-  reportPaperSize: 'A4',
-  pdfFontPath: '',
 }
 
 type Form = typeof initialForm
@@ -608,7 +605,7 @@ function PolicyStep({ form, set }: { form: Form; set: Setter }) {
       </section>
 
       <section className="space-y-4">
-        <h3 className="text-sm font-bold text-emerald-950">حکم، گزارش و لاگ</h3>
+        <h3 className="text-sm font-bold text-emerald-950">حکم مأموریت</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="سربرگ حکم مأموریت">
             <input className="input" value={form.orderHeader} onChange={(e) => set('orderHeader')(e.target.value)} />
@@ -616,28 +613,7 @@ function PolicyStep({ form, set }: { form: Form; set: Setter }) {
           <Field label="پاورقی حکم مأموریت">
             <input className="input" value={form.orderFooter} onChange={(e) => set('orderFooter')(e.target.value)} />
           </Field>
-          <Field label="اندازه کاغذ گزارش">
-            <select className="input" value={form.reportPaperSize} onChange={(e) => set('reportPaperSize')(e.target.value)}>
-              {['A4', 'A5', 'Letter'].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="سطح لاگ" hint="پس از راه‌اندازی مجدد سرویس اعمال می‌شود.">
-            <select className="input" value={form.logLevel} onChange={(e) => set('logLevel')(e.target.value)}>
-              {['Critical', 'Error', 'Warning', 'Information', 'Debug', 'Trace'].map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-          </Field>
         </div>
-        <Field label="مسیر فونت فارسی PDF" hint="مسیر کامل؛ اگر خالی بماند فونت پیش‌فرض ویندوز به کار می‌رود.">
-          <input className="input" dir="ltr" value={form.pdfFontPath} onChange={(e) => set('pdfFontPath')(e.target.value)} />
-        </Field>
         <Toggle label="لوگو در حکم مأموریت نمایش داده شود" checked={form.orderShowLogo} onChange={set('orderShowLogo')} />
       </section>
     </div>
@@ -682,7 +658,6 @@ function SummaryStep({ form }: { form: Form }) {
         <Row label="فاصله مأموریت / بازه آینده" value={`${form.minimumGapMinutes} دقیقه / ${form.futureRequestDays} روز`} />
         <Row label="بازه ثبت در گذشته" value={form.backdateRequestDays === null ? 'نامحدود' : `${form.backdateRequestDays} روز`} />
         <Row label="نشست" value={`${form.sessionAbsoluteMinutes} دقیقه عمر، ${form.sessionIdleMinutes} دقیقه بی‌فعالیتی`} />
-        <Row label="کاغذ گزارش / سطح لاگ" value={`${form.reportPaperSize} / ${form.logLevel}`} />
       </section>
 
       <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs leading-6 text-slate-500 ring-1 ring-slate-200">
@@ -725,11 +700,6 @@ function buildPayload(form: Form) {
       retryMinutes: form.smsRetryMinutes,
       maxAttempts: form.smsMaxAttempts,
       password: form.smsPassword,
-    },
-    operations: {
-      logLevel: form.logLevel,
-      pdfFontPath: form.pdfFontPath,
-      reportPaperSize: form.reportPaperSize,
     },
     rules: {
       minimumGapMinutes: form.minimumGapMinutes,

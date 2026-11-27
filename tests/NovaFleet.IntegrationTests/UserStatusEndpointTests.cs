@@ -93,7 +93,6 @@ public sealed class UserStatusEndpointTests
         public Task<PagedResult<UserSessionDto>> ListAsync(SessionQuery query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> ValidateAsync(string sessionKey, int absoluteMinutes, int idleMinutes, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task ForceEndAsync(Guid id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-        public Task<int> ActiveCountAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class ThrowingAuditQueryService : IAuditQueryService

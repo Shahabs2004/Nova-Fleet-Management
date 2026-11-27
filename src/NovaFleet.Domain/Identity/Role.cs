@@ -21,31 +21,19 @@ public sealed class Role : Entity
 
     public Role(string name, string title, string? description = null, bool isSystem = false)
     {
-        Name = Required(name, 64, nameof(name));
-        Title = Required(title, 200, nameof(title));
+        Name = TextRules.Required(name, 64, nameof(name));
+        Title = TextRules.Required(title, 200, nameof(title));
         Description = description?.Trim();
         IsSystem = isSystem;
     }
 
     public void Update(string title, string? description)
     {
-        Title = Required(title, 200, nameof(title));
+        Title = TextRules.Required(title, 200, nameof(title));
         Description = description?.Trim();
     }
 
     public void Disable() => IsActive = false;
 
     public void Enable() => IsActive = true;
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
-    }
 }

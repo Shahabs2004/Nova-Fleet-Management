@@ -111,8 +111,7 @@ export interface TimelineMission {
   destination: string
 }
 
-export interface DriverDto {
-  avatarDataUrl: string | null
+export interface DriverListItem {
   id: string
   firstName: string
   lastName: string
@@ -124,6 +123,61 @@ export interface DriverDto {
   isArchived: boolean
   createdAtUtc: string
   rowVersion: string
+}
+
+export interface DriverDto extends DriverListItem {
+  avatarDataUrl: string | null
+}
+
+export interface DriverOptionDto {
+  id: string
+  displayName: string
+  mobilePhone: string
+  defaultVehicleId: string | null
+}
+
+export interface DriverProfileRequest {
+  firstName: string
+  lastName: string
+  mobilePhone: string
+  avatarDataUrl: string | null
+  rowVersion?: string
+}
+
+export interface DriverCompositeCreateRequest {
+  profile: DriverProfileRequest
+  defaultVehicleId: string | null
+}
+
+export interface DriverCompositeUpdateRequest extends DriverCompositeCreateRequest {
+  profile: DriverProfileRequest & { rowVersion: string }
+}
+
+export interface VehicleProfileRequest {
+  brand: string
+  model: string
+  plateFirstTwo: string
+  plateLetter: string
+  plateNextThree: string
+  plateIranCode: string
+  rowVersion?: string
+}
+
+export interface VehicleCompositeCreateRequest {
+  profile: VehicleProfileRequest
+  driverId: string | null
+}
+
+export interface VehicleCompositeUpdateRequest extends VehicleCompositeCreateRequest {
+  profile: VehicleProfileRequest & { rowVersion: string }
+}
+
+export interface VehicleOptionDto {
+  id: string
+  displayName: string
+  plateDisplay: string
+  effectiveStatus: number
+  manualStatus: number
 }
 
 export interface VehicleDto {
@@ -142,6 +196,8 @@ export interface VehicleDto {
   isArchived: boolean
   createdAtUtc: string
   rowVersion: string
+  driverId: string | null
+  driverDisplayName: string | null
 }
 
 export interface PagedResult<T> {
@@ -259,7 +315,6 @@ export interface SetupDatabaseResult {
 }
 
 export interface UserListItem {
-  avatarDataUrl: string | null
   id: string
   username: string
   displayName: string
@@ -389,12 +444,6 @@ export interface SmsConnectionSettings {
   retryMinutes: number
   maxAttempts: number
   hasPassword: boolean
-}
-
-export interface OperationsSettings {
-  logLevel: string
-  pdfFontPath: string | null
-  reportPaperSize: string
 }
 
 export interface DatabaseSettings {

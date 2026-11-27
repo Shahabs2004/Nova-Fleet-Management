@@ -140,42 +140,6 @@ public static class SettingsWriters
         return mode;
     }
 
-    public static (string LogLevel, string PaperSize, string? FontPath) ValidateOperations(UpdateOperationsSettingsDto request)
-    {
-        var level = Normalize(request.LogLevel);
-        if (!SettingKeys.LogLevels.Contains(level))
-        {
-            throw new ValidationAppException("سطح لاگ معتبر نیست.");
-        }
-
-        var paper = Normalize(request.ReportPaperSize);
-        if (!SettingKeys.ReportPaperSizes.Contains(paper))
-        {
-            throw new ValidationAppException("اندازه کاغذ گزارش باید A4، A5 یا Letter باشد.");
-        }
-
-        var fontPath = request.PdfFontPath?.Trim();
-        if (!string.IsNullOrEmpty(fontPath) && (!Path.IsPathRooted(fontPath) || fontPath.Length > 500))
-        {
-            throw new ValidationAppException("مسیر فونت باید کامل و کوتاه باشد.");
-        }
-
-        return (level, paper, fontPath);
-    }
-
-    public static async Task<(string LogLevel, string PaperSize, string? FontPath)> WriteOperationsAsync(
-        IRuntimeSettings settings,
-        UpdateOperationsSettingsDto request,
-        CancellationToken cancellationToken = default)
-    {
-        var (level, paper, fontPath) = ValidateOperations(request);
-
-        await settings.SetAsync(SettingKeys.OperationsLogLevel, level, cancellationToken);
-        await settings.SetAsync(SettingKeys.BrandingPdfFontPath, fontPath ?? string.Empty, cancellationToken);
-        await settings.SetAsync(SettingKeys.BrandingReportPaperSize, paper, cancellationToken);
-        return (level, paper, fontPath);
-    }
-
     public static OrganizationProfileDto ValidateOrganization(OrganizationProfileDto profile)
     {
         if (string.IsNullOrWhiteSpace(profile.Name))

@@ -167,9 +167,13 @@ public static class EndpointMapper
             await service.ListOptionsAsync(includeInactive ?? false, ct));
         group.MapPost("/drivers", async (DriverCreateRequest request, IDriverService service, CancellationToken ct) =>
             Results.Ok(await service.CreateAsync(request, ct)));
+        group.MapPost("/drivers/composite", async (DriverCompositeCreateRequest request, IDriverService service, CancellationToken ct) =>
+            Results.Ok(await service.CreateCompositeAsync(request, ct)));
         group.MapGet("/drivers/{id:guid}", async (Guid id, IDriverService service, CancellationToken ct) => await service.GetAsync(id, ct));
         group.MapPut("/drivers/{id:guid}", async (Guid id, DriverUpdateRequest request, IDriverService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(id, request, ct)));
+        group.MapPut("/drivers/{id:guid}/composite", async (Guid id, DriverCompositeUpdateRequest request, IDriverService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateCompositeAsync(id, request, ct)));
         group.MapPost("/drivers/{id:guid}/employment-status", async (Guid id, EmploymentStatusBody body, IDriverService service, CancellationToken ct) =>
             Results.Ok(await service.SetEmploymentStatusAsync(id, body.Status, body.RowVersion, ct)));
         group.MapPost("/drivers/{id:guid}/default-vehicle", async (Guid id, DefaultVehicleBody body, IDriverService service, CancellationToken ct) =>
@@ -186,9 +190,13 @@ public static class EndpointMapper
             await service.ListOptionsAsync(includeArchived ?? false, ct));
         group.MapPost("/vehicles", async (VehicleCreateRequest request, IVehicleService service, CancellationToken ct) =>
             Results.Ok(await service.CreateAsync(request, ct)));
+        group.MapPost("/vehicles/composite", async (VehicleCompositeCreateRequest request, IVehicleService service, CancellationToken ct) =>
+            Results.Ok(await service.CreateCompositeAsync(request, ct)));
         group.MapGet("/vehicles/{id:guid}", async (Guid id, IVehicleService service, CancellationToken ct) => await service.GetAsync(id, ct));
         group.MapPut("/vehicles/{id:guid}", async (Guid id, VehicleUpdateRequest request, IVehicleService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateAsync(id, request, ct)));
+        group.MapPut("/vehicles/{id:guid}/composite", async (Guid id, VehicleCompositeUpdateRequest request, IVehicleService service, CancellationToken ct) =>
+            Results.Ok(await service.UpdateCompositeAsync(id, request, ct)));
         group.MapPost("/vehicles/{id:guid}/manual-status", async (Guid id, ManualStatusBody body, IVehicleService service, CancellationToken ct) =>
             Results.Ok(await service.SetManualStatusAsync(id, body.Status, body.RowVersion, ct)));
         group.MapPost("/vehicles/{id:guid}/archive", async (Guid id, ArchiveBody body, IVehicleService service, CancellationToken ct) =>
@@ -337,7 +345,7 @@ public static class EndpointMapper
             Results.Ok(new { id = await service.QueueTestAsync(request, ct) }));
     }
 
-    private static void MapSettingsEndpoints(this RouteGroupBuilder group)
+    internal static void MapSettingsEndpoints(this RouteGroupBuilder group)
     {
         group.MapGet("/settings", async (ISettingsService service, CancellationToken ct) => await service.GetBundleAsync(ct));
         group.MapPut("/settings/organization", async (OrganizationProfileDto profile, ISettingsService service, CancellationToken ct) =>
@@ -364,10 +372,6 @@ public static class EndpointMapper
             await service.GetSmsAsync(ct));
         group.MapPut("/settings/connections/sms", async (UpdateSmsConnectionSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
             Results.Ok(await service.UpdateSmsAsync(request, ct)));
-        group.MapGet("/settings/connections/operations", async (IConnectionsSettingsService service, CancellationToken ct) =>
-            await service.GetOperationsAsync(ct));
-        group.MapPut("/settings/connections/operations", async (UpdateOperationsSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>
-            Results.Ok(await service.UpdateOperationsAsync(request, ct)));
         group.MapGet("/settings/connections/database", async (IConnectionsSettingsService service, CancellationToken ct) =>
             await service.GetDatabaseAsync(ct));
         group.MapPut("/settings/connections/database", async (DatabaseSettingsDto request, IConnectionsSettingsService service, CancellationToken ct) =>

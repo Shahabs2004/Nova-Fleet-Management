@@ -18,7 +18,9 @@ public sealed record VehicleDto(
     VehicleEffectiveStatus EffectiveStatus,
     bool IsArchived,
     DateTimeOffset CreatedAtUtc,
-    string RowVersion);
+    string RowVersion,
+    Guid? DriverId = null,
+    string? DriverDisplayName = null);
 
 public sealed record VehicleOptionDto(
     Guid Id,
@@ -44,6 +46,10 @@ public sealed record VehicleUpdateRequest(
     string PlateIranCode,
     string? RowVersion);
 
+public sealed record VehicleCompositeCreateRequest(VehicleCreateRequest Profile, Guid? DriverId);
+
+public sealed record VehicleCompositeUpdateRequest(VehicleUpdateRequest Profile, Guid? DriverId);
+
 public interface IVehicleService
 {
     Task<PagedResult<VehicleDto>> SearchAsync(
@@ -60,6 +66,10 @@ public interface IVehicleService
     Task<VehicleDto> CreateAsync(VehicleCreateRequest request, CancellationToken cancellationToken = default);
 
     Task<VehicleDto> UpdateAsync(Guid id, VehicleUpdateRequest request, CancellationToken cancellationToken = default);
+
+    Task<VehicleDto> CreateCompositeAsync(VehicleCompositeCreateRequest request, CancellationToken cancellationToken = default);
+
+    Task<VehicleDto> UpdateCompositeAsync(Guid id, VehicleCompositeUpdateRequest request, CancellationToken cancellationToken = default);
 
     Task<VehicleDto> SetManualStatusAsync(Guid id, ManualVehicleStatus status, string? rowVersion, CancellationToken cancellationToken = default);
 

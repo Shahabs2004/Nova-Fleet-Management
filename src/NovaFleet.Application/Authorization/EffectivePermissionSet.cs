@@ -63,9 +63,6 @@ public sealed class EffectivePermissionSet
             || _grants.Contains(ModuleWildcard(code));
     }
 
-    /// <summary>آیا حداقل یکی از مجوزهای خواسته‌شده مؤثر است؟</summary>
-    public bool HasAny(params string[] permissions) => permissions.Any(Has);
-
     public IReadOnlyCollection<string> Grants => _grants;
 
     private bool IsDenied(string code) =>

@@ -61,7 +61,31 @@ public sealed class VehicleService(
             .Take(safeSize)
             .ToListAsync(cancellationToken);
 
-        var items = rows.Select(vehicle => ToDto(vehicle, activeVehicleIds.Contains(vehicle.Id))).ToList();
+        var driverByVehicle = new Dictionary<Guid, (Guid Id, string DisplayName)?>();
+        if (currentUser.Has(PermissionCatalog.Drivers.View))
+        {
+            var vehicleIds = rows.Select(vehicle => vehicle.Id).ToArray();
+            var assignments = await db.Drivers.AsNoTracking()
+                .Where(item => item.DefaultVehicleId != null && vehicleIds.Contains(item.DefaultVehicleId.Value))
+                .OrderBy(item => item.Id)
+                .Select(item => new
+                {
+                    VehicleId = item.DefaultVehicleId!.Value,
+                    item.Id,
+                    DisplayName = item.FirstName + " " + item.LastName,
+                })
+                .ToListAsync(cancellationToken);
+            foreach (var assignment in assignments)
+            {
+                driverByVehicle.TryAdd(assignment.VehicleId, (assignment.Id, assignment.DisplayName));
+            }
+        }
+
+        var items = rows.Select(vehicle =>
+        {
+            var driver = driverByVehicle.GetValueOrDefault(vehicle.Id);
+            return ToDto(vehicle, activeVehicleIds.Contains(vehicle.Id), driver?.Id, driver?.DisplayName);
+        }).ToList();
         return new PagedResult<VehicleDto>(items, total, safePage, safeSize);
     }
 
@@ -94,7 +118,20 @@ public sealed class VehicleService(
         currentUser.Require(PermissionCatalog.Vehicles.View);
         var vehicle = await LoadAsync(id, cancellationToken);
         var hasActive = await HasActiveMissionAsync(id, cancellationToken);
-        return ToDto(vehicle, hasActive);
+        Guid? driverId = null;
+        string? driverDisplayName = null;
+        if (currentUser.Has(PermissionCatalog.Drivers.View))
+        {
+            var driver = await db.Drivers.AsNoTracking()
+                .Where(item => item.DefaultVehicleId == id)
+                .OrderBy(item => item.Id)
+                .Select(item => new { item.Id, DisplayName = item.FirstName + " " + item.LastName })
+                .FirstOrDefaultAsync(cancellationToken);
+            driverId = driver?.Id;
+            driverDisplayName = driver?.DisplayName;
+        }
+
+        return ToDto(vehicle, hasActive, driverId, driverDisplayName);
     }
 
     public async Task<VehicleDto> CreateAsync(VehicleCreateRequest request, CancellationToken cancellationToken = default)
@@ -117,6 +154,66 @@ public sealed class VehicleService(
         vehicle.UpdateDetails(request.Brand, request.Model, plate);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("UpdateVehicle", "Vehicle", id.ToString(), "Success", After: new { vehicle.DisplayName }), cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
+    public async Task<VehicleDto> CreateCompositeAsync(
+        VehicleCompositeCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Profile);
+        currentUser.Require(PermissionCatalog.Vehicles.Manage);
+        if (request.DriverId.HasValue)
+        {
+            currentUser.RequireAny(PermissionCatalog.Drivers.DefaultVehicleManage, PermissionCatalog.Drivers.Manage);
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var plate = BuildPlate(request.Profile.PlateFirstTwo, request.Profile.PlateLetter,
+            request.Profile.PlateNextThree, request.Profile.PlateIranCode);
+        var vehicle = new Vehicle(request.Profile.Brand, request.Profile.Model, plate);
+        db.Vehicles.Add(vehicle);
+        await ApplyDriverAsync(vehicle, request.DriverId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("CreateVehicle", "Vehicle", vehicle.Id.ToString(), "Success",
+            After: new { vehicle.DisplayName, request.DriverId }), cancellationToken);
+        return await GetAsync(vehicle.Id, cancellationToken);
+    }
+
+    public async Task<VehicleDto> UpdateCompositeAsync(
+        Guid id,
+        VehicleCompositeUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Profile);
+        currentUser.Require(PermissionCatalog.Vehicles.Manage);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var vehicle = await LoadAsync(id, cancellationToken);
+        var currentDriverIds = await db.Drivers
+            .Where(item => item.DefaultVehicleId == vehicle.Id)
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
+        var relationshipChanges = request.DriverId.HasValue
+            ? currentDriverIds.Count != 1 || currentDriverIds[0] != request.DriverId.Value
+            : currentDriverIds.Count != 0;
+        if (relationshipChanges)
+        {
+            currentUser.RequireAny(PermissionCatalog.Drivers.DefaultVehicleManage, PermissionCatalog.Drivers.Manage);
+        }
+
+        db.ApplyRowVersion(vehicle, request.Profile.RowVersion);
+        var plate = BuildPlate(request.Profile.PlateFirstTwo, request.Profile.PlateLetter,
+            request.Profile.PlateNextThree, request.Profile.PlateIranCode);
+        vehicle.UpdateDetails(request.Profile.Brand, request.Profile.Model, plate);
+        await ApplyDriverAsync(vehicle, request.DriverId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("UpdateVehicle", "Vehicle", id.ToString(), "Success",
+            After: new { vehicle.DisplayName, request.DriverId }), cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
 
@@ -182,6 +279,31 @@ public sealed class VehicleService(
         return await GetAsync(id, cancellationToken);
     }
 
+    private async Task ApplyDriverAsync(Vehicle vehicle, Guid? driverId, CancellationToken cancellationToken)
+    {
+        if (driverId.HasValue)
+        {
+            var driver = await db.Drivers.FirstOrDefaultAsync(item => item.Id == driverId, cancellationToken)
+                ?? throw new NotFoundAppException("راننده انتخاب‌شده پیدا نشد.");
+            var otherHolders = await db.Drivers
+                .Where(item => item.DefaultVehicleId == vehicle.Id && item.Id != driver.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var holder in otherHolders)
+            {
+                holder.SetDefaultVehicle(null);
+            }
+
+            driver.SetDefaultVehicle(vehicle.Id);
+            return;
+        }
+
+        var holders = await db.Drivers.Where(item => item.DefaultVehicleId == vehicle.Id).ToListAsync(cancellationToken);
+        foreach (var holder in holders)
+        {
+            holder.SetDefaultVehicle(null);
+        }
+    }
+
     private static IranianLicensePlate BuildPlate(string firstTwo, string letter, string nextThree, string iranCode)
     {
         try
@@ -208,7 +330,11 @@ public sealed class VehicleService(
     private Task<bool> HasActiveMissionAsync(Guid vehicleId, CancellationToken cancellationToken) =>
         db.Missions.AnyAsync(item => item.VehicleId == vehicleId && ActiveStatuses.Contains(item.Status), cancellationToken);
 
-    private static VehicleDto ToDto(Vehicle vehicle, bool hasActiveMission) => new(
+    private static VehicleDto ToDto(
+        Vehicle vehicle,
+        bool hasActiveMission,
+        Guid? driverId = null,
+        string? driverDisplayName = null) => new(
         vehicle.Id,
         vehicle.Brand,
         vehicle.Model,
@@ -223,5 +349,7 @@ public sealed class VehicleService(
         vehicle.GetEffectiveStatus(hasActiveMission),
         vehicle.IsArchived,
         vehicle.CreatedAtUtc,
-        vehicle.RowVersion.ToRowVersionString());
+        vehicle.RowVersion.ToRowVersionString(),
+        driverId,
+        driverDisplayName);
 }

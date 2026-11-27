@@ -450,9 +450,6 @@ public sealed class MissionChangeSnapshotMigrationIntegrationTests : IAsyncLifet
 
         public Task PublishToPermissionAsync(NotificationMessage message, string permission, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
-
-        public Task PublishToRolesAsync(NotificationMessage message, IReadOnlyList<string> roleNames, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
     }
 
     private sealed class FakeSmsDispatcher : ISmsDispatcher

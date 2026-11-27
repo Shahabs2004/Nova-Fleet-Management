@@ -21,7 +21,7 @@ import {
   toFa,
 } from '../lib/date'
 import { MISSION_STATUS, MISSION_TYPE } from '../lib/labels'
-import type { DriverDto, MissionDetails, TimelineMission, VehicleDto } from '../lib/types'
+import type { DriverOptionDto, MissionDetails, TimelineMission, VehicleOptionDto } from '../lib/types'
 
 const DAY_MS = 86_400_000
 const HOUR_MS = 3_600_000
@@ -121,8 +121,8 @@ export function TimelinePage() {
   const toDayStart = jalaliValueToUtc(to, 0)
   const toUtc = toDayStart ? new Date(Date.parse(toDayStart) + DAY_MS).toISOString() : null
 
-  const drivers = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
-  const vehicles = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
+  const drivers = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverOptionDto[]>('/api/drivers/options') })
+  const vehicles = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleOptionDto[]>('/api/vehicles/options') })
 
   const params = new URLSearchParams()
   if (fromUtc) params.set('fromUtc', fromUtc)
@@ -507,7 +507,7 @@ export function TimelinePage() {
                       }`}
                       style={{ width: NAME_WIDTH }}
                     >
-                      <Avatar name={row.name} src={drivers.data?.find((driver) => driver.id === row.key)?.avatarDataUrl} size="sm" />
+                      <Avatar name={row.name} size="sm" />
                       <div className="min-w-0">
                         <p className="truncate text-[13px] font-bold text-emerald-950">{row.name}</p>
                         <p className="text-[10px] text-slate-400">{toFa(row.placed.length)} مأموریت</p>

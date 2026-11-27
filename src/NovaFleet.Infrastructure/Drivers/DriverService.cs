@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Authorization;
@@ -15,7 +16,7 @@ public sealed class DriverService(
     ICurrentUser currentUser,
     IAuditTrail audit) : IDriverService
 {
-    public async Task<PagedResult<DriverDto>> SearchAsync(
+    public async Task<PagedResult<DriverListItemDto>> SearchAsync(
         string? search,
         bool includeArchived,
         int page,
@@ -45,11 +46,21 @@ public sealed class DriverService(
             .OrderBy(item => item.LastName).ThenBy(item => item.FirstName)
             .Skip((safePage - 1) * safeSize)
             .Take(safeSize)
-            .Select(item => new { item, Plate = db.Vehicles.Where(v => v.Id == item.DefaultVehicleId).Select(v => v.PlateDisplay).FirstOrDefault() })
+            .Select(item => new DriverListItemDto(
+                item.Id,
+                item.FirstName,
+                item.LastName,
+                item.FirstName + " " + item.LastName,
+                item.MobilePhone,
+                item.EmploymentStatus,
+                item.DefaultVehicleId,
+                db.Vehicles.Where(vehicle => vehicle.Id == item.DefaultVehicleId).Select(vehicle => vehicle.PlateDisplay).FirstOrDefault(),
+                item.IsArchived,
+                item.CreatedAtUtc,
+                item.RowVersion.ToRowVersionString()))
             .ToListAsync(cancellationToken);
 
-        var items = rows.Select(row => ToDto(row.item, row.Plate)).ToList();
-        return new PagedResult<DriverDto>(items, total, safePage, safeSize);
+        return new PagedResult<DriverListItemDto>(rows, total, safePage, safeSize);
     }
 
     public async Task<IReadOnlyList<DriverOptionDto>> ListOptionsAsync(bool includeInactive, CancellationToken cancellationToken = default)
@@ -63,7 +74,7 @@ public sealed class DriverService(
 
         return await source
             .OrderBy(item => item.LastName).ThenBy(item => item.FirstName)
-            .Select(item => new DriverOptionDto(item.Id, item.FirstName + " " + item.LastName, item.MobilePhone, item.DefaultVehicleId, item.AvatarDataUrl))
+            .Select(item => new DriverOptionDto(item.Id, item.FirstName + " " + item.LastName, item.MobilePhone, item.DefaultVehicleId))
             .ToListAsync(cancellationToken);
     }
 
@@ -102,6 +113,56 @@ public sealed class DriverService(
         return await GetAsync(id, cancellationToken);
     }
 
+    public async Task<DriverDto> CreateCompositeAsync(
+        DriverCompositeCreateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Profile);
+        currentUser.Require(PermissionCatalog.Drivers.Manage);
+        if (request.DefaultVehicleId.HasValue)
+        {
+            currentUser.RequireAny(PermissionCatalog.Drivers.DefaultVehicleManage, PermissionCatalog.Drivers.Manage);
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var driver = new Driver(request.Profile.FirstName, request.Profile.LastName, request.Profile.MobilePhone);
+        driver.SetAvatar(AvatarImageValidator.ValidateAndNormalize(request.Profile.AvatarDataUrl));
+        db.Drivers.Add(driver);
+        await ApplyDefaultVehicleAsync(driver, request.DefaultVehicleId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("CreateDriver", "Driver", driver.Id.ToString(), "Success",
+            After: new { driver.DisplayName, driver.MobilePhone, request.DefaultVehicleId }), cancellationToken);
+        return await GetAsync(driver.Id, cancellationToken);
+    }
+
+    public async Task<DriverDto> UpdateCompositeAsync(
+        Guid id,
+        DriverCompositeUpdateRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Profile);
+        currentUser.Require(PermissionCatalog.Drivers.Manage);
+        if (request.DefaultVehicleId.HasValue)
+        {
+            currentUser.RequireAny(PermissionCatalog.Drivers.DefaultVehicleManage, PermissionCatalog.Drivers.Manage);
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var driver = await LoadAsync(id, cancellationToken);
+        db.ApplyRowVersion(driver, request.Profile.RowVersion);
+        driver.UpdateProfile(request.Profile.FirstName, request.Profile.LastName, request.Profile.MobilePhone);
+        driver.SetAvatar(AvatarImageValidator.ValidateAndNormalize(request.Profile.AvatarDataUrl));
+        await ApplyDefaultVehicleAsync(driver, request.DefaultVehicleId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await audit.WriteAsync(new AuditRecord("UpdateDriver", "Driver", id.ToString(), "Success",
+            After: new { driver.DisplayName, driver.MobilePhone, request.DefaultVehicleId }), cancellationToken);
+        return await GetAsync(id, cancellationToken);
+    }
+
     public async Task<DriverDto> SetEmploymentStatusAsync(
         Guid id,
         DriverEmploymentStatus status,
@@ -127,25 +188,7 @@ public sealed class DriverService(
         var driver = await LoadAsync(id, cancellationToken);
         db.ApplyRowVersion(driver, rowVersion);
 
-        if (vehicleId.HasValue)
-        {
-            var vehicle = await db.Vehicles.FirstOrDefaultAsync(item => item.Id == vehicleId, cancellationToken)
-                ?? throw new NotFoundAppException("خودروی انتخاب‌شده پیدا نشد.");
-            if (vehicle.IsArchived)
-            {
-                throw new ValidationAppException("خودروی بایگانی‌شده نمی‌تواند پیش‌فرض باشد.");
-            }
-
-            var otherHolders = await db.Drivers
-                .Where(item => item.DefaultVehicleId == vehicleId && item.Id != id)
-                .ToListAsync(cancellationToken);
-            foreach (var holder in otherHolders)
-            {
-                holder.SetDefaultVehicle(null);
-            }
-        }
-
-        driver.SetDefaultVehicle(vehicleId);
+        await ApplyDefaultVehicleAsync(driver, vehicleId, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord("SetDefaultVehicle", "Driver", id.ToString(), "Success", After: new { vehicleId }), cancellationToken);
         return await GetAsync(id, cancellationToken);
@@ -186,6 +229,29 @@ public sealed class DriverService(
         await db.SaveChangesAsync(cancellationToken);
         await audit.WriteAsync(new AuditRecord(archived ? "ArchiveDriver" : "ReactivateDriver", "Driver", id.ToString(), "Success"), cancellationToken);
         return await GetAsync(id, cancellationToken);
+    }
+
+    private async Task ApplyDefaultVehicleAsync(Driver driver, Guid? vehicleId, CancellationToken cancellationToken)
+    {
+        if (vehicleId.HasValue)
+        {
+            var vehicle = await db.Vehicles.FirstOrDefaultAsync(item => item.Id == vehicleId, cancellationToken)
+                ?? throw new NotFoundAppException("خودروی انتخاب‌شده پیدا نشد.");
+            if (vehicle.IsArchived)
+            {
+                throw new ValidationAppException("خودروی بایگانی‌شده نمی‌تواند پیش‌فرض باشد.");
+            }
+
+            var otherHolders = await db.Drivers
+                .Where(item => item.DefaultVehicleId == vehicleId && item.Id != driver.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var holder in otherHolders)
+            {
+                holder.SetDefaultVehicle(null);
+            }
+        }
+
+        driver.SetDefaultVehicle(vehicleId);
     }
 
     private async Task<Driver> LoadAsync(Guid id, CancellationToken cancellationToken) =>

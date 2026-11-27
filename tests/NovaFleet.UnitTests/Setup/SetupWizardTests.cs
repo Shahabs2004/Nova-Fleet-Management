@@ -54,9 +54,10 @@ public class SetupWizardTests : MissionTestBase
         Assert.Equal("Wsdl", await Runtime.GetStringAsync(SettingKeys.SmsMode));
         Assert.Equal("1000999", await Runtime.GetStringAsync(SettingKeys.SmsSenderNumber));
         Assert.Equal(SmsSecret, await Runtime.GetSecretAsync(SettingKeys.SmsPassword));
-        Assert.Equal("Warning", await Runtime.GetStringAsync(SettingKeys.OperationsLogLevel));
-        Assert.Equal("A5", await Runtime.GetStringAsync(SettingKeys.BrandingReportPaperSize));
-        Assert.Equal("C:\\Fonts\\Vazir.ttf", await Runtime.GetStringAsync(SettingKeys.BrandingPdfFontPath));
+        var plainValues = await Runtime.ReadAllAsync();
+        Assert.False(plainValues.ContainsKey("operations.log-level"));
+        Assert.False(plainValues.ContainsKey("branding.report-paper-size"));
+        Assert.False(plainValues.ContainsKey("branding.pdf-font-path"));
         Assert.Equal("45", await Runtime.GetStringAsync(SettingKeys.MinimumGapMinutes));
         Assert.Equal("7", await Runtime.GetStringAsync(SettingKeys.BackdateRequestDays));
         Assert.Equal("90", await Runtime.GetStringAsync(SettingKeys.SmsReminderMinutes));
@@ -350,7 +351,6 @@ public class SetupWizardTests : MissionTestBase
             SearchFilter: "(&(objectClass=user)(sAMAccountName={0}))",
             BindPassword: BindSecret),
         Sms: FullSms,
-        Operations: new UpdateOperationsSettingsDto("Warning", "C:\\Fonts\\Vazir.ttf", "A5"),
         Rules: new MissionRulesDto(45, 20, 12, 90, 7),
         Session: new SessionPolicyDto(360, 60),
         Template: new MissionOrderTemplateDto("سرناوگان", "پاورقی آزمون", true));

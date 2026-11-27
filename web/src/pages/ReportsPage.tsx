@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 import { api, downloadFile } from '../lib/api'
 import { faNumber, formatFaDateTime, jalaliOf, toFa } from '../lib/date'
 import { MISSION_STATUS, MISSION_TYPE } from '../lib/labels'
-import type { DriverDto, ReportDefinition, ReportTable, VehicleDto } from '../lib/types'
+import type { DriverOptionDto, ReportDefinition, ReportTable, VehicleOptionDto } from '../lib/types'
 
 interface ReportFilters {
   fromUtc: string | null
@@ -52,8 +52,8 @@ export function ReportsPage() {
     queryKey: ['reports', user?.username],
     queryFn: () => api.get<ReportDefinition[]>('/api/reports'),
   })
-  const { data: drivers } = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options') })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options') })
+  const { data: drivers } = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverOptionDto[]>('/api/drivers/options') })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleOptionDto[]>('/api/vehicles/options') })
   const { data: orgUnits } = useQuery({
     queryKey: ['organization-units', user?.username],
     queryFn: () => api.get<{ id: string; name: string; isActive: boolean }[]>('/api/organization-units'),

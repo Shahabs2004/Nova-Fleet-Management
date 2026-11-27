@@ -136,7 +136,7 @@ function UsersTab() {
                   <tr key={user.id} className="hover:bg-slate-50/70">
                     <td>
                       <div className="flex items-center gap-3">
-                        <Avatar name={user.displayName} src={user.avatarDataUrl} size="sm" />
+                        <Avatar name={user.displayName} size="sm" />
                         <div>
                           <p className="text-xs font-bold text-emerald-950">{user.displayName}</p>
                           <p className="num mt-0.5 text-[11px] text-slate-400" dir="ltr">{user.username}</p>

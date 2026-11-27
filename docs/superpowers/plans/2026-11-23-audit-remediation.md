@@ -701,22 +701,28 @@ Task<VehicleDto> UpdateCompositeAsync(Guid id, VehicleCompositeUpdateRequest req
 
 Map these to `POST /api/drivers/composite`, `PUT /api/drivers/{id}/composite`, `POST /api/vehicles/composite`, and `PUT /api/vehicles/{id}/composite`; use the composite routes for both create and update forms so a selected default vehicle/driver is saved in the same transaction.
 
-- [ ] **Step 1: Write failing atomic-save tests.** Force the second related write to fail and assert the first write is rolled back. Cover driver profile plus default vehicle, and vehicle plus related driver. Return one updated DTO to the UI.
-- [ ] **Step 2: Run tests and observe failure**, then add the smallest composite service/endpoint transaction. Do not add a generic transaction framework. Update frontend to call the composite endpoint once and invalidate both queries from its result.
-- [ ] **Step 3: Write failing payload tests.** Driver list/options and user list must not include full avatar data URLs; driver/user detail and own profile still include them. Replace list avatars with existing initials/name presentation; do not add an image library.
-- [ ] **Step 4: Recheck and remove dead code.** Whole-tree search each candidate immediately before deletion: `PagedResult<T>.Empty`, `EffectivePermissionSet.HasAny`, `PermissionCatalog.Policy`, `ISessionService.ActiveCountAsync`, and `INotificationPublisher.PublishToRolesAsync` including implementations/fakes. Remove only if no caller or documented external contract remains.
-- [ ] **Step 5: Remove no-op realtime.** Delete `IRealtimeNotifier`, `NoopRealtimeNotifier`, DI registration, and the per-notification no-op loop after confirming `PublishAsync` has no caller. Keep database notification persistence and polling unchanged.
-- [ ] **Step 6: Remove nonfunctional settings.** Recheck the operations log-level, PDF font-path, and report paper-size keys and controls. The audit found no runtime consumer; remove their DTO fields, validation/writes, `SettingKeys` constants, setup defaults, and operations form fields. Do not retain a visible control that does nothing. If the recheck finds a real consumer, stop and report the contradiction instead of silently changing scope.
-- [ ] **Step 7: Consolidate domain helpers only where behavior is identical.** Compare error messages and trimming/null rules first. Keep distinct helpers if consolidation changes behavior. Merge duplicate pending/approved mission validation into one private method only when tests prove identical invariants.
-- [ ] **Step 8: Add route-level code splitting.** Replace static page imports in `main.tsx` with `React.lazy`, use one shared Persian loading fallback, and keep layout/auth providers outside the fallback. Verify login and initial route chunks shrink and direct-route navigation works.
-- [ ] **Step 9: Verify.** Run focused backend/frontend tests, full backend tests, lint/build, inspect bundle manifest before/after, and search again for deleted symbols. Exercise driver/vehicle golden paths in a browser only if available without user credentials.
-- [ ] **Step 10: Report and wait.**
+- [x] **Step 1: Write failing atomic-save tests.** Force the second related write to fail and assert the first write is rolled back. Cover driver profile plus default vehicle, and vehicle plus related driver. Return one updated DTO to the UI.
+- [x] **Step 2: Run tests and observe failure**, then add the smallest composite service/endpoint transaction. Do not add a generic transaction framework. Update frontend to call the composite endpoint once and invalidate both queries from its result.
+- [x] **Step 3: Write failing payload tests.** Driver list/options and user list must not include full avatar data URLs; driver/user detail and own profile still include them. Replace list avatars with existing initials/name presentation; do not add an image library.
+- [x] **Step 4: Recheck and remove dead code.** Whole-tree search each candidate immediately before deletion: `PagedResult<T>.Empty`, `EffectivePermissionSet.HasAny`, `PermissionCatalog.Policy`, `ISessionService.ActiveCountAsync`, and `INotificationPublisher.PublishToRolesAsync` including implementations/fakes. Remove only if no caller or documented external contract remains.
+- [x] **Step 5: Remove no-op realtime.** Delete `IRealtimeNotifier`, `NoopRealtimeNotifier`, DI registration, and the per-notification no-op loop after confirming `PublishAsync` has no caller. Keep database notification persistence and polling unchanged.
+- [x] **Step 6: Remove nonfunctional settings.** Recheck the operations log-level, PDF font-path, and report paper-size keys and controls. The audit found no runtime consumer; remove their DTO fields, validation/writes, `SettingKeys` constants, setup defaults, and operations form fields. Do not retain a visible control that does nothing. If the recheck finds a real consumer, stop and report the contradiction instead of silently changing scope.
+- [x] **Step 7: Consolidate domain helpers only where behavior is identical.** Compare error messages and trimming/null rules first. Keep distinct helpers if consolidation changes behavior. Merge duplicate pending/approved mission validation into one private method only when tests prove identical invariants.
+- [x] **Step 8: Add route-level code splitting.** Replace static page imports in `main.tsx` with `React.lazy`, use one shared Persian loading fallback, and keep layout/auth providers outside the fallback. Verify login and initial route chunks shrink and direct-route navigation works.
+- [x] **Step 9: Verify.** Run focused backend/frontend tests, full backend tests, lint/build, inspect bundle manifest before/after, and search again for deleted symbols. Exercise driver/vehicle golden paths in a browser only if available without user credentials.
+- [x] **Step 10: Report and wait.** گزارش ثبت شد؛ تأخیر برای تأیید طبق اجازهٔ خودکار کاربر اعمال نشد.
 
 **Acceptance criteria:** Composite saves are all-or-nothing; list payloads are smaller; dead/no-op code is gone; no visible setting is nonfunctional; initial frontend bundle is reduced without breaking direct routes.
 
 **Risk:** Removing public methods can break unseen consumers. The final whole-tree search and build are mandatory; documented external APIs require explicit user approval before removal.
 
 **Dependencies:** Stage 2 for user/session APIs; stage 10 for changed pages. No-op realtime removal must not alter database notifications.
+
+**تأیید مرحله ۱۱ (۲۰۲۶-۱۱-۲۷):**
+- ذخیرهٔ ترکیبی راننده/خودرو اتمی است و فرم‌ها فقط یک درخواست می‌فرستند؛ تغییر رابطه فقط هنگام تغییر واقعی مجوز رابطه را می‌خواهد. رانندهٔ غیرفعال/بایگانی‌شدهٔ فعلی در ویرایش پروفایل خودرو حفظ می‌شود و هویت راننده فقط با مجوز `drivers.view` در DTO دیده می‌شود.
+- payload لیست/گزینه‌ها بدون avatar است؛ جزئیات و پروفایل avatar را نگه می‌دارند. تنظیمات بی‌اثر operations، realtime بی‌اثر و APIهای بی‌مصرف حذف شدند؛ ذخیرهٔ اعلان در پایگاه داده و polling حفظ شد. helperهای هم‌رفت دامنه فقط در محدودهٔ رفتار یکسان ادغام شدند.
+- صفحات با `React.lazy` جدا شدند و fallback فارسی مشترک آزمون مسیر مستقیم را پاس کرد. دانلود اولیه JS+CSS از ۱٬۰۹۳٬۱۰۷ به ۴۲۱٬۶۳۱ بایت کاهش یافت (۶۱٫۴۳٪)؛ حجم کل یکتای خروجی برای chunking از ۱٬۰۲۵٬۶۷۴ به ۱٬۱۰۱٬۹۲۶ بایت رسید.
+- ساخت solution بدون هشدار/خطا، ۵۶۳ تست واحد، ۹۶ تست یکپارچه با ۲۳ skip محافظت‌شده، ۴۶ تست فرانت‌اند، lint بدون خطا با ۵ هشدار موجود و build موفق ثبت شد. جزئیات RED/GREEN و محدودیت‌ها در `.superpowers/sdd/2026-11-23-audit-remediation/stage-11-report.md` است.
 
 ## Stage 12 — CI, Lint, Documentation, and Final Verification
 

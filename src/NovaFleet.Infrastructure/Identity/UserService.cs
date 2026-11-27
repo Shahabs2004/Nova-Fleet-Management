@@ -85,8 +85,7 @@ public sealed class UserService(
             user.IsDisabled,
             user.IsDirectoryUser,
             user.IsLocalAdmin,
-            roles.GetValueOrDefault(user.Id, []),
-            user.AvatarDataUrl)).ToList();
+            roles.GetValueOrDefault(user.Id, []))).ToList();
     }
 
     public async Task<UserDetailsDto> GetAsync(Guid id, CancellationToken cancellationToken = default)

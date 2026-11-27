@@ -52,11 +52,6 @@ public static class SettingKeys
     public const string SmsSenderNumber = "sms.sender-number";
     public const string SmsTimeoutSeconds = "sms.timeout-seconds";
 
-    public const string BrandingPdfFontPath = "branding.pdf-font-path";
-    public const string BrandingReportPaperSize = "branding.report-paper-size";
-
-    public const string OperationsLogLevel = "operations.log-level";
-
     public const string SetupCompleted = "setup.completed";
 
     public const int DefaultMinimumGapMinutes = 30;
@@ -75,15 +70,8 @@ public static class SettingKeys
     public const int DefaultSmsTimeoutSeconds = 20;
     public const int DefaultDirectoryPort = 636;
     public const int DefaultDirectoryTimeoutSeconds = 15;
-    public const string DefaultLogLevel = "Information";
-    public const string DefaultReportPaperSize = "A4";
     public const string DefaultDirectorySearchFilter = "(&(objectClass=user)(sAMAccountName={0}))";
 
     /// <summary>حالت‌های مجاز درگاه پیامک؛ Simulation تنها حالتی است که به شبکه نیاز ندارد.</summary>
     public static IReadOnlyList<string> SmsModes { get; } = ["Simulation", "Wsdl", "Api"];
-
-    public static IReadOnlyList<string> LogLevels { get; } =
-        ["Critical", "Error", "Warning", "Information", "Debug", "Trace"];
-
-    public static IReadOnlyList<string> ReportPaperSizes { get; } = ["A4", "A5", "Letter"];
 }

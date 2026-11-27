@@ -57,10 +57,6 @@ public sealed record UpdateSmsConnectionSettingsDto(
     int MaxAttempts,
     string? Password);
 
-public sealed record OperationsSettingsDto(string LogLevel, string? PdfFontPath, string ReportPaperSize);
-
-public sealed record UpdateOperationsSettingsDto(string LogLevel, string? PdfFontPath, string ReportPaperSize);
-
 /// <summary>رشته اتصال از فایل بوت‌استرپ خوانده و نوشته می‌شود؛ پیش از اتصال به دیتابیس نمی‌توان آن را خواند.</summary>
 public sealed record DatabaseSettingsDto(string? ConnectionString, bool IsConfigured, string Source);
 
@@ -76,12 +72,6 @@ public interface IConnectionsSettingsService
 
     Task<SettingsSaveResultDto> UpdateSmsAsync(
         UpdateSmsConnectionSettingsDto request,
-        CancellationToken cancellationToken = default);
-
-    Task<OperationsSettingsDto> GetOperationsAsync(CancellationToken cancellationToken = default);
-
-    Task<SettingsSaveResultDto> UpdateOperationsAsync(
-        UpdateOperationsSettingsDto request,
         CancellationToken cancellationToken = default);
 
     Task<DatabaseSettingsDto> GetDatabaseAsync(CancellationToken cancellationToken = default);

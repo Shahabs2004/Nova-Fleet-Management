@@ -354,14 +354,6 @@ public sealed class SetupService(
             summary["smsPasswordSet"] = !string.IsNullOrWhiteSpace(sms.Password);
         }
 
-        if (request.Operations is { } operations)
-        {
-            var (level, paper, fontPath) = SettingsWriters.ValidateOperations(operations);
-            summary["logLevel"] = level;
-            summary["reportPaperSize"] = paper;
-            summary["pdfFontPath"] = fontPath ?? string.Empty;
-        }
-
         if (request.Rules is { } rules)
         {
             SettingsWriters.ValidateMissionRules(rules);
@@ -402,11 +394,6 @@ public sealed class SetupService(
         if (request.Sms is { } sms)
         {
             await SettingsWriters.WriteSmsAsync(runtime, sms, cancellationToken);
-        }
-
-        if (request.Operations is { } operations)
-        {
-            await SettingsWriters.WriteOperationsAsync(runtime, operations, cancellationToken);
         }
 
         if (request.Rules is { } rules)

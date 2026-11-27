@@ -27,7 +27,7 @@ public sealed class Location : Entity
     public Location(string name, string proposedBy, bool autoApprove = false)
     {
         Rename(name);
-        ProposedBy = Required(proposedBy, 64, nameof(proposedBy));
+        ProposedBy = TextRules.Required(proposedBy, 64, nameof(proposedBy));
         if (autoApprove)
         {
             Status = LocationStatus.Approved;
@@ -51,7 +51,7 @@ public sealed class Location : Entity
     public void Approve(string reviewer)
     {
         EnsurePending();
-        ReviewedBy = Required(reviewer, 64, nameof(reviewer));
+        ReviewedBy = TextRules.Required(reviewer, 64, nameof(reviewer));
         ReviewReason = null;
         ReviewedAtUtc = DateTimeOffset.UtcNow;
         Status = LocationStatus.Approved;
@@ -60,8 +60,8 @@ public sealed class Location : Entity
     public void Reject(string reviewer, string reason)
     {
         EnsurePending();
-        ReviewedBy = Required(reviewer, 64, nameof(reviewer));
-        ReviewReason = Required(reason, 1000, nameof(reason));
+        ReviewedBy = TextRules.Required(reviewer, 64, nameof(reviewer));
+        ReviewReason = TextRules.Required(reason, 1000, nameof(reason));
         ReviewedAtUtc = DateTimeOffset.UtcNow;
         Status = LocationStatus.Rejected;
     }
@@ -73,15 +73,15 @@ public sealed class Location : Entity
             return;
         }
 
-        ReviewedBy = Required(reviewer, 64, nameof(reviewer));
-        ReviewReason = Required(reason, 1000, nameof(reason));
+        ReviewedBy = TextRules.Required(reviewer, 64, nameof(reviewer));
+        ReviewReason = TextRules.Required(reason, 1000, nameof(reason));
         ReviewedAtUtc = DateTimeOffset.UtcNow;
         Status = LocationStatus.Disabled;
     }
 
     public void Reopen(string reviewer)
     {
-        ReviewedBy = Required(reviewer, 64, nameof(reviewer));
+        ReviewedBy = TextRules.Required(reviewer, 64, nameof(reviewer));
         ReviewReason = null;
         ReviewedAtUtc = DateTimeOffset.UtcNow;
         Status = LocationStatus.Approved;
@@ -93,17 +93,5 @@ public sealed class Location : Entity
         {
             throw new InvalidOperationException("فقط مکان در انتظار تأیید قابل بررسی است.");
         }
-    }
-
-    private static string Required(string value, int maxLength, string parameterName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);
-        var normalized = value.Trim();
-        if (normalized.Length > maxLength)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, $"حداکثر طول مجاز {maxLength} نویسه است.");
-        }
-
-        return normalized;
     }
 }

@@ -32,6 +32,9 @@ public sealed class ProfilePhotoTests : MissionTestBase
 
     private AuthService Auth() => new(Db, new TestHasher(), new TestDirectory(), new PermissionResolver(Db), Clock);
 
+    private static void AssertNoAvatar(object payload) =>
+        Assert.DoesNotContain("avatarDataUrl", JsonSerializer.Serialize(payload, JsonOptions), StringComparison.OrdinalIgnoreCase);
+
     private static CreateLocalUserRequest CreateUser(string? avatar) =>
         new("photo.user", "password123", "مریم", "رضایی", "09121112233", "user@example.test", "واحد اول", false, [], avatar);
 
@@ -47,7 +50,7 @@ public sealed class ProfilePhotoTests : MissionTestBase
         var created = await service.CreateLocalAsync(CreateUser(Png()));
         Assert.Equal(1, saves);
         Assert.NotNull(created.AvatarDataUrl);
-        Assert.Equal(created.AvatarDataUrl, (await service.ListAsync(null, false)).Single(x => x.Id == created.Id).AvatarDataUrl);
+        AssertNoAvatar(await service.ListAsync(null, false));
         Assert.Equal(created.AvatarDataUrl, (await service.GetAsync(created.Id)).AvatarDataUrl);
         Assert.Equal(created.AvatarDataUrl, (await Auth().LoginLocalAsync(
             new LoginRequest("photo.user", "password123"), new SessionContext(Guid.NewGuid().ToString(), null))).AvatarDataUrl);
@@ -65,7 +68,7 @@ public sealed class ProfilePhotoTests : MissionTestBase
 
         var cleared = await service.UpdateAsync(created.Id, UpdateUser(null));
         Assert.Null(cleared.AvatarDataUrl);
-        Assert.Null((await service.ListAsync(null, false)).Single(x => x.Id == created.Id).AvatarDataUrl);
+        AssertNoAvatar(await service.ListAsync(null, false));
         Assert.Null((await Auth().GetCurrentAsync("photo.user"))!.AvatarDataUrl);
         AssertNoPhotoInAudit();
     }
@@ -79,8 +82,8 @@ public sealed class ProfilePhotoTests : MissionTestBase
         var created = await service.CreateAsync(new DriverCreateRequest("رضا", "محمدی", "09121112233", Png()));
         Assert.Equal(1, saves);
         Assert.NotNull(created.AvatarDataUrl);
-        Assert.Equal(created.AvatarDataUrl, (await service.ListOptionsAsync(false)).Single().AvatarDataUrl);
-        Assert.Equal(created.AvatarDataUrl, (await service.SearchAsync(null, false, 1, 20)).Items.Single().AvatarDataUrl);
+        AssertNoAvatar(await service.ListOptionsAsync(false));
+        AssertNoAvatar((await service.SearchAsync(null, false, 1, 20)).Items);
         Assert.Equal(created.AvatarDataUrl, (await service.GetAsync(created.Id)).AvatarDataUrl);
 
         saves = 0;
@@ -95,7 +98,7 @@ public sealed class ProfilePhotoTests : MissionTestBase
         var cleared = await service.UpdateAsync(created.Id,
             new DriverUpdateRequest(updated.FirstName, updated.LastName, updated.MobilePhone, updated.RowVersion, null));
         Assert.Null(cleared.AvatarDataUrl);
-        Assert.Null((await service.ListOptionsAsync(false)).Single().AvatarDataUrl);
+        AssertNoAvatar(await service.ListOptionsAsync(false));
         AssertNoPhotoInAudit();
     }
 

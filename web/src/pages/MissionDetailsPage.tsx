@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { faNumber, formatFaDateTime, jalaliOf, tehranHour, toFa } from '../lib/date'
 import { JalaliDateField, jalaliValueToUtc, type JalaliDateValue } from '../components/JalaliDateField'
 import { MISSION_TYPE } from '../lib/labels'
-import type { DriverDto, MissionDetails, VehicleDto } from '../lib/types'
+import type { DriverOptionDto, MissionDetails, VehicleOptionDto } from '../lib/types'
 import { Modal, PageHeader, Spinner, StatusBadge } from '../components/ui'
 import { MissionForm, type MissionFormOutput } from '../components/MissionForm'
 
@@ -38,8 +38,8 @@ export function MissionDetailsPage() {
     queryKey: ['mission', user?.username, id],
     queryFn: () => api.get<MissionDetails>(`/api/missions/${id}`),
   })
-  const { data: drivers } = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverDto[]>('/api/drivers/options'), enabled: action === 'approve' })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleDto[]>('/api/vehicles/options'), enabled: action === 'approve' })
+  const { data: drivers } = useQuery({ queryKey: ['driver-options', user?.username], queryFn: () => api.get<DriverOptionDto[]>('/api/drivers/options'), enabled: action === 'approve' })
+  const { data: vehicles } = useQuery({ queryKey: ['vehicle-options', user?.username], queryFn: () => api.get<VehicleOptionDto[]>('/api/vehicles/options'), enabled: action === 'approve' })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['mission', user?.username, id] })
 

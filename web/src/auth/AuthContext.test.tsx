@@ -292,7 +292,6 @@ describe('private query key scoping', () => {
         enabled: false, mode: 'Simulation', endpoint: null, organization: null, username: null,
         senderNumber: null, timeoutSeconds: 20, retryMinutes: 5, maxAttempts: 5, hasPassword: false,
       },
-      '/api/settings/connections/operations': { logLevel: 'Information', pdfFontPath: null, reportPaperSize: 'A4' },
     })
     const { queryClient } = setup(<ConnectionsSettingsTab />)
     await waitForUser(firstUser.username)
@@ -301,7 +300,6 @@ describe('private query key scoping', () => {
       ['connections-database', firstUser.username],
       ['connections-directory', firstUser.username],
       ['connections-sms', firstUser.username],
-      ['connections-operations', firstUser.username],
     ])))
   })
 

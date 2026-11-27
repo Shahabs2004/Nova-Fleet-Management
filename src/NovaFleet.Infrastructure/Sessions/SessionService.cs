@@ -118,7 +118,4 @@ public sealed class SessionService(
         session.End(clock.UtcNow, "پایان اجباری توسط مدیر.");
         await db.SaveChangesAsync(cancellationToken);
     }
-
-    public Task<int> ActiveCountAsync(CancellationToken cancellationToken = default)
-        => db.UserSessions.CountAsync(item => item.Status == UserSessionStatus.Active, cancellationToken);
 }
