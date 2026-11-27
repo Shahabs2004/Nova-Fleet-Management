@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import { jalaliHourToUtcUtc, jalaliOf, tehranHour, todayJalali, toFa } from '../lib/date'
-import { jalaliDaysInMonth } from './JalaliDateField'
+import { jalaliDaysInMonth } from '../lib/jalali'
 import type { LocationDto, MissionDetails, ProfileDetails } from '../lib/types'
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند']
@@ -102,7 +102,7 @@ export function MissionForm({
   initial?: MissionDetails
 }) {
   const { user } = useAuth()
-  const today = useMemo(() => todayParts(), [])
+  const [today] = useState(todayParts)
   const years = useMemo(() => Array.from({ length: today.year + 10 }, (_, i) => today.year + 10 - i), [today.year])
   const [type, setType] = useState(initial?.type ?? 1)
   const [title, setTitle] = useState(initial?.title ?? '')

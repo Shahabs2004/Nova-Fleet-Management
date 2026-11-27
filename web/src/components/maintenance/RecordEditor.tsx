@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../../lib/api'
-import { useAuth } from '../../auth/AuthContext'
+import { useAuth } from '../../auth/useAuth'
 import { faNumber } from '../../lib/date'
 import { maintenancePath, type Part, type Schedule, type ServiceItem, type ServiceRecord, type Template } from '../../lib/maintenance'
 import { DateField, Field, MaintenanceDialog, MoneyInput, Notice } from './MaintenanceControls'
@@ -10,7 +10,7 @@ export function RecordEditor({ vehicleId, record, templates, schedules, onClose,
   const { can } = useAuth()
   const canEditMileage = !record || can('maintenance.odometer.correct')
   const [requestId] = useState(() => crypto.randomUUID())
-  const [date, setDate] = useState<string | null>(record?.performedAtUtc ?? new Date().toISOString())
+  const [date, setDate] = useState<string | null>(() => record?.performedAtUtc ?? new Date().toISOString())
   const [km, setKm] = useState(record?.odometerKm?.toString() ?? '')
   const [workshop, setWorkshop] = useState(record?.workshop ?? '')
   const [notes, setNotes] = useState(record?.notes ?? '')

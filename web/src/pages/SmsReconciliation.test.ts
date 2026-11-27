@@ -10,7 +10,7 @@ const auth = vi.hoisted(() => {
   return { user, can: (permission: string) => user.permissions.includes(permission) }
 })
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({ user: auth.user, can: auth.can }),
 }))
 

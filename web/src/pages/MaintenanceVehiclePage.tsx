@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import { faNumber, formatFaDate } from '../lib/date'
 import { maintenancePath, pixelAsset, type MaintenanceVehicle, type Schedule, type ServiceRecord, type Template } from '../lib/maintenance'

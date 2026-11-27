@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ConnectionsSettingsTab } from '../components/ConnectionsSettings'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import { formatFaDateTime } from '../lib/date'
 import { LOCATION_STATUS } from '../lib/labels'
+import { readOrganizationLogo } from '../lib/organizationLogo'
 import type { LocationDto, OrgUnitDto, SettingsBundle } from '../lib/types'
 
 type Tab = 'organization' | 'rules' | 'template' | 'split-reasons' | 'org-units' | 'locations' | 'connections'
@@ -68,18 +69,19 @@ function OrganizationTab() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const settings = useSettings()
+  const [source, setSource] = useState<SettingsBundle | undefined>(undefined)
   const [name, setName] = useState('')
   const [logo, setLogo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
+  if (source !== settings.data) {
+    setSource(settings.data)
     if (settings.data) {
-      // oxlint-disable-next-line react/set-state-in-effect -- Hydrate organization fields after the async read.
       setName(settings.data.organization.name)
       setLogo(settings.data.organization.logoDataUrl)
     }
-  }, [settings.data])
+  }
 
   const save = useMutation({
     mutationFn: () => api.put('/api/settings/organization', { name: name.trim(), logoDataUrl: logo }),
@@ -90,15 +92,14 @@ function OrganizationTab() {
   if (settings.isLoading) return <Spinner />
   if (settings.isError) return <ErrorBox error={settings.error} />
 
-  const pickLogo = (file: File | undefined) => {
+  const pickLogo = async (file: File | undefined) => {
     if (!file) return
-    if (file.size > 512 * 1024) {
-      setError('حجم لوگو باید کمتر از ۵۱۲ کیلوبایت باشد.')
-      return
+    try {
+      setLogo(await readOrganizationLogo(file))
+      setError(null)
+    } catch (error) {
+      setError((error as Error).message)
     }
-    const reader = new FileReader()
-    reader.onload = () => setLogo(typeof reader.result === 'string' ? reader.result : null)
-    reader.readAsDataURL(file)
   }
 
   return (
@@ -118,7 +119,7 @@ function OrganizationTab() {
             <input
               ref={logoInputRef}
               type="file"
-              accept="image/png,image/jpeg,image/svg+xml"
+              accept="image/png"
               className="hidden"
               onChange={(e) => {
                 pickLogo(e.target.files?.[0])
@@ -135,6 +136,7 @@ function OrganizationTab() {
               </button>
             )}
           </div>
+          <p className="mt-1 text-[11px] text-slate-400">PNG مربع، حداکثر ۲۵۶ × ۲۵۶ پیکسل و ۲۵۶ کیلوبایت.</p>
         </div>
         {error && <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">{error}</div>}
         <div className="flex justify-end">
@@ -179,17 +181,18 @@ function RulesTab() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const settings = useSettings()
+  const [source, setSource] = useState<SettingsBundle | undefined>(undefined)
   const [rules, setRules] = useState<SettingsBundle['missionRules'] | null>(null)
   const [policy, setPolicy] = useState<SettingsBundle['sessionPolicy'] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  if (source !== settings.data) {
+    setSource(settings.data)
     if (settings.data) {
-      // oxlint-disable-next-line react/set-state-in-effect -- Hydrate editable rules after the async read.
       setRules(settings.data.missionRules)
       setPolicy(settings.data.sessionPolicy)
     }
-  }, [settings.data])
+  }
 
   const saveRules = useMutation({
     mutationFn: () => api.put('/api/settings/mission-rules', rules),
@@ -287,13 +290,14 @@ function TemplateTab() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const settings = useSettings()
+  const [source, setSource] = useState<SettingsBundle | undefined>(undefined)
   const [template, setTemplate] = useState<SettingsBundle['missionOrderTemplate'] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable template after the async read.
+  if (source !== settings.data) {
+    setSource(settings.data)
     if (settings.data) setTemplate(settings.data.missionOrderTemplate)
-  }, [settings.data])
+  }
 
   const save = useMutation({
     mutationFn: () => api.put('/api/settings/mission-order-template', template),

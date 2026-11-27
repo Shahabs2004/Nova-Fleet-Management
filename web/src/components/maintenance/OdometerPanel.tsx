@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '../../auth/AuthContext'
+import { useAuth } from '../../auth/useAuth'
 import { api } from '../../lib/api'
 import { faNumber, formatFaDate, formatFaDateTime } from '../../lib/date'
 import { maintenancePath, type OdometerSummary, type Reading, type Revision } from '../../lib/maintenance'

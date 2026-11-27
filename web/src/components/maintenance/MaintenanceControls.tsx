@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { JalaliDateField, type JalaliDateValue } from '../JalaliDateField'
+import { JalaliDateField } from '../JalaliDateField'
+import type { JalaliDateValue } from '../../lib/jalali'
 import { faNumber, jalaliHourToUtcUtc, jalaliOf, tehranHour, todayJalali, toFa } from '../../lib/date'
 import { stateLabels } from '../../lib/maintenance'
 

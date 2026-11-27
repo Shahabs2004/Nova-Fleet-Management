@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DriversPage } from './DriversPage'
 import { VehiclesPage } from './VehiclesPage'
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({ can: () => true }),
 }))
 

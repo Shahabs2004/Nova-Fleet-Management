@@ -1,19 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { AuthContext } from './useAuth'
 import { ApiError, api } from '../lib/api'
 import type { CurrentUser } from '../lib/types'
-
-interface AuthState {
-  user: CurrentUser | null
-  loading: boolean
-  refresh: () => Promise<void>
-  loginLocal: (username: string, password: string) => Promise<void>
-  loginLdap: (username: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-  can: (permission: string) => boolean
-}
-
-const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
@@ -91,11 +80,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-// oxlint-disable-next-line react/only-export-components -- The provider and its consumer share one context module.
-export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
 }

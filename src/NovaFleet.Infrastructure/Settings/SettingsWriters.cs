@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using NovaFleet.Application.Abstractions;
 using NovaFleet.Application.Common;
 using NovaFleet.Application.Settings;
@@ -243,11 +245,52 @@ public static class SettingsWriters
 
     private static void ValidateEndpoint(string endpoint)
     {
-        if (!Uri.TryCreate(endpoint.Trim(), UriKind.Absolute, out var uri)
-            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        if (!IsValidEndpoint(endpoint))
         {
-            throw new ValidationAppException("آدرس سرویس پیامک باید با http یا https شروع شود.");
+            throw new ValidationAppException(
+                "آدرس سرویس پیامک باید HTTP/HTTPS معتبر و بدون اطلاعات ورود، قطعه URI، loopback یا نشانی link-local باشد.");
         }
+    }
+
+    /// <summary>قوانین مشترک ذخیره و اجرای درگاه؛ آدرس‌های خصوصیِ درگاه داخلی مجاز می‌مانند.</summary>
+    public static bool IsValidEndpoint(string? endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint)
+            || !Uri.TryCreate(endpoint.Trim(), UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
+            || string.IsNullOrWhiteSpace(uri.Host)
+            || !string.IsNullOrEmpty(uri.UserInfo)
+            || !string.IsNullOrEmpty(uri.Fragment)
+            || uri.IsLoopback)
+        {
+            return false;
+        }
+
+        var host = uri.DnsSafeHost.TrimEnd('.');
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!IPAddress.TryParse(uri.DnsSafeHost, out var address))
+        {
+            return true;
+        }
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        var bytes = address.GetAddressBytes();
+        return !IPAddress.Any.Equals(address)
+            && !IPAddress.IPv6Any.Equals(address)
+            && !address.IsIPv6LinkLocal
+            && !address.IsIPv6SiteLocal
+            && !address.IsIPv6Multicast
+            && !(address.AddressFamily == AddressFamily.InterNetwork
+                && ((bytes[0] >= 224 && bytes[0] <= 239) || (bytes[0] == 169 && bytes[1] == 254)));
     }
 
     private static string Normalize(string? value) => value?.Trim() ?? string.Empty;

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { AvatarEditor } from '../components/AvatarEditor'
 import { PageHeader, Spinner } from '../components/ui'
 import { api } from '../lib/api'

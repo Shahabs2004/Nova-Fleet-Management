@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner, StatCard } from '../components/ui'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import { faNumber, formatFaDateTime, toFa } from '../lib/date'
 import { SMS_GATEWAY_MODE, SMS_STATUS } from '../lib/labels'

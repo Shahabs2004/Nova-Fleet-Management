@@ -52,13 +52,13 @@
 | رانندگان | پرونده کامل، وضعیت استخدام، خودروی پیش‌فرض، بایگانی با دلیل |
 | خودروها | وضعیت فنی (سرویس/تعمیرگاه/خارج از سرویس)، بایگانی، و آمادگی ذاتی جدا از درگیری زمانی |
 | مقاصد | چرخه تأیید/رد/غیرفعال‌سازی برای جلوگیری از ورود مبدأ و مقصد تکراری یا نامعتبر |
-| پیامک | صف با تلاش مجدد و ردیابی وضعیت تحویل، قالب‌های قابل ویرایش برای هر رویداد، درگاه payamSMS (WSDL) یا شبیه‌سازی |
+| پیامک | صف با تلاش مجدد و ردیابی وضعیت تحویل، قالب‌های قابل ویرایش برای هر رویداد، درگاه payamSMS از نوع SOAP/WSDL یا REST/API و شبیه‌سازی |
 | نظیر به نظیر | اعلان‌های درون‌برنامه‌ای خوانده‌نشده |
 | امنیت | نشست‌های فعال با پایان اجباری، دفتر رویداد (Audit Trail) قابل فیلتر، کاربران، نقش‌ها و مجوزهای دانه‌درشت |
 | گزارش‌ها | گزارش‌های پارامتری با خروجی Excel و PDF |
 | خط زمانی | یک ردیف برای هر راننده، با نوار پیوسته مأموریت‌ها از ساعت شروع تا ساعت پایان؛ زوم از **یک ساعت** تا **دو ماه**، برچسب ماه/روز/ساعت، خط «اکنون»، و کلیک روی هر نوار برای دیدن و ویرایش همان‌جا |
 | پیکربندی | نام/لوگوی سازمان، قواعد مأموریت، سیاست نشست و قالب حکم، از داخل خود سامانه |
-| اتصال سرویس‌ها | تب «تنظیمات ← اتصال سرویس‌ها» برای دیتابیس، دامنه، درگاه پیامک و عملیات — با تست زنده هر اتصال: `ping` و مهاجرت‌های معوق پایگاه، bind + جست‌وجوی نمونه دامنه با شمارش نتیجه، `Balance` درگاه و ثبت پیامک آزمایشی در صف |
+| اتصال سرویس‌ها | تب «تنظیمات ← اتصال سرویس‌ها» برای دیتابیس، دامنه و درگاه پیامک — با تست زنده هر اتصال: اتصال و مهاجرت‌های معوق پایگاه، bind + جست‌وجوی نمونه دامنه با شمارش نتیجه، `Balance` درگاه و ثبت پیامک آزمایشی در صف |
 
 ## گشتی‌بر‌صفحه‌ها
 
@@ -150,7 +150,7 @@
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/17-security-users.png" alt="کاربران"><br><b>کاربران</b> — ساخت، نقش، مجوز مستقیم Grant/Deny</td>
-    <td width="50%"><img src="docs/screenshots/18-security-roles.png" alt="نقش‌ها و مجوزها"><br><b>نقش‌ها</b> — ۴۲ کد مجوز و نگاشت گروه دایرکتوری</td>
+    <td width="50%"><img src="docs/screenshots/18-security-roles.png" alt="نقش‌ها و مجوزها"><br><b>نقش‌ها</b> — ۵۳ کد مجوز و نگاشت گروه دایرکتوری</td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/19-security-sessions.png" alt="نشست‌ها"><br><b>نشست‌ها</b> — فهرست نشست‌های فعال با پایان اجباری</td>
@@ -173,7 +173,7 @@
     <td colspan="2"><img src="docs/screenshots/25-settings-locations.png" alt="مقاصد"><br><b>مقاصد</b> — چرخه تأیید/رد/غیرفعال‌سازی مبدأ و مقصد</td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/screenshots/30-settings-connections.png" alt="اتصال سرویس‌ها"><br><b>اتصال سرویس‌ها</b> — دیتابیس، دامنه، پیامک و عملیات؛ هر کارت نتیجه تست زنده خود را همین‌جا نشان می‌دهد</td>
+    <td colspan="2"><img src="docs/screenshots/30-settings-connections.png" alt="اتصال سرویس‌ها"><br><b>اتصال سرویس‌ها</b> — دیتابیس، دامنه و پیامک؛ هر کارت نتیجه تست زنده خود را همین‌جا نشان می‌دهد</td>
   </tr>
 </table>
 
@@ -210,10 +210,12 @@ docs/screenshots/              تصویرهای همین README
 | ابزار | نسخه مورد نیاز | بررسی با |
 |---|---|---|
 | .NET SDK | ۱۰.۰.۴xx (کلید `global.json` روی `10.0.403` با `rollForward: latestFeature` قفل شده) | `dotnet --version` |
-| Node.js | ۲۰ یا بالاتر (توسعه روی ۲۴ انجام شده) | `node -v` |
-| SQL Server | ۲۰۱۹ یا بالاتر، با احراز هویت ترکیبی (لاگین `sa`) | `SELECT @@VERSION` |
+| Node.js | ۲۲ برای توسعه، build، CI و نصاب | `node -v` |
+| SQL Server | توسعه محلی با SQL Server LocalDB؛ عملیاتی با SQL Server ۲۰۱۹ یا بالاتر و احراز هویت Windows یا SQL | `SELECT @@VERSION` |
 | sqlcmd | هر نسخه با پشتیبانی `-i` و `-v` | `sqlcmd -?` |
 | فونت Tahoma | فقط برای خروجی PDF فارسی | مسیر `C:\Windows\Fonts\tahoma.ttf` |
+
+> **توسعه محلی:** ویندوز و `(localdb)\MSSQLLocalDB` برای نصب تازه و تست‌های LocalDB کافی است. برای provision دستی با اسکریپت‌های SQL و سناریوهای احراز هویت SQL، SQL Server واقعی و `sqlcmd` لازم است؛ در Setup هم می‌توان LocalDB را با Windows authentication انتخاب کرد.
 
 > **محدودیت SQL Server 2019:** این نسخه `AT TIME ZONE 'Asia/Tehran'` را نمی‌شناسد، بنابراین همه محاسبات وقت تهران (`+۳:۳۰`) در EF Core با `DATEADD(MINUTE, ±210, …)` ترجمه می‌شوند. روی SQL Server 2022 به بعد هم همین کوئری‌ها درست کار می‌کنند و تغییری لازم نیست.
 
@@ -227,10 +229,10 @@ docs/screenshots/              تصویرهای همین README
 git clone https://github.com/Shahabs2004/Nova-Fleet-Management.git
 cd Nova-Fleet-Management
 dotnet build          # باید بدون warning و error تمام شود
-cd web && npm install && cd ..
+cd web && npm ci && cd ..
 ```
 
-`dotnet build` راه‌حل چهارلایه و دو پروژه تست را می‌سازد. `npm install` فقط برای محیط توسعه لازم است؛ در حالت production خروجی از `npm run build` به `wwwroot` کپی می‌شود.
+`dotnet build` راه‌حل چهارلایه و دو پروژه تست را می‌سازد. `npm ci` وابستگی‌ها را دقیقاً از `package-lock.json` نصب می‌کند و در توسعه و build تکرارپذیر استفاده می‌شود؛ در حالت یکپارچه خروجی `npm run build` به `wwwroot` کپی می‌شود.
 
 **۲) ساخت پوشه اسرار (بیرون از مخزن)**
 
@@ -287,9 +289,9 @@ http://localhost:5173/setup
 
 اگر پایگاه داده هنوز ساخته نشده، همان گام ۱ آن را می‌سازد و مهاجرت را اعمال می‌کند؛ در غیر این صورت اتصال فعلی را از `GET /api/setup/database` می‌خواند و فیلدها را پیش‌پُر می‌کند. در گام ۴ یک مدیر سامانه با رمز (حداقل ۸ نویسه) ساخته می‌شود.
 
-این ویزارد **یک‌بارمصرف** است: اگر حتی یک کاربر در پایگاه وجود داشته باشد، هر فراخوانی `/api/setup/*` (از جمله گام دیتابیس) با خطای ۴۰۹ «راه‌اندازی اولیه قبلاً انجام شده است.» پاسخ می‌دهد و صفحه ورود دیگر به آنجا ریدیرکت نمی‌کند. مدیری که اینجا ساخته می‌شود ستون `IsLocalAdmin = 1` می‌گیرد، یعنی مجوز `*` (همه ۴۲ کد) به‌علاوه نقش `Administrator` — تنها حسابی که تب «تنظیمات» و بخش کامل امنیت را می‌بیند.
+این ویزارد **یک‌بارمصرف** است: اگر حتی یک کاربر در پایگاه وجود داشته باشد، هر فراخوانی `/api/setup/*` (از جمله گام دیتابیس) با خطای ۴۰۹ «راه‌اندازی اولیه قبلاً انجام شده است.» پاسخ می‌دهد و صفحه ورود دیگر به آنجا ریدیرکت نمی‌کند. مدیری که اینجا ساخته می‌شود ستون `IsLocalAdmin = 1` می‌گیرد، یعنی مجوز فراگیر `*` در برابر ۵۳ کد ثبت‌شده به‌علاوه نقش `Administrator` — تنها حسابی که تب «تنظیمات» و بخش کامل امنیت را می‌بیند.
 
-> تنظیمات دامنه و پیامک را می‌توانید در همین گام‌ها بدهید؛ پس از نصب، همان فرم‌ها در تب «تنظیمات ← اتصال سرویس‌ها» (با مجوز `settings.connections.manage`) و بقیه در تب «تنظیمات» قابل ویرایش‌اند. جزئیات اتصال سرویس‌ها با تست زنده در برنامه است و فعلاً مسیرهای API‌شان آماده است.
+> تنظیمات دامنه و پیامک را می‌توانید در همین گام‌ها بدهید؛ پس از نصب، همان فرم‌های پیاده‌شده در تب «تنظیمات ← اتصال سرویس‌ها» (با مجوز `settings.connections.manage`) و بقیه در تب «تنظیمات» قابل ویرایش‌اند. هر کارت، تست زنده و نتیجه مربوط به سرویس فعال را در همان صفحه نشان می‌دهد.
 
 **۷) داده نمایشی (اختیاری، ولی برای دیدن برنامه توصیه می‌شود)**
 
@@ -453,12 +455,12 @@ sqlcmd -S "$SQL_HOST" -U "$SA_USER" -P "$SA_PASSWORD" -d "$DB_NAME" \
 |---|---|---|
 | `demo.operator1` (سمیرا کاظمی) | اپراتور | ثبت، بررسی، تأیید و تخصیص مأموریت |
 | `demo.operator2` (پیمان نوروزی) | اپراتور | همان مسیر، برای تست همزمانی دو اپراتور |
-| `demo.manager1` (حمید موسوی) | مدیر ناوگان | کل ناوگان + گزارش‌ها + پیامک + تنظیمات عملیاتی |
+| `demo.manager1` (حمید موسوی) | مدیر ناوگان | کل ناوگان + گزارش‌ها + پیامک + مأموریت‌ها؛ بدون مجوز تنظیمات سامانه/اتصال سرویس‌ها |
 | `demo.manager2` (نگار رحیمی) | مدیر ناوگان | دوم، برای مقایسه سطوح دسترسی |
 | `demo.requester1` (مریم هاشمی) | درخواست‌کننده | فقط مأموریت‌های خودش |
 | `demo.requester2` (احمد بهرامی) | درخواست‌کننده | همان سطح، کاربر دوم |
 | `demo.requester3` (الهام زارعی) | درخواست‌کننده | همان سطح، کاربر سوم |
-| `demo.viewer1` (فرید سلطانی) | ناظر | فقط مشاهده و گزارش |
+| `demo.viewer1` (فرید سلطانی) | ناظر | داشبورد و مشاهده رانندگان، خودروها و مأموریت‌ها؛ بدون گزارش |
 
 ورود: `POST /api/auth/login-local` با `{ "username": "demo.manager1", "password": "Demo@1405!" }` یا فرم صفحه ورود، تب «ورود محلی».
 
@@ -522,12 +524,12 @@ dotnet run --project src/NovaFleet.Api
 
 ```bash
 cd web
-npm install
+npm ci
 npm run dev
 # http://localhost:5173
 ```
 
-Vite مسیر `/api` را به `http://localhost:5192` پروکسی می‌کند، پس نیازی به تنظیم CORS در توسعه نیست. بعد از اولین اجرا، وارد صفحه `/setup` شوید و شش گام ویزارد را کامل کنید (گام ۱ با همان `SHAHABPC` و احراز هویت Windows، بدون رمز).
+Vite مسیر `/api` را به `http://localhost:5192` پروکسی می‌کند، پس نیازی به تنظیم CORS در توسعه نیست. بعد از اولین اجرا، وارد صفحه `/setup` شوید و شش گام ویزارد را کامل کنید. در گام ۱، سرور و نام پایگاه محلی خودتان را انتخاب کنید؛ برای LocalDB معمولاً `(localdb)\MSSQLLocalDB` و یک کاتالوگ تازه با احراز هویت Windows، بدون رمز، کار می‌کند. هرگز پایگاه مشترک سازمان را برای نصب تازه یا پاک‌سازی انتخاب نکنید.
 
 ## نصب‌و‌اجرا‌در‌محیط‌عملیاتی
 
@@ -537,9 +539,9 @@ Vite مسیر `/api` را به `http://localhost:5192` پروکسی می‌کن�
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\build.ps1
 ```
 
-این اسکریپت `npm ci` را اجرا می‌کند، فرانت‌اند را می‌سازد، restore/build و تست‌های واحد و یکپارچه را انجام می‌دهد، هر دو آزمون نصاب را اجرا می‌کند، پوشه `installer/stage` را از صفر می‌سازد و manifest فایل‌های payload را تولید می‌کند. خروجی نهایی `installer/output/NovaFleet-Setup-<version>.exe` است. آزمون SQL نصاب فقط یک پایگاه موقت و ساختگی LocalDB می‌سازد؛ تست‌های SQL یکپارچهٔ وابسته به محیط، فقط با متغیرهای صریح پایگاه آزمایشی اجرا می‌شوند و در غیر این صورت skip گزارش می‌شوند.
+این اسکریپت `npm ci` و build فرانت‌اند را اجرا می‌کند، restore/build و تست‌های واحد و یکپارچه بک‌اند را انجام می‌دهد، هر دو آزمون نصاب (`Test-Upgrade.ps1` و `Test-UpgradeSql.ps1`) را اجرا می‌کند، پوشه `installer/stage` را از صفر می‌سازد و manifest فایل‌های payload را تولید می‌کند. خروجی نهایی `installer/output/NovaFleet-Setup-<version>.exe` است. آزمون SQL نصاب فقط یک پایگاه موقت و ساختگی LocalDB می‌سازد؛ تست‌های SQL یکپارچهٔ وابسته به محیط، فقط با متغیرهای صریح پایگاه آزمایشی اجرا می‌شوند و در غیر این صورت skip گزارش می‌شوند. `npm test` و lint فرانت‌اند جزو این اسکریپت نیستند و باید جداگانه و پیش از ساخت اجرا شوند؛ CI نیز هر دو را اجباری می‌کند.
 
-برای اجرای کامل ۹ تست SQL صف پیامک، پیش از ساخت متغیر زیر را فقط برای همان فرایند تنظیم کنید. این مقادیر مخصوص LocalDB و پایگاه آزمایشی‌اند و هرگز نباید به SQL Server سازمان اشاره کنند:
+برای اجرای SQL صف پیامک روی LocalDB، پیش از ساخت متغیر زیر را فقط برای همان فرایند تنظیم کنید. این مقادیر مخصوص LocalDB و پایگاه آزمایشی‌اند و هرگز نباید به SQL Server سازمان اشاره کنند:
 
 ```powershell
 $env:NOVAFLEET_SMS_TEST_SQL = 'Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_SmsQueue_Test_20261124'
@@ -569,7 +571,18 @@ Get-ChildItem Cert:\LocalMachine\My |
 
 برای ارتقا، همان Setup را روی نصب ثبت‌شده اجرا کنید. نام سایت، پورت و hostname ثبت‌شده حفظ می‌شوند؛ thumbprint جدید می‌تواند برای تمدید گواهی داده شود. گواهی جدید پیش از health check روی binding HTTPS موجود اعمال می‌شود و اگر verify شکست بخورد، thumbprint قبلی بازیابی می‌شود. ارتقا به مجوز backup SQL Server، فضای دیسک و manifest نصب‌شده `NovaFleet.payload.json` نیاز دارد. نصب‌های قدیمی بدون این manifest به‌صورت خودکار قابل prune نیستند، چون مالکیت فایل‌های قدیمی قابل اثبات نیست؛ ابتدا inventory و manifest بستهٔ Verified را برای آن‌ها ثبت کنید.
 
-`Program.cs` تنها در صورتی از فرانت‌اند سرو می‌کند که پوشه `wwwroot` کنار API وجود داشته باشد؛ در آن حالت `UseDefaultFiles` + `UseStaticFiles` + `MapFallbackToFile("index.html")` فعال می‌شود و API و UI روی یک دامنه کار می‌کنند. اگر مستقرسازی دستی انجام می‌شود، ابتدا `web/dist` را کامل جایگزین `src/NovaFleet.Api/wwwroot` کنید، سپس publish را اجرا کنید؛ کپی `dist` داخل `wwwroot/dist` مسیر اشتباه است.
+`Program.cs` تنها در صورتی از فرانت‌اند سرو می‌کند که پوشه `wwwroot` کنار API وجود داشته باشد؛ در آن حالت `UseDefaultFiles` + `UseStaticFiles` + `MapFallbackToFile("index.html")` فعال می‌شود و API و UI روی یک دامنه کار می‌کنند. برای مستقرسازی دستی، **محتوای** `web/dist` را مستقیم داخل `wwwroot` قرار دهید تا `index.html` و پوشه `assets` در ریشه آن باشند، سپس publish را اجرا کنید:
+
+```powershell
+npm --prefix web ci
+npm --prefix web run build
+Remove-Item src/NovaFleet.Api/wwwroot -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory src/NovaFleet.Api/wwwroot | Out-Null
+Copy-Item web/dist/* src/NovaFleet.Api/wwwroot -Recurse
+dotnet publish src/NovaFleet.Api -c Release -o publish
+```
+
+کپی `dist` داخل `wwwroot/dist` مسیر اشتباه است؛ `index.html` باید در `wwwroot/index.html` باشد.
 
 ### Journal و بازیابی
 
@@ -600,12 +613,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.Backup
 
 ## مدل‌امنیتی
 
-- **احراز هویت:** محلی (PBKDF2-SHA256، ۲۱۰٬۰۰۰ تکرار، نمک ۱۶ بایت، کلید ۳۲ بایت) یا LDAP؛ هر دو پس از موفقیت یک نشست در پایگاه داده باز می‌کنند و پایان/خاتمه اجباری آن‌ها از صفحه امنیت ممکن است. تغییر رمز از `POST /api/auth/change-password` (حداقل ۸ نویسه) و برای کاربران دامنه مسدود است.
-- **تلاش ناموفق:** هر ورود ناموفق یک `UserSession` با وضعیت Failed و یک سطر دفتر رویداد با دلیل («رمز یا نام کاربری نادرست»، «حساب غیرفعال است»، «حساب در گروه‌های مجاز نیست») ثبت می‌کند، بدون قفل کردن حساب — اگر قفل پس از N تلاش ناموفق لازم است، باید اضافه شود.
-- **CSRF:** همه فراخوانی‌های تغییردهنده `/api` باید هدر `X-Requested-With: XMLHttpRequest` داشته باشند (مسیرهای `/api/auth` و `/api/setup` مستثنا).
+- **احراز هویت:** محلی (PBKDF2-SHA256، ۲۱۰٬۰۰۰ تکرار، نمک ۱۶ بایت، کلید ۳۲ بایت) یا LDAP؛ هر دو پس از موفقیت یک نشست در پایگاه داده باز می‌کنند و پایان/خاتمه اجباری آن‌ها از صفحه امنیت ممکن است. هش‌هایی با تعداد تکرار کمتر از ۲۱۰٬۰۰۰ در Verify رد می‌شوند؛ تعدادهای قوی‌ترِ آینده نیز پذیرفته می‌شوند تا افزایش تدریجی work factor ناسازگار نشود. تغییر رمز از `POST /api/auth/change-password` (حداقل ۸ نویسه) و برای کاربران دامنه مسدود است.
+- **تلاش ناموفق و قفل:** هر ورود ناموفق یک `UserSession` با وضعیت Failed و یک سطر دفتر رویداد ثبت می‌کند. حساب **محلی** پس از پنج شکست، پانزده دقیقه قفل می‌شود؛ ورود موفق شمارنده را صفر می‌کند و قفل منقضی نیز دوباره فرصت می‌دهد. پیام حساب قفل‌شده همان پیام عمومی اعتبارنامعتبر است تا وجود/وضعیت حساب فاش نشود. ورود دامنه ابتدا در AD احراز هویت می‌شود و سپس حساب غیرفعال یا فاقد نقش مجاز رد می‌شود.
+- **محدودیت نرخ ورود:** `LoginRateLimitFilter` در هر فرایند، پنج شکست برای هر «نام کاربری نرمال‌شده + IP» در یک دقیقه و بیست شکست برای هر IP در یک ساعت را با پاسخ `429` و `Retry-After` محدود می‌کند. این شمارنده‌ها در حافظه فرایند هستند و برای استقرار چندنمونه‌ای باید با limiter مشترک جایگزین شوند.
+- **CSRF:** همه فراخوانی‌های تغییردهنده `/api` باید هدر `X-Requested-With: XMLHttpRequest` داشته باشند. فقط ورود محلی/LDAP و mutationهای `/api/setup/*` که از اتصال loopback بیایند مستثنا هستند؛ logout، تغییر رمز و سایر `/api/auth` مشمول بررسی هستند. GET/HEAD/OPTIONS تغییردهنده محسوب نمی‌شوند.
+- **کش فرانت‌اند:** هنگام ورود با هویت متفاوت، refresh که هویت عوض کرده، logout و رویداد ۴۰۱، درخواست‌های React Query لغو و کل کش خصوصی پاک می‌شود تا داده حساب قبلی زیر حساب تازه دیده نشود. کلیدهای حساس بسیاری از کوئری‌ها نیز با نام کاربری scope شده‌اند؛ پاک‌سازی مرز هویت همچنان لایه محافظ اصلی است.
 - **حمل‌ونقل امن:** بیرون از `Development` همه درخواست‌های `http` با `307` به `https` می‌روند، `Strict-Transport-Security: max-age=2592000` روی پاسخ‌های امن می‌نشیند و کوکی `nf_session` همیشه پرچم `Secure` می‌گیرد (`CookieSecurePolicy.Always`). نتیجه: اگر پیکره‌بندی TLS جا بیفتد، سامانه بالا می‌آید ولی هیچ نشست ورودی بسته نمی‌شود. هر سه از یک پرچم `requireHttps` در `Program.cs` گره خورده‌اند و در پروفایل `http://localhost:5192` توسعه فعال نیستند.
 - **رمزنگاری در حال انتقالِ ورود دامنه:** `LdapDirectoryAuthenticator` با `AuthType.Basic`.bind می‌کند و LDAPS فقط وقتی فعال است که مدیر `directory.use-ssl` را `true` گذاشته باشد؛ این تصمیم آگاهانه است و توضیحش در بخش [محدودیت‌های شناخته‌شده](#محدودیت‌های‌شناخته‌شده) آمده.
-- **مجوزها:** `PermissionCatalog` چهل‌ودو کد دارد: یک کد `*` (همه دسترسی‌ها)، سه کد گروه مانند `missions.*` / `drivers.*` / `vehicles.*` و ۳۸ کد دانه‌درشت (`missions.approve`، `missions.print`، `notifications.sms.templates.manage`، `security.sessions.view`، `settings.system.manage`، `settings.connections.manage` …). نقش‌های پیش‌فرض: مدیر سامانه، مدیر ناوگان، اپراتور، درخواست‌کننده، ناظر. هر کاربر می‌تواند علاوه بر نقش، مجوز مستقیم (Grant/Deny) داشته باشد و نگاشت گروه دایرکتوری هم نقش اضافه می‌کند. منوی فرانت‌اند بر پایه همین کدها ساخته می‌شود، پس تبی که مجوزش را ندارید نمایش داده نمی‌شود.
+- **مجوزها:** `PermissionCatalog` پنجاه‌وسه کد دارد: یک کد `*` (همه دسترسی‌ها)، چهار کد گروه `missions.*` / `drivers.*` / `vehicles.*` / `maintenance.*` و ۴۸ کد دانه‌درشت (`missions.approve`، `missions.print`، `notifications.sms.templates.manage`، `security.sessions.view`، `settings.system.manage`، `settings.connections.manage` …). نقش‌های پیش‌فرض: مدیر سامانه، مدیر ناوگان، اپراتور، درخواست‌کننده، ناظر. هر کاربر می‌تواند علاوه بر نقش، مجوز مستقیم (Grant/Deny) داشته باشد و نگاشت گروه دایرکتوری هم نقش اضافه می‌کند. منوی فرانت‌اند بر پایه همین کدها ساخته می‌شود، پس تبی که مجوزش را ندارید نمایش داده نمی‌شود.
 - **سطح‌دسترسی داده:** درخواست‌کننده فقط مأموریت‌های خودش را می‌بیند؛ مدیر ناوگان و اپراتور کل محدوده را.
 - **صف رویداد:** هر اقدام حساس با عامل، نتیجه و زمان (به وقت تهران) ثبت و قابل فیلتر است.
 - **همزمانی:** ستون‌های `RowVersion` در خودرو و راننده، تغییر هم‌زمان دو اپراتور را به خطای ۴۰۹ تبدیل می‌کنند.
@@ -616,13 +631,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.Backup
 
 **۱) دروازه‌بانی مجوز (برطرف‌شده در این نسخه).** پیش از این، فقط بعضی سرویس‌ها `currentUser.Require(...)` داشتند و هیچ سیاست `RequireAuthorization` روی گروه `/api` وجود نداشت؛ نتیجه اینکه یک درخواست **بدون کوکی** می‌توانست تنظیمات را بخواند و بنویسد، کاربر مدیر بسازد، نقش‌ها را تغییر دهد، نشست‌ها را ختم کند و پیامک آزمایشی واقعی ارسال کند. اکنون سه لایه هم‌زمان بست بسته شده است:
 
-- `RequireAuthorization` روی کل گروه `/api`؛ فقط `/api/setup/*` و `/api/auth/*` بی‌نیاز از نشست می‌مانند (راه‌اندازی اولیه قبل از وجود هر حسابی باید کار کند).
+- `RequireAuthorization` روی گروه اصلی `/api`؛ مسیرهای bootstrap جداگانه نگاشت می‌شوند: `GET /api/setup/status`، `GET /api/setup/database`، دو مسیر ورود و mutationهای `/api/setup/*`. mutationهای setup فقط از loopback پذیرفته می‌شوند؛ `me`، logout، تغییر رمز و سایر عملیات داخل سرویس نشست معتبر را بررسی می‌کنند.
 - `currentUser.Require(...)` در `SettingsService`، `SmsService`، `UserService`، `RoleService`، `SessionService` و `AuditQueryService`، با همان کدهایی که `PermissionCatalog` از قبل تعریف کرده و هیچ‌جا استفاده نمی‌شد (`settings.system.manage`، `settings.sessions`، `settings.mission-template.manage`، `settings.mission-split-reasons.manage`، `settings.authorization`، `users.manage`، `notifications.sms.view/.retry/.templates.manage`، `security.audit.view`، `security.sessions.view`).
 - مجوز جدید `settings.connections.manage` برای تغییر و تست اتصال سرویس‌ها (دیتابیس، دامنه، پیامک). `ConnectionsSettingsService` همان مجوز را روی هر سه جفت `GET`/`PUT` مسیر `/api/settings/connections/*` و `ConnectionTestsService` روی هر سه مسیر `POST /api/settings/connections/*/test` بررسی می‌کند.
 
 مسیرهای فنی که عمداً بی‌مجوز ماندند: `ISettingsService.GetValueAsync` (در اعتبارسنجی کوکی هر درخواست خوانده می‌شود؛ ردیف‌های `IsSecret` را ساختاراً برنمی‌گرداند)، `ISettingsService.GetRuntimeBundleAsync` (مسیر چاپ حکم، که مجوز خودش `missions.print` در `MissionService` سنجیده می‌شود و کاربر چاپ‌کننده نباید مجوز تنظیمات داشته باشد) و `ISessionService.ValidateAsync`. هیچ نوشتن تنظیماتی بدون رکورد ممیزی انجام نمی‌شود. پوشش آزمون: `AuthorizationGuardTests` و `RuntimeSettingsTests` در پروژه `NovaFleet.UnitTests`.
 
-**۲) قفل حساب پس از تلاش ناموفق وجود ندارد**؛ فقط ثبت می‌شود. **۳) ارقام جدول گزارش‌ها لاتین است.** **۴) صفحه‌های فرانت‌اند با `React.lazy` در مسیرها بارگذاری می‌شوند؛ چیدمان و احراز هویت بیرون از fallback صفحه باقی می‌مانند.**
+**۲) محدودیت نرخ ورود فرایندمحور است.** قفل حساب محلی پایدار است، اما limiter نرخ در حافظه هر فرایند زندگی می‌کند و در استقرار چندنمونه‌ای نباید به‌تنهایی به آن تکیه کرد. **۳) ارقام جدول گزارش‌ها لاتین است.** **۴) صفحه‌های فرانت‌اند با `React.lazy` در مسیرها بارگذاری می‌شوند؛ چیدمان و احراز هویت بیرون از fallback صفحه باقی می‌مانند و هر صفحه chunk مستقل دارد.**
 
 **۵) ورود با دامنه بدون اجبارِ TLS کار می‌کند (تصمیم مدیر).** `LdapDirectoryAuthenticator` همیشه با `AuthType.Basic` bind می‌کند و `SecureSocketLayer` دقیقاً از `directory.use-ssl` می‌آید؛ نه ذخیره تنظیمات و نه خود احراز هویت، روشن‌بودن SSL را شرط نمی‌کنند. یعنی در حالت خاموش، هم رمز مدیر دامنه (BindDn) و هم رمز کاربر روی `POST /api/auth/login-ldap` در شبکه روشن می‌روند. پذیرفته شد چون شبکه مقصد بسته داخلی است؛ در هر شبکه‌ای که قابل شنود است، `directory.use-ssl` باید `true` باشد و گواهی DC نصب شود (بخش [احراز هویت با Active Directory](#احراز‌هویت‌با‌active‌directory)).
 
@@ -687,18 +702,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.Backup
 |---|---|---|
 | `sms.enabled` | `enabled` | سوییچ سراسری بالا |
 | `sms.mode` | `mode` | `Simulation` (پیش‌فرض) / `Wsdl` / `Api` |
-| `sms.endpoint` | `endpoint` | آدرس سرویسدهنده؛ فقط در حالت‌های واقعی الزامی و باید http(s) مطلق باشد |
+| `sms.endpoint` | `endpoint` | آدرس HTTP/HTTPS مطلق سرویسدهنده؛ در حالت‌های واقعی الزامی و در ذخیره و اجرا از نشانی‌های خطرناک محافظت می‌شود |
 | `sms.organization` | `organization` | نام سازمان در سرویس پیامک |
 | `sms.username` / `sms.password` | `username` / `password` | `password` فقط نوشته می‌شود (ستون رمزنگاری‌شده) و خالی بودنش یعنی «تغییر نده» |
 | `sms.sender-number` | `senderNumber` | شماره فرستنده |
 | `sms.timeout-seconds` | `timeoutSeconds` | ۱ تا ۱۲۰ |
 | `sms.retry-minutes` / `sms.max-attempts` | `retryMinutes` / `maxAttempts` | فاصله تلاش مجدد (۱ تا ۱۴۴۰ دقیقه) و سقف تلاش (۱ تا ۲۰) |
 
-`Simulation` هیچ تماس بیرونی نمی‌زند: پیامک در صف ثبت و در نخستین استعلام «تحویل‌شده» می‌شود، و تست اعتبار هم یک عدد ساختگی برمی‌گرداند. هر پیامک واقعی فقط با `Wsdl` ارسال می‌شود.
+`Simulation` هیچ تماس بیرونی نمی‌زند: پیامک در صف ثبت و در نخستین استعلام «تحویل‌شده» می‌شود، و تست اعتبار هم یک عدد ساختگی برمی‌گرداند. حالت‌های واقعی `Wsdl` و `Api` پیاده‌شده‌اند.
 
-**درگاه `Wsdl` پیاده شده است** — `src/NovaFleet.Infrastructure/Sms/PayamSmsGateway.cs` مطابق بخش ۶ سند `docs/integrations/payam-sms-soap-v2.md`: SOAP 1.1 سبک RPC/encoded با namespace `urn:SMSAPIwsdl`، `Send` برای ارسال (شناسه سرور در `ProviderReference` می‌نشیند و بعداً با `getStatuses_OriginalID` رهگیری می‌شود)، `Balance` برای تست اتصال و هر ۲۱ کد خطای سند به دو دسته «تلاش دوباره بی‌فایده است» و «موقت است» تقسیم شده‌اند. شماره گیرنده پیش از فراخوانی به `98…` تبدیل می‌شود و اگر تبدیل‌ناپذیر باشد پیامک دائمی رد می‌شود؛ یعنی هیچ درخواستی با شماره خراب به سرویس‌دهنده نمی‌رود.
+**درگاه `Wsdl`** — `src/NovaFleet.Infrastructure/Sms/PayamSmsGateway.cs` مطابق بخش ۶ سند `docs/integrations/payam-sms-soap-v2.md`: SOAP 1.1 سبک RPC/encoded با namespace `urn:SMSAPIwsdl`، `Send` برای ارسال (شناسه سرور در `ProviderReference` می‌نشیند و بعداً با `getStatuses_OriginalID` رهگیری می‌شود)، `Balance` برای تست اتصال و هر ۲۱ کد خطای سند به دو دسته «تلاش دوباره بی‌فایده است» و «موقت است» تقسیم شده‌اند. شماره گیرنده پیش از فراخوانی به `98…` تبدیل می‌شود و اگر تبدیل‌ناپذیر باشد پیامک دائمی رد می‌شود؛ یعنی هیچ درخواستی با شماره خراب به سرویس‌دهنده نمی‌رود.
 
-حالت درگاه هنگام هر فراخوانی از ردیف `sms.mode` خوانده می‌شود (`SmsGatewayRouter`)، پس تغییرش نیاز به ری‌استارت ندارد و نبودش یا هر مقدار ناشناخته به شبیه‌سازی می‌رسد تا یک تایپو، اعتبار واقعی حساب را خرج نکند. حالت `Api` در UI و تنظیمات پذیرفته می‌شود ولی فعلاً با پیام صریح رد می‌شود: قرارداد REST این سرویس‌دهنده در دست نیست، و فرمت ساختنِ حدسی برای آن درست نیست — با داشتن سند یا WSDL بخش REST، همین router فعال می‌شود.
+**درگاه `Api`/REST** در `PayamSmsRestGateway.cs` قرارداد JSON پروسیجر مرجع `SP_SendSMS` را با `method=send` برای یک گیرنده و `method=getbalance` پیاده می‌کند. شناسه‌های `ID` و `serverId`، چه رشته و چه عدد، به `ProviderReference` تبدیل می‌شوند. این ارائه‌دهنده متد وضعیت تحویل REST ندارد؛ نتیجه استعلام وضعیت صریحاً `Unknown` است و هیچ درخواست حدسی به سرویس‌دهنده زده نمی‌شود.
+
+حالت درگاه هنگام هر فراخوانی از ردیف `sms.mode` خوانده می‌شود (`SmsGatewayRouter`)، پس تغییرش نیاز به ری‌استارت ندارد و نبودش یا هر مقدار ناشناخته به شبیه‌سازی می‌رسد تا یک تایپو، اعتبار واقعی حساب را خرج نکند. شماره گیرنده پیش از فراخوانی به `98…` تبدیل می‌شود و اگر تبدیل‌ناپذیر باشد پیامک دائمی رد می‌شود.
+
+**سیاست نشانی و انتقال:** endpoint باید HTTP/HTTPS مطلق، بدون user-info یا fragment و بدون loopback (شامل `localhost.` و زیردامنه‌های `.localhost`)، unspecified، multicast، IPv6 site-local یا link-local باشد. درگاه‌های خصوصی و داخلی مثل `10.20.30.40`، RFC1918 و `sms.corp.local` مجاز می‌مانند. همان سیاست هنگام ذخیره تنظیم فعال و هنگام خواندن مقدار ذخیره‌شده در SOAP/REST بررسی می‌شود؛ redirect خودکار هر دو کلاینت خاموش است تا پاسخ سرویس‌دهنده درخواست را به میزبان دیگری نفرستد. نام‌ها DNS resolve یا pin نمی‌شوند؛ بنابراین DNS rebinding یا پاسخ مخرب DNS همچنان ریسک باقی است و باید با DNS مورد اعتماد و کنترل egress شبکه محدود شود.
+
+**نتیجه نامشخص، ارسال مجدد خودکار نیست:** اگر پس از فرستادن پاسخ قابل‌اعتماد یا شناسه پیام دریافت نشود، ردیف `Indeterminate` می‌شود و کارگر آن را خودکار دوباره نمی‌فرستد. هم‌چنین ردیف `Sending` که بیش از ده دقیقه بدون نتیجه مانده `Indeterminate` می‌شود. بازیابی فقط با مجوز `notifications.sms.manage`، تأیید صریح، دلیل و تصمیم `retry` یا `failed` از مسیر reconcile ممکن است. حالت درگاه انتخاب‌شده هنگام claim در خود ردیف ذخیره می‌شود، بنابراین تغییر بعدی `sms.mode` نتیجه یک ارسال در حال پیگیری را عوض نمی‌کند.
 
 رمز درگاه از انبار اسرار (`sms.password`، ستون رمزنگاری‌شده) خوانده می‌شود و فقط در پاکت ارسالی به سرویس‌دهنده قرار می‌گیرد؛ در `GET /api/settings/connections/sms` هرگز برگردانده نمی‌شود.
 
@@ -718,7 +739,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.Backup
 
 **جست‌وجوی دامنه با سقف اندازه انجام می‌شود.** `ProbeAsync` با حساب Bind وارد دامنه می‌شود و فیلتر تنظیمات را روی یک نام نمونه (`*` اگر خالی باشد) با `SizeLimit = 25` اجرا می‌کند. عدد گزارش‌شده «تعداد کاربر کل دایرکتوری» نیست؛ اگر به سقف برسد، پیام «حداقل ۲۵ کاربر یافت شد (سقف آزمون)» می‌گوید و اگر صفر باشد، پیام مستقیماً به `BaseDn` یا فیلتر جست‌وجو شک می‌کند — چون bind موفق با صفر کاربر معمولاً یعنی دامنه درست و محدوده جست‌وجو غلط. کد خطای LDAP ۴۹ («اعتبارنامه رد شد») از بقیه خطاها جدا می‌شود تا مشخص باشد مشکل رمز است نه شبکه.
 
-**`Balance` صادق است.** در حالت `Simulation` اعتبار ساختگی برمی‌گردد و پیام صریحاً «حالت درگاه: Simulation» را می‌چاپد تا با درگاه واقعی اشتباه نشود؛ در حالت ناپیاده‌شده `Api` تست **شکست می‌خورد** (پیش‌تر همان عدد ساختگی را برمی‌گرداند). اگر کلید سراسری `sms.enabled` خاموش باشد، پیام تست همان را با «کل سامانه پیامک خاموش است» یادآوری می‌کند — یعنی تست سبز به معنی اجازه ارسال نیست. برای اطمینان از مسیر ارسال، «ارسال آزمایشی» همان `POST /api/sms/test` را می‌زند و پیامک در صفحه `/sms` قابل ردیابی است.
+**`Balance` صادق است.** در حالت `Simulation` اعتبار ساختگی برمی‌گردد و پیام صریحاً «حالت درگاه: Simulation» را می‌چاپد تا با درگاه واقعی اشتباه نشود؛ در `Wsdl` و `Api` تست اعتبار از همان درگاه انتخاب‌شده گرفته می‌شود و خطای ارائه‌دهنده به شکست قابل‌مشاهده تبدیل می‌شود. اگر کلید سراسری `sms.enabled` خاموش باشد، پیام تست همان را با «کل سامانه پیامک خاموش است» یادآوری می‌کند — یعنی تست سبز به معنی اجازه ارسال نیست. برای اطمینان از مسیر ارسال، «ارسال آزمایشی» همان `POST /api/sms/test` را می‌زند و پیامک در صفحه `/sms` قابل ردیابی است.
 
 **چه چیزی بیرون نمی‌رود.** هیچ‌یک از پاسخ‌های تست رمز ذخیره‌شده را برنمی‌گرداند: خطای سرویس‌دهنده قبل از نمایش کوتاه و پاک‌سازی می‌شود و رکورد ممیزی فقط `Test = Database|Directory|Sms` همراه با `Success` و `Detail` غیرحساس را نگه می‌دارد. هر تست، مستقل از نتیجه، یک رویداد `TestConnection` در دفتر امنیت ثبت می‌کند (موفقیت هم ممیزی می‌شود، چون نشان می‌دهد کسی تنظیمات اتصال را آزموده است).
 
@@ -783,11 +804,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.Backup
 
 ## سطح‌API
 
-**۱۱۴ endpoint** در `src/NovaFleet.Api/Endpoints/EndpointMapper.cs` (۴۰ GET، ۵۳ POST، ۱۹ PUT، ۲ DELETE)، همه زیر پیشوند `/api`:
+**۱۴۰ endpoint زیر `/api`**: ۱۲۱ نگاشت در `EndpointMapper.cs` و ۱۹ نگاشت در `MaintenanceEndpoints.cs` (۵۰ GET، ۶۳ POST، ۲۵ PUT، ۲ DELETE). مسیر مستقل `GET /health` نیز در `Program.cs` نگاشت شده است؛ در مجموع ۱۴۱ مسیر mapped.
 
 | گروه | نمونه مسیر | توضیح |
 |---|---|---|
-| راه‌اندازی | `GET/POST /api/setup/database`، `POST /api/setup/initialize`، `GET /api/setup/status` | ویزارد یک‌بارمصرف نصب: ساخت و مهاجرت پایگاه داده، نوشتن همه تنظیمات و اولین مدیر سامانه؛ بدون CSRF و بی‌نیاز از نشست تا نصب کامل شود |
+| راه‌اندازی | `GET/POST /api/setup/database`، `POST /api/setup/initialize`، `GET /api/setup/status` | ویزارد یک‌بارمصرف نصب: ساخت و مهاجرت پایگاه داده، نوشتن همه تنظیمات و اولین مدیر سامانه؛ خواندن وضعیت/دیتابیس و mutationهای loopback-only پیش از نصب، مستثنا از نشست و CSRF |
 | احراز هویت | `/api/auth/login-local`، `login-ldap`، `me`، `logout` | کوکی `nf_session` |
 | مأموریت | `/api/missions`، `{id}/review`، `{id}/approve`، `{id}/extend`، `{id}/split`، `{id}/withdrawal`، `{id}/order.pdf` | چرخه عمر کامل + حکم |
 | درخواست تغییر | `/api/mission-changes/*` | ثبت، بررسی و تصمیم |
@@ -801,17 +822,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $state.Backup
 | تنظیمات | `/api/settings/*` | سازمان، قواعد مأموریت، سیاست نشست، قالب حکم |
 | اتصال سرویس‌ها | `GET/PUT /api/settings/connections/{directory,sms,database}`، `POST /api/settings/connections/{database,directory,sms}/test` | دامنه، پیامک (+سوییچ سراسری)، رشته اتصال — با مجوز `settings.connections.manage`، بدون برگرداندن رمز، و سه تست زنده (بخش [اتصال سرویس‌ها و تست‌های زنده](#اتصال‌سرویس‌ها‌و‌تست‌های‌زنده)) |
 
-برای کشف کامل، فایل `EndpointMapper.cs` را ببینید؛ کل گروه `/api` پشت `RequireAuthorization` است و هر سرویس هم مجوز ریز خود را با `currentUser.Require(...)` از `PermissionCatalog` بررسی می‌کند.
+برای کشف کامل، `EndpointMapper.cs` و `MaintenanceEndpoints.cs` را ببینید؛ گروه اصلی `/api` پشت `RequireAuthorization` است، مسیرهای bootstrap جداگانه‌اند و هر سرویس نیز مجوز ریز خود را از `PermissionCatalog` بررسی می‌کند.
 
 ## تست‌و‌مهاجرت
 
 ```bash
 dotnet build                       # بدون warning و error
 dotnet test                        # پروژه‌های tests/
-cd web && npm run lint && npm run build
+cd web
+npm ci
+npm test
+npm run lint -- --deny-warnings
+npm run build
 ```
 
-`NovaFleet.UnitTests` ۲۱۶ آزمون xUnit دارد و برای اجرا به SQL Server نیاز ندارد: `MissionTestBase` یک پایگاه SQLite در حافظه می‌سازد، مهاجرت مدل را با `SqliteProviderColumnTypesModelCustomizer` به SQLite سازگار می‌کند (ستون‌های `(max)`، `DateTimeOffset` به unix-ms و rowversion) و fakes برای ساعت، ممیزی، ناشر اعلان، درگاه پیامک و محافظ رمز (`FakeSecretProtector`) ارائه می‌دهد. پوشش فعلی: چرخه عمر مأموریت، درخواست تغییر و تفکیک، تداخل راننده/خودرو، دروازه‌بانی مجوز (`AuthorizationGuardTests`)، تنظیمات runtime/اتصال و سوییچ پیامک (`RuntimeSettingsTests`)، تست‌های زنده اتصال (`ConnectionTestsServiceTests`: منبع فعال رشته اتصال، مهاجرت معوق، شمارش جست‌وجوی دامنه با سقف اندازه، اعتبار درگاه و نشت‌نکردن رمز ذخیره‌شده در پیام/`Detail`/ممیزی) و درگاه payamSMS (`PayamSmsGatewayTests`، با `HttpMessageHandler` ساختگی: شکل پاکت RPC/encoded، `SOAPAction`، ترتیب و نوع پارامترها، بدنه فارسی UTF-8، طبقه‌بندی ۲۱ کد خطا، نرمال‌سازی شماره، `Balance`، انتخاب حالت از `sms.mode` و سقف `sms.max-attempts` در صف) و ویزارد نصب (`SetupWizardTests`: اتمیت، بیرون‌نبودن اسرار از `Value` و ممیزی، قفل پس از نصب، سه حالت گام دیتابیس)، خودروی پیش‌فرض از هر دو فرم (`DriverDefaultVehicleTests`: آزادسازی نگه‌دارنده پیشین، پاک‌کردن همه نگه‌دارندگان، رد خودروی بایگانی‌شده)، چاپ حکم فقط پس از تأیید و در وضعیت‌های ۳/۴/۵ (`MissionLifecycleTests`) و تصویر پروفایل (`ProfilePhotoTests`: ۳۴ آزمون — مسیرهای خود کاربر/ادمین/راننده، رد over-posting، رد حساب ناشناس/غیرفعال، ۲۰ حالت تصویر نامعتبر روی هر پنج مسیر نوشتن، بازرمزگذاری و حذف فراداده، و نشت‌نکردن تصویر در ممیزی). `NovaFleet.IntegrationTests` هنوز خالی است.
+`NovaFleet.UnitTests` در آخرین اجرای محلی ۵۹۳ آزمون سبز، بدون skip، دارد و برای اجرا به SQL Server نیاز ندارد: `MissionTestBase` یک پایگاه SQLite در حافظه می‌سازد، مهاجرت مدل را با `SqliteProviderColumnTypesModelCustomizer` به SQLite سازگار می‌کند (ستون‌های `(max)`، `DateTimeOffset` به unix-ms و rowversion) و fakes برای ساعت، ممیزی، ناشر اعلان، درگاه پیامک و محافظ رمز (`FakeSecretProtector`) ارائه می‌دهد. پوشش فعلی: چرخه عمر مأموریت، درخواست تغییر و تفکیک، تداخل راننده/خودرو، دروازه‌بانی مجوز (`AuthorizationGuardTests`)، تنظیمات runtime/اتصال و سوییچ پیامک (`RuntimeSettingsTests`)، تست‌های زنده اتصال (`ConnectionTestsServiceTests`: منبع فعال رشته اتصال، مهاجرت معوق، شمارش جست‌وجوی دامنه با سقف اندازه، اعتبار درگاه و نشت‌نکردن رمز ذخیره‌شده در پیام/`Detail`/ممیزی) و درگاه payamSMS (`PayamSmsGatewayTests`، با `HttpMessageHandler` ساختگی: شکل پاکت RPC/encoded، `SOAPAction`، ترتیب و نوع پارامترها، بدنه فارسی UTF-8، طبقه‌بندی ۲۱ کد خطا، نرمال‌سازی شماره، `Balance`، انتخاب حالت از `sms.mode` و سقف `sms.max-attempts` در صف) و ویزارد نصب (`SetupWizardTests`: اتمیت، بیرون‌نبودن اسرار از `Value` و ممیزی، قفل پس از نصب، سه حالت گام دیتابیس)، خودروی پیش‌فرض از هر دو فرم (`DriverDefaultVehicleTests`: آزادسازی نگه‌دارنده پیشین، پاک‌کردن همه نگه‌دارندگان، رد خودروی بایگانی‌شده)، چاپ حکم فقط پس از تأیید و در وضعیت‌های ۳/۴/۵ (`MissionLifecycleTests`) و تصویر پروفایل (`ProfilePhotoTests`: ۳۴ آزمون — مسیرهای خود کاربر/ادمین/راننده، رد over-posting، رد حساب ناشناس/غیرفعال، ۲۰ حالت تصویر نامعتبر روی هر پنج مسیر نوشتن، بازرمزگذاری و حذف فراداده، و نشت‌نکردن تصویر در ممیزی). `NovaFleet.IntegrationTests` شامل آزمون‌های واقعی LocalDB و SQL Server با guard دقیق سرور و نام کاتالوگ است. CI پنج کاتالوگ LocalDB را جداگانه migrate می‌کند و همه آن‌ها را بدون skip اجرا می‌کند؛ پنج آزمون maintenance نیز روی SQL Server 2022 واقعیِ default instance و دقیقاً `localhost` اجرا می‌شوند. بدون متغیرهای صریح، آزمون‌های وابسته به SQL محیطی skip می‌شوند و اجرای محلی‌شان جایگزین jobهای اجباری CI نیست.
 
 **مهاجرت جدید** (رشته اتصال فقط از متغیر محیطی، نه از فایل):
 
@@ -824,6 +849,13 @@ dotnet ef database update --project src/NovaFleet.Infrastructure --startup-proje
 
 `NOVAFLEET_CONNECTION_STRING` را از متغیرهای `app.env` خود بسازید؛ `DesignTimeDbContextFactory` همین متغیر را می‌خواند و اگر تنظیم نباشد با پیام «متغیر محیطی NOVAFLEET_CONNECTION_STRING … تنظیم نشده است» خطا می‌دهد. رشته اتصال را به `appsettings.json` ننویسید.
 
+نسخه SDK در `global.json` (`10.0.403`) عمداً تغییر نمی‌کند. اگر روی ماشینی فقط SDK جدیدتر با runtime سازگار .NET 10 نصب است، برای build/test محلی می‌توان آن SDK نصب‌شده را صریحاً انتخاب کرد؛ این workaround فقط برای همان ماشین است و CI همچنان SDK تعیین‌شده در `global.json` را نصب می‌کند. نمونه ویندوز:
+
+```powershell
+& 'C:\Program Files\dotnet\dotnet.exe' 'C:\Program Files\dotnet\sdk\11.0.100\dotnet.dll' build NovaFleet.sln -c Release
+& 'C:\Program Files\dotnet\dotnet.exe' 'C:\Program Files\dotnet\sdk\11.0.100\dotnet.dll' test NovaFleet.sln -c Release
+```
+
 **آزمون‌های نصاب:**
 
 ```powershell
@@ -832,6 +864,28 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-UpgradeSq
 ```
 
 آزمون اول IIS/SQL را mock می‌کند ولی فایل‌ها و manifest‌های واقعی را در پوشه‌های موقت می‌آزماید: گواهی و hostname، HTTPS-only binding، journal نصب تازه، بازیابی، حفظ داده/config و prune امن. آزمون دوم فقط با guard دقیق `(localdb)\MSSQLLocalDB` و نام `NovaFleet_Upgrade_Test_<guid>` backup/checksum و بازیابی schema/data را آزمایش می‌کند و پایگاه ساختگی را در پایان حذف می‌کند. هیچ‌کدام به IIS زنده، SQL Server سازمان، حساب کاربر، AD یا پیامک واقعی وصل نمی‌شوند.
+
+### CI اجباری و SQL محلی
+
+`.github/workflows/ci.yml` در pull request و push به `main` هفت job مستقل دارد: اعتبارسنجی workflow با actionlint، بک‌اند، فرانت‌اند، mock نصاب، SQL LocalDB نصاب، SQL/migrationهای LocalDB برنامه و SQL maintenance روی `localhost`. بک‌اند و فرانت‌اند Release/تولید می‌شوند؛ فرانت‌اند با Node 22، `npm ci`، `npm test` و `npm run lint -- --deny-warnings` اجرا می‌شود. نتیجه TRX با `Assert-CiTestResults.ps1` بررسی می‌شود و **هر skip، شکست تست، run خالی یا run ناتمام job را قرمز می‌کند**. هیچ job اجباری `continue-on-error` ندارد.
+
+برای اجرای محلی گروه LocalDB، فقط این پنج رشته آزمایشی را تنظیم کنید و filter را برای حذف job native اعمال کنید؛ guardهای داخل تست همچنان سرور و نام دقیق کاتالوگ را بررسی می‌کنند:
+
+```bash
+export NOVAFLEET_SMS_TEST_SQL='Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_SmsQueue_Test_20261124'
+export NOVAFLEET_ALLOCATION_TEST_SQL='Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_Allocation_Test_20261125'
+export NOVAFLEET_MISSION_CHANGE_TEST_SQL='Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_MissionChangeSnapshot_Test_20261124'
+export NOVAFLEET_LOGIN_TEST_SQL='Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_Login_Test_20261124'
+export NOVAFLEET_MIGRATION_TEST_SQL='Server=(localdb)\MSSQLLocalDB;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_Migration_Test_0123456789abcdef0123456789abcdef'
+dotnet test tests/NovaFleet.IntegrationTests -c Release --filter 'FullyQualifiedName!~MaintenanceSqlServerTests'
+```
+
+آزمون maintenance فقط با رشته زیر و SQL Server 2022 واقعیِ `localhost:1433` اجرا می‌شود؛ تغییر guard به `(localdb)`، `127.0.0.1` یا نام دیگر برای سبزشدن تست مجاز نیست:
+
+```bash
+export NOVAFLEET_MAINTENANCE_TEST_SQL='Server=localhost;Integrated Security=true;TrustServerCertificate=true;Database=NovaFleet_Maintenance_Test_20261116'
+dotnet test tests/NovaFleet.IntegrationTests -c Release --filter 'FullyQualifiedName~MaintenanceSqlServerTests'
+```
 
 ## خط زمانی
 
@@ -851,13 +905,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-UpgradeSq
 
 **مخزن و معماری**
 
-- ساخت کامل راه‌حل چهارلایه `NovaFleet.sln` (Domain / Application / Infrastructure / Api) با Build بدون warning و خطا، به‌همراه پروژه‌های تست خالی `tests/NovaFleet.UnitTests` و `tests/NovaFleet.IntegrationTests`.
+- ساخت کامل راه‌حل چهارلایه `NovaFleet.sln` (Domain / Application / Infrastructure / Api). هر دو پروژه تست که در آغاز خالی بودند، اکنون پوشش واحد و یکپارچه دارند؛ بخش [تست و مهاجرت](#تست‌و‌مهاجرت) مرجع اجرای فعلی است.
 - پیاده‌سازی موجودیت‌ها و قواعد دامنه: مأموریت، راننده، خودرو، مقصد، واحد سازمانی، کاربر/نقش/مجوز، صف پیامک، قالب‌ها، درخواست تغییر، دفتر رویداد و تنظیمات.
 
 **بک‌اند**
 
-- ۱۱۴ endpoint (۴۰ GET، ۵۳ POST، ۱۹ PUT، ۲ DELETE) در `EndpointMapper` برای مأموریت، راننده، خودرو، مقصد، پیامک، گزارش، امنیت، تنظیمات، اتصال سرویس‌ها، سازمان، تایم‌لاین، پروفایل و ویزارد نصب.
-- احراز هویت محلی + LDAP، نشست‌های کوکی‌محور با پایان اجباری، ثبت هر تلاش ناموفق در نشست و دفتر رویداد، هدر CSRF، و ۴۲ کد مجوز در `PermissionCatalog` (یک `*`، سه گروه `x.*` و ۳۸ کد دانه‌درشت) با Grant/Deny مستقیم و نگاشت گروه دایرکتوری به نقش.
+- ۱۴۰ endpoint زیر `/api` (۵۰ GET، ۶۳ POST، ۲۵ PUT، ۲ DELETE) در `EndpointMapper` و `MaintenanceEndpoints`، به‌علاوه `GET /health`.
+- احراز هویت محلی + LDAP، نشست‌های کوکی‌محور با پایان اجباری، ثبت هر تلاش ناموفق، قفل پانزده‌دقیقه‌ای حساب محلی پس از پنج شکست، rate limit فرایندمحور، هدر CSRF، و ۵۳ کد مجوز در `PermissionCatalog` (یک `*`، چهار گروه `x.*` و ۴۸ کد دانه‌درشت) با Grant/Deny مستقیم و نگاشت گروه دایرکتوری به نقش.
 - چرخه عمر کامل مأموریت: ثبت → بررسی → تأیید و تخصیص → اجرا → پایان/خاتمه زودهنگام، به‌همراه انصراف، لغو، رد، تمدید، تعویض راننده/خودرو و تفکیک؛ همه با کنترل تداخل راننده و خودرو و فاصله ایمنی قابل تنظیم.
 - دو Worker پس‌زمینه: انتقال خودکار وضعیت/آزادسازی منابع، و ارسال و پیگیری تحویل پیامک با تلاش مجدد.
 - خروجی: حکم مأموریت PDF راست‌به‌چپ با QuestPDF، گزارش‌های پارامتری Excel (ClosedXML) و PDF.
@@ -881,21 +935,21 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-UpgradeSq
 
 **امنیت و تنظیمات**
 
-- بستن شکاف دروازه‌بانی: `RequireAuthorization` روی کل گروه `/api` (به‌جز `/api/auth/*` و `/api/setup/*`) به‌علاوه `currentUser.Require(...)` در `SettingsService`، `SmsService`، `UserService`، `RoleService`، `SessionService` و `AuditQueryService`؛ جزئیات و استثناهای عمدی در بخش [محدودیت‌های شناخته‌شده](#محدودیت‌های‌شناخته‌شده).
+- بستن شکاف دروازه‌بانی: `RequireAuthorization` روی گروه اصلی `/api`؛ bootstrap شامل وضعیت/دیتابیس setup و مسیرهای auth جداگانه نگاشت می‌شود و mutationهای setup فقط loopback هستند. در سرویس‌ها نیز `currentUser.Require(...)` روی تنظیمات، پیامک، کاربران، نقش‌ها، نشست‌ها و ممیزی اجرا می‌شود؛ جزئیات در بخش [مدل امنیتی](#مدل‌امنیتی) آمده است.
 - بستن کوکی نشست به TLS: بیرون از `Development`، `nf_session` با `CookieSecurePolicy.Always` می‌نشیند و `UseHsts()` + `UseHttpsRedirection()` فعال می‌شوند (تأیید زنده: `http` → `307` به `https` و هدر `Strict-Transport-Security: max-age=2592000`). پروفایل `http://localhost:5192` توسعه دست‌نخورده ماند، چون هر سه از `IHostEnvironment.IsDevelopment()` گره می‌خورند.
 - تنظیمات runtime دیتابیس‌محور: `IRuntimeSettings` + `RuntimeSettings` مسیر همگانی نوشتن جدول `SystemSettings` شد و پشته‌ای مثل `LdapDirectoryAuthenticator` از `IOptions` به خواندن زنده ردیف‌های `directory.*` منتقل شد (بدون ری‌استارت).
 - اسرار با Data Protection (بدون پکیج NuGet جدید، از طریق `FrameworkReference` به `Microsoft.AspNetCore.App`): `ISecretProtector`/`DataProtectionSecretProtector`، ستون `SystemSettings.ProtectedValue` با مهاجرت `AddProtectedSystemSettings`، فیلدهای نوشتنی-یک‌طرفه و حلقه کلید `~/.novafleet/keys`.
 - `GET/PUT /api/settings/connections/{directory,sms,database}` با اعتبارسنجی، ممیزی و `RestartRequired` صادقانه؛ `GET` رشته اتصال ماسک‌شده می‌دهد و منبع فعال را اعلام می‌کند.
 - رشته اتصال از سه منبع با اولویت خوانده می‌شود (`ConnectionStringResolver`) و فایل بوت‌استرپ `~/.novafleet/bootstrap.json` اتمی نوشته می‌شود تا ویرایش اتصال پس از نصب ممکن باشد.
 - سوییچ سراسری `sms.enabled` (پیش‌فرض خاموش): کارگر صف و «تست پیامک» هر دو از همان تصمیم عبور می‌کنند.
-- درگاه payamSMS نسخه ۲ (`PayamSmsGateway`، SOAP 1.1 RPC/encoded مطابق `docs/integrations/payam-sms-soap-v2.md`) با `Send`/`getStatuses_OriginalID`/`Balance`، نگاشت ۲۱ کد خطا به دائم/موقت، نرمال‌سازی شماره به `98…`، و انتخاب حالت از `sms.mode` توسط `SmsGatewayRouter` بی‌ری‌استارت. `SmsOptions`/`AdpSmsGateway` و بخش `Sms` در `appsettings.json` حذف شدند؛ `sms.max-attempts` هم واقعاً سقف تلاش‌های مجدد صف شد.
+- درگاه payamSMS در دو حالت واقعی: SOAP/WSDL با `Send`/`getStatuses_OriginalID`/`Balance` و نگاشت ۲۱ کد خطا، و REST/API با `send`/`getbalance` و شناسه عددی/رشته‌ای پیام. حالت درگاه از `sms.mode` زنده انتخاب می‌شود، حالت نامشخص به simulation می‌رود و نتیجه `Indeterminate` بدون تصمیم مدیر ارسال مجدد نمی‌شود.
 - ویزارد شش‌گامی `/setup`: گام دیتابیس (`GET/POST /api/setup/database` — ساخت و مهاجرت واقعی، نوشتن `~/.novafleet/bootstrap.json`، پیش‌پُر کردن از منبع فعال بدون برگرداندن رمز، و درواز restart تا سرویس روی همان پایگاه بالا نیاید) و پنج گام بعدی که در تأیید نهایی با همان `SettingsWriters` اعتبارسنجی و سپس نوشته می‌شوند: دامنه، پیامک (فیلدها فقط وقتی سوییچ سراسری روشن شود)، سازمان و مدیر محلی، قواعد/نشست/قالب/سربرگ، و خلاصه.
-- پوسته حالا نام و لوگوی سازمانی را از `organization.name` / `organization.logoDataUrl` می‌خواند (نوار کنار و پیام خوش‌آمد) به‌جای رشته ثابت «ناوگان نوین»؛ چون از همان `queryKey: ['settings']` استفاده می‌کند، با ذخیره در تب تنظیمات بی‌ری‌استارت عوض می‌شود.
+- پوسته نام و لوگوی سازمانی را از `organization.name` / `organization.logoDataUrl` می‌خواند و با ذخیره در تنظیمات بی‌ری‌استارت عوض می‌شود. لوگوی سازمان در Setup و تنظیمات فقط PNG مربع تا ۲۵۶×۲۵۶ پیکسل و ۲۵۶ کیلوبایت است؛ همان قرارداد سمت کلاینت و سرور اعتبارسنجی و نرمال‌سازی می‌شود.
 - آزمودن زنده نصب از صفر: wipe کامل، شش گام در مرورگر، و سپس بررسی مستقیم پایگاه — ۳۵ ردیف `SystemSettings`، دو راز با `IsSecret=1` و `ProtectedValue` (هیچ مقداری در `Value`)، مدیر محلی با هش PBKDF2 و دو سطر ممیزی که فقط `*PasswordSet` را نشان می‌دهند. یک گام با مقدار نادرست (endpoint بدون `http`) به ۴۰۰ رسید و هیچ ردیفی ننوشت — اتمیت در محیط واقعی تأیید شد.
 - تب «اتصال سرویس‌ها» در تنظیمات با سه کارت (دیتابیس، دامنه، پیامک) و سه تست زنده: `POST /api/settings/connections/database/test` (اتصال واقعی + مهاجرت‌های معوق + منبع فعال رشته اتصال)، `.../directory/test` (bind با حساب سرویس و جست‌وجوی نمونه تا سقف ۲۵ کاربر همراه شمارش نتیجه) و `.../sms/test` (`Balance` درگاه فعال)؛ «ارسال آزمایشی» هم از همان‌جا پیامک را در صف می‌گذارد. هر تست یک رویداد `TestConnection` در دفتر امنیت می‌نویسد و هیچ‌کدام رمز ذخیره‌شده را برنمی‌گرداند. بنر restart فقط برای رشته اتصال دیتابیس نمایش داده می‌شود.
-- `SmsGatewayRouter.GetBalanceAsync` در حالت ناپیاده‌شده `Api` دیگر اعتبار ساختگی برنمی‌گرداند و با پیام صریح رد می‌شود — تست اتصال نباید دروغ بگوید.
+- تست اتصال پیامک در `Simulation` عدد ساختگی را با برچسب صریح simulation برمی‌گرداند؛ در `Wsdl` و `Api` اعتبار واقعی همان درگاه خوانده می‌شود و خطای ارائه‌دهنده سبز نمایش داده نمی‌شود.
 - رفع باگ «انتخاب تصویر» لوگو در تب سازمان و ویزارد: چون مقدار `input type=file` پاک نمی‌شد، انتخاب دوباره همان فایل (مثلاً پس از «حذف») هیچ `change` ای روشن نمی‌کرد و دکمه «کار نمی‌کرد»؛ حالا مقدار پس از هر انتخاب صفر می‌شود و با `pointer-events-none` روی خود input، فقط برچسب فعال می‌شود.
-- ۱۶۹ آزمون سبز در پایان این دوره در `NovaFleet.UnitTests` روی SQLite در حافظه، از جمله `AuthorizationGuardTests`، `RuntimeSettingsTests`، `ConnectionTestsServiceTests`، `PayamSmsGatewayTests` و `SetupWizardTests`.
+- نقطه عطف تاریخی: ۱۶۹ آزمون واحد در پایان دوره تنظیمات؛ عدد معتبر اجرای فعلی ۵۹۳ است و در بخش تست آمده است.
 
 **ناوگان، حکم و تایم‌لاین (دوره میانی)**
 
@@ -916,20 +970,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-UpgradeSq
 - ممیزی بدون محموله تصویر: رویداد `UpdateProfilePhoto` فقط شناسه کاربر را ثبت می‌کند و `After` تصویر ندارد. `AssertNoPhotoInAudit` نبودِ `data:image` و `AvatarDataUrl` را در هر دو ممیزی حافظه‌ای و جدول `AuditEntries` تضمین می‌کند.
 - تصویر در پوسته و فهرست‌ها: کامپوننت مشترک `Avatar` در نوار بالا (لینک به `/profile`) تصویر پروفایل را نشان می‌دهد؛ جدول کاربران، جدول رانندگان و ردیف راننده تایم‌لاین از fallback حرف اول نام استفاده می‌کنند چون payloadهای فهرست/گزینه تصویر ندارند. `auth/me`، جزئیات کاربر/راننده و ورود LDAP/Windows همچنان `avatarDataUrl` را برمی‌گردانند و همگام‌سازی دایرکتوری تصویر را حفظ می‌کند.
 - فرم ادمین `UserProfileForm.tsx` از `SecurityPage` جدا شد (ساخت و ویرایش کاربر با تصویر و نقش‌ها، با دکمه «ویرایش» در جدول و پیام موفقیت)؛ `Modal` حالا `max-h-[calc(100dvh-2rem)]` و `overflow-y-auto` دارد تا ویرایشگر برش در صفحه‌های کوچک بیرون نزند. پس از ذخیره، فرم ادمین کلیدهای `['users']` و `['profile']` را باطل می‌کند و اگر کاربر خودش را ویرایش کرده باشد نشست را بازخوانی می‌کند؛ فرم راننده هم `['drivers']`، `['driver-options']`، `['vehicles']`، `['vehicle-options']` و `['timeline']` را باطل می‌کند تا پروفایل و رابطهٔ خودروی پیش‌فرض در همه مصرف‌کننده‌ها به‌روز شود. دکمه ذخیره هنگام برش یا بی‌تغییری غیرفعال است و `useRef` جلوی ارسال دوباره را می‌گیرد.
-- ۳۴ آزمون جدید در `tests/NovaFleet.UnitTests/Authorization/ProfilePhotoTests.cs`؛ مجموع `NovaFleet.UnitTests` حالا **۲۱۶ آزمون سبز** است (۱۶۹ پایان دوره تنظیمات + ۱۳ دوره میانی + ۳۴). پوشش: ذخیره/خواندن/حذف تصویر در هر دو موجودیت، بی‌نیازی تصویرِ خود کاربر از مجوز ادمین و دست‌نخورده‌ماندن نقش‌ها/مجوزها/سایر کاربران، رد شش فیلد over-posted، رد حساب ناشناس/ناموجود/غیرفعال، حفظ مجوزهای موجود مسیرهای ادمین و راننده، حفظ تصویر در همگام‌سازی دایرکتوری و ورود LDAP/Windows، و ۲۰ حالت تصویر نامعتبر (خالی، URL، SVG، JPEG، غیرتصویر، base64 نادرست و با فاصله، پیشوند `image/PNG` با حروف بزرگ، حجم بیش از حد در دو سمت encoded/decoded، غیرمربع، ابعاد بیش از حد، bomb ابعاد، بریده، CRC، bomb تورم، فیلتر نامعتبر، deflate ناقص، APNG، داده اضافه) روی هر پنج مسیر نوشتن؛ به‌علاوه بازرمزگذاری PNG معتبر با حذف فراداده، حفظ ابعاد و شفافیت و قابل‌استفاده‌ماندن خروجی.
+- ۳۴ آزمون در `tests/NovaFleet.UnitTests/Authorization/ProfilePhotoTests.cs`؛ در پایان دوره تصویر، مجموع به ۲۱۶ رسید (۱۶۹ دوره تنظیمات + ۱۳ دوره میانی + ۳۴) و مجموعه بعداً توسعه یافت. پوشش: ذخیره/خواندن/حذف تصویر در هر دو موجودیت، بی‌نیازی تصویرِ خود کاربر از مجوز ادمین و دست‌نخورده‌ماندن نقش‌ها/مجوزها/سایر کاربران، رد شش فیلد over-posted، رد حساب ناشناس/ناموجود/غیرفعال، حفظ مجوزهای موجود مسیرهای ادمین و راننده، حفظ تصویر در همگام‌سازی دایرکتوری و ورود LDAP/Windows، و ۲۰ حالت تصویر نامعتبر (خالی، URL، SVG، JPEG، غیرتصویر، base64 نادرست و با فاصله، پیشوند `image/PNG` با حروف بزرگ، حجم بیش از حد در دو سمت encoded/decoded، غیرمربع، ابعاد بیش از حد، bomb ابعاد، بریده، CRC، bomb تورم، فیلتر نامعتبر، deflate ناقص، APNG، داده اضافه) روی هر پنج مسیر نوشتن؛ به‌علاوه بازرمزگذاری PNG معتبر با حذف فراداده، حفظ ابعاد و شفافیت و قابل‌استفاده‌ماندن خروجی.
 
 **باقی‌مانده**
 
-- باندل فرانت‌اند یک تکه است (۹۲۲ کیلوبایت، gzip ≈ ۲۶۲ در build فعلی)؛ code-splitting با `React.lazy` ارزش انجام دارد.
-- حالت `Api` درگاه پیامک در تنظیمات پذیرفته می‌شود ولی ارسال نمی‌کند: قرارداد REST سرویس‌دهنده در مخزن سند نشده است و حدس زدن فریم‌ورک سیم درست نیست. با رسیدن WSDL/سند REST، همان `SmsGatewayRouter` بدون تغییر معماری فعال می‌شود؛ فعلاً مسیر واقعی `Wsdl` است.
-- درگاه payamSMS هنوز روی سرویس‌دهنده زنده (با اعتبار واقعی) آزمایش نشده؛ آزمون‌ها با `HttpMessageHandler` ساختگی‌اند.
+- مسیرهای صفحه با `React.lazy` به chunk مستقل تقسیم شده‌اند. در build محلی فعلی، JS و CSS اولیه `index.html` فقط **۴۲۲٬۰۳۹ بایت** است (`index-CLqV1qeu.js` و `index-CeBv9poR.css`)؛ کل ۲۸ فایل JS/CSS خروجی **۱٬۱۰۳٬۶۵۲ بایت** است و کل `dist` شامل آیکون‌ها ۱۷۴ فایل با ۲٬۲۶۴٬۳۲۵ بایت است. بنابراین رقم «یک باندل ۹۲۲ کیلوبایتی» دیگر معتبر نیست.
+- REST/API پیاده‌شده است، اما این ارائه‌دهنده متد استعلام وضعیت تحویل REST ندارد؛ وضعیت آن `Unknown` می‌ماند. پیاده‌سازی و contract با handler ساختگی آزموده شده، نه با ترافیک واقعی و پولی.
 - نوشتن تنظیمات اتصال روی HTTP واقعی با نشست معتبر برای مسیر پیامک آزموده شد؛ `PUT` دیتابیس (چون فایل بوت را بازمی‌نویسد و restart می‌خواهد) و `PUT` دامنه (چون DC در این محیط نیست) فقط در آزمون واحد پوشش دارند (`RuntimeSettingsTests`).
-- `NovaFleet.IntegrationTests` هنوز هیچ آزمونی ننوشته است.
-- چهار یافته ممیزی امنیتی دوره تنظیمات عمداً باز ماند (انتخاب مدیر، در مقابلِ فقط بستن حمل‌ونقل نشست): اعتبارسنجی `sms.endpoint` در هر ذخیره و بستن بازخورد خام سرویس‌دهنده (SSRF با کوئری از شبکه داخلی)، کف تعداد تکرار PBKDF2 به‌جای پذیرش عددِ داخل رشته هش، محدودسازی نرخ ورود بی‌نام (rate limit؛ بدون قفل حساب)، و اعتبارسنجی اندازه/نوع لوگوی ارسالی — `organization.logoDataUrl` هنوز بدون اعتبارسنجی در `SettingsWriters` ذخیره می‌شود؛ مسیر تصویر پروفایل با `AvatarImageValidator` بسته شد ولی لوگو از همان اعتبارسنج استفاده نمی‌کند. اجبار LDAPS هم بررسی و کنار گذاشته شد؛ دلیل و ریسکش در بند ۵ بخش [محدودیت‌های شناخته‌شده](#محدودیت‌های‌شناخته‌شده).
+- آزمون‌های SQL یکپارچه اکنون وجود دارند، ولی اجرای کامل آن‌ها به LocalDB یا SQL Server 2022 واقعی `localhost` و کاتالوگ‌های دقیق مجاز نیاز دارد؛ skipهای اجرای معمول `dotnet test` به معنی حذف نیاز به SQL نیست.
+- چهار یافته امنیتی دوره تنظیمات بسته شده‌اند: سیاست endpoint در ذخیره و اجرای SOAP/REST و redirect خاموش، کف ۲۱۰٬۰۰۰ تکرار PBKDF2 با پذیرش work factor قوی‌تر آینده و رد طول نامعتبر نمک/کلید، rate limit ورود به‌همراه قفل پایدار حساب محلی، و اعتبارسنجی مشترک لوگوی PNG مربع/محدود در Setup و تنظیمات. **SSRF کامل نیست:** DNS نام‌ها resolve یا pin نمی‌شود و DNS rebinding همچنان با DNS مورد اعتماد و کنترل egress باید مهار شود. اجبار LDAPS نیز تصمیم آگاهانه مدیر است و ریسک LDAP ساده در بند ۵ بخش [محدودیت‌های شناخته‌شده](#محدودیت‌های‌شناخته‌شده) توضیح داده شده است.
 - ارقام جدول گزارش‌ها با ارقام لاتین چاپ می‌شوند؛ برای یکدستی با بقیه رابط، فارسی‌کردن آن‌ها در `ReportService` باقی است.
 - صفحه `/profile` و ویرایشگر برش هنوز در `docs/screenshots` (۳۰ تصویر) و بخش [گشتی بر صفحه‌ها](#گشتی‌بر‌صفحه‌ها) مستند نشده‌اند.
-- تصویر پروفایل به‌صورت data URL درون‌خطی در `nvarchar(max)` ذخیره می‌شود و فهرست‌ها (`/api/users`، `/api/drivers`، `/api/drivers/options`) آن را برای هر سطر برمی‌گردانند؛ با سقف ۲۵۶ کیلوبایت برای هر رکورد، مسیر جداگانهٔ تصویر یا کش/فشرده‌سازی سمت کلاینت هنوز بهینه نشده است.
-- فرانت‌اند آزمون خودکار ندارد (فقط `oxlint` و `tsc -b`)؛ ویرایشگر برش، رفتار کیبورد/لمس و مسیرهای تصویر در مرورگر واقعی پوشش خودکار ندارند و سمت سرور با `ProfilePhotoTests` سنجیده می‌شود. `oxlint` هم ۲۰ هشدار دارد (۸ `set-state-in-effect`، ۷ `only-export-components`، ۴ `purity` مثل `Date.now()` در render تایم‌لاین، ۱ `use-memo`) بدون خطا.
+- تصویر پروفایل همچنان به‌صورت data URL درون‌خطی در `nvarchar(max)` ذخیره می‌شود، اما DTOهای فهرست و گزینه‌های `/api/users`، `/api/drivers` و `/api/drivers/options` تصویر را ارسال نمی‌کنند؛ فقط جزئیات، پروفایل و `auth/me` آن را نگه می‌دارند. ذخیره‌سازی فایل مستقل هنوز انجام نشده است.
+- فرانت‌اند اکنون **۵۸ آزمون در ۱۲ فایل** دارد و اجرای `npm test` سبز است؛ `oxlint --deny-warnings` نیز **صفر هشدار و صفر خطا** می‌دهد. تست‌های hydration، احراز هویت/کش، مسیرهای lazy، لوگو، تنظیمات و reconcile پیامک وجود دارد؛ پوشش کیبورد/لمس و ظاهر واقعی همه صفحه‌ها همچنان نیازمند بازبینی مرورگر است.
 - فایل مجوز (LICENSE) به مخزن اضافه نشده است؛ تا پیش از آن، شرایط بخش [مجوز](#مجوز) حاکم است.
 
 ## عیب‌یابی
@@ -947,11 +1000,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer\Test-UpgradeSq
 | گام‌های بعدی ویزارد باز نمی‌شوند و پیام «سرویس را راه‌اندازی مجدد کنید» می‌آید | گام دیتابیس رشته اتصال را در `~/.novafleet/bootstrap.json` نوشته ولی منبع فعال سرویس چیز دیگری است (متغیر محیطی یا `ConnectionStrings:Default` بر فایل اولویت دارند)؛ سرویس را restart کنید یا آن منبع را بردارید |
 | در گام ۱ ویزارد، نام سرور و پایگاه از قبل پر است | اتصال از `GET /api/setup/database` خوانده می‌شود (بدون رمز)؛ فقط وقتی می‌خواهید پایگاه تازه بسازید مقدارها را عوض کنید |
 | تب «تنظیمات» یا «امنیت» در منو نیست | حساب جاری مجوز `settings.system.manage` / `security.audit.view` ندارد (حساب‌های `demo.*` این‌طورند)؛ همان مجوز سمت سرور هم چک می‌شود، پس فراخوانی دستی ۴۰۳ می‌گیرد |
-| در تب سازمان «انتخاب تصویر» بی‌واکنش به نظر می‌رسد | دو علت: فایل بزرگ‌تر از ۵۱۲ کیلوبایت که با پیام روشن رد می‌شود، یا انتخاب دوباره *همان* فایل — که پیش از این `change` را روشن نمی‌کرد (حالا مقدار input پس از هر انتخاب پاک می‌شود). در هر دو حالت لوگو فقط با «ذخیره تنظیمات سازمان» در `organization.logoDataUrl` می‌نشیند و پیش‌نمایش تنها، ذخیره نیست |
+| در تب سازمان «انتخاب تصویر» بی‌واکنش یا رد می‌شود | لوگو باید PNG مربع، حداکثر ۲۵۶×۲۵۶ پیکسل و ۲۵۶ کیلوبایت باشد؛ JPEG/SVG، فایل نامعتبر، غیرمربع یا بزرگ‌تر با پیام روشن رد می‌شود و لوگوی معتبر قبلی حفظ می‌شود. مقدار input پس از هر انتخاب پاک می‌شود و پیش‌نمایش تا «ذخیره تنظیمات سازمان» ذخیره نیست |
 | داشبورد و تایم‌لاین خالی | داده نمونه بارگذاری نشده؛ بخش داده نمونه را ببینید یا یک مأموریت دستی ثبت کنید |
 | تایم‌لاین در مقیاس ساعت «۰ راننده» نشان می‌دهد | حالت بارگذاری React Query است؛ با تغییر بازه چند لحظه صبر کنید، داده می‌آید |
 | متن فارسی در داده نمونه خراب شد | `sqlcmd` بدون `-f 65001` اجرا شده و فایل UTF-8 را ویندوزی خوانده است |
 | پیامک ارسال‌نشده و وضعیت `Queued` مانده | یا `sms.enabled` خاموش است (کارگر صف را دست نمی‌زند) یا `sms.mode` روی `Simulation`/مقدار ناشناخته است؛ از `GET /api/settings/connections/sms` و لاگ «ارسال پیامک در سامانه غیرفعال است» قابل تشخیص است |
+| پیامک `Indeterminate` است | پاسخ یا شناسه قابل‌اعتماد دریافت نشده، یا ارسال بیش از ده دقیقه ناتمام مانده؛ ارسال خودکار تکرار نمی‌شود و reconcile نیازمند مجوز، تأیید و دلیل است |
+| ورود با `429` رد می‌شود | سقف تلاش ناموفق username/IP فعال شده؛ `Retry-After` را ببینید. حساب محلی پس از پنج شکست نیز پانزده دقیقه قفل می‌شود |
+| ذخیره یا ارسال پیامک با «آدرس سرویس» رد می‌شود | endpoint باید HTTP/HTTPS مطلق بدون user-info/fragment و بدون loopback/link-local/unspecified/multicast باشد؛ redirectها نیز خودکار نیستند |
 | «رمز ذخیره‌شده» ولی خواندنش null برمی‌گردد | حلقه کلید `~/.novafleet/keys` پاک یا جابه‌جا شده؛ رمزگشایی ناموفق است و باید رمز از نو ثبت شود |
 | فارسی PDF نامفهوم | فونت Tahoma در دسترس سیستم نیست (مسیر `C:\Windows\Fonts\tahoma.ttf`) |
 | ۴۰۰ CSRF | هدر `X-Requested-With: XMLHttpRequest` روی متدهای تغییردهنده فراموش شده |

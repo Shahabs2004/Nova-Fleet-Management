@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '../../auth/AuthContext'
+import { useAuth } from '../../auth/useAuth'
 import { api } from '../../lib/api'
 import { faNumber, formatFaDate } from '../../lib/date'
 import { maintenancePath, pixelAsset, type ServiceRecord } from '../../lib/maintenance'

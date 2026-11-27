@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import { formatFaDate } from '../lib/date'
 import { VEHICLE_STATUS } from '../lib/labels'
 import type { DriverOptionDto, PagedResult, VehicleCompositeCreateRequest, VehicleCompositeUpdateRequest, VehicleDto } from '../lib/types'
 import { EmptyState, Modal, PageHeader, Pagination, Spinner } from '../components/ui'
-import { Plate, PLATE_LETTER_GROUPS } from '../components/Plate'
+import { Plate } from '../components/Plate'
+import { PLATE_LETTER_GROUPS } from '../lib/plate'
 
 const emptyPlate = { brand: '', model: '', plateFirstTwo: '', plateLetter: '', plateNextThree: '', plateIranCode: '' }
 

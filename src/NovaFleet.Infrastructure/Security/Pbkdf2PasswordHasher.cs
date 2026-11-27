@@ -34,7 +34,7 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
             return false;
         }
 
-        if (!int.TryParse(parts[1], out var iterations) || iterations <= 0)
+        if (!int.TryParse(parts[1], out var iterations) || iterations < Iterations)
         {
             return false;
         }
@@ -43,7 +43,12 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
         {
             var salt = Convert.FromBase64String(parts[2]);
             var expected = Convert.FromBase64String(parts[3]);
-            var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
+            if (salt.Length != SaltSize || expected.Length != KeySize)
+            {
+                return false;
+            }
+
+            var actual = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, KeySize);
             return CryptographicOperations.FixedTimeEquals(actual, expected);
         }
         catch (FormatException)

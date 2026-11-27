@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import { faNumber, formatFaDate } from '../lib/date'
 import { pixelAsset, stateLabels, type MaintenanceVehicle, type Template } from '../lib/maintenance'

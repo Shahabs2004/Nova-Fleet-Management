@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConnectionsSettingsTab } from './ConnectionsSettings'
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({ user: { username: 'settings.user' } }),
 }))
 
@@ -51,11 +51,13 @@ function response(status: number, body: unknown): Response {
 
 function setup() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  render(
+  const ui = (
     <QueryClientProvider client={queryClient}>
       <ConnectionsSettingsTab />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  const view = render(ui)
+  return { ...view, queryClient, rerender: () => view.rerender(ui) }
 }
 
 function card(title: string): HTMLElement {
@@ -149,6 +151,65 @@ describe('connection settings failed reads', () => {
     })
     const recovered = card(title)
     for (const test of tests) expect(within(recovered).getByRole('button', { name: test })).toBeEnabled()
+  })
+})
+
+describe('connection settings hydration', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('hydrates an empty database connection string after a successful refetch', async () => {
+    const databasePath = '/api/settings/connections/database'
+    let database = routes[databasePath] as { connectionString: string; isConfigured: boolean; source: string }
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const path = String(input)
+      if (path === databasePath) {
+        if (init?.method === 'PUT') {
+          database = { ...database, connectionString: '' }
+          return response(200, { restartRequired: true, hint: null })
+        }
+        return response(200, database)
+      }
+      if (path in routes) return response(200, routes[path])
+      throw new Error(`Unexpected request: ${path}`)
+    })
+
+    setup()
+    await screen.findByRole('heading', { name: 'پایگاه داده' })
+    const section = card('پایگاه داده')
+    const textarea = section.querySelector('textarea')
+    if (!textarea) throw new Error('Missing database connection textarea')
+    await waitFor(() => expect(textarea).toHaveValue('Server=example;Database=fleet;User Id=svc;Password=stored'))
+
+    fireEvent.click(within(section).getByRole('button', { name: 'ذخیره رشته اتصال' }))
+
+    await waitFor(() => expect(textarea).toHaveValue(''))
+  })
+
+  it('preserves an edited draft across an unrelated parent render', async () => {
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const path = String(input)
+      if (path in routes) return response(200, routes[path])
+      throw new Error(`Unexpected request: ${path}`)
+    })
+
+    const view = setup()
+    await screen.findByRole('heading', { name: 'پایگاه داده' })
+    const textarea = card('پایگاه داده').querySelector('textarea')
+    if (!textarea) throw new Error('Missing database connection textarea')
+    await waitFor(() => expect(textarea).toHaveValue('Server=example;Database=fleet;User Id=svc;Password=stored'))
+    fireEvent.change(textarea, { target: { value: 'unfinished draft' } })
+
+    view.rerender()
+
+    expect(textarea).toHaveValue('unfinished draft')
   })
 })
 

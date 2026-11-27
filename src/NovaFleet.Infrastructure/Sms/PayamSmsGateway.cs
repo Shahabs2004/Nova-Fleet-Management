@@ -388,6 +388,10 @@ public sealed class PayamSmsGateway(
             {
                 missing.Add("آدرس سرویس");
             }
+            else if (!Settings.SettingsWriters.IsValidEndpoint(Endpoint))
+            {
+                missing.Add("آدرس سرویس معتبر");
+            }
 
             if (string.IsNullOrWhiteSpace(Username))
             {

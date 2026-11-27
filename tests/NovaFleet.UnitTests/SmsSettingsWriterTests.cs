@@ -51,6 +51,45 @@ public sealed class SmsSettingsWriterTests : MissionTestBase
         Assert.Empty(settings.IndividualWrites);
     }
 
+    [Theory]
+    [InlineData("http://localhost/sms")]
+    [InlineData("http://localhost./sms")]
+    [InlineData("http://gateway.localhost/sms")]
+    [InlineData("http://127.0.0.1/sms")]
+    [InlineData("http://[::1]/sms")]
+    [InlineData("http://[fe80::1]/sms")]
+    [InlineData("http://[::]/sms")]
+    [InlineData("http://0.0.0.0/sms")]
+    [InlineData("http://224.0.0.1/sms")]
+    [InlineData("http://169.254.169.254/latest/meta-data")]
+    [InlineData("https://user:password@sms.example/rest")]
+    [InlineData("https://smsms.example/rest#fragment")]
+    public async Task WriteSmsAsync_RejectsUnsafeEndpointWithoutEnablingOrWriting(string endpoint)
+    {
+        await Runtime.SetAsync(SettingKeys.SmsEnabled, bool.FalseString);
+        var settings = new RecordingRuntimeSettings(Runtime);
+
+        await Assert.ThrowsAsync<ValidationAppException>(() => SettingsWriters.WriteSmsAsync(
+            settings, Request(endpoint: endpoint)));
+
+        Assert.False(await Runtime.GetBoolAsync(SettingKeys.SmsEnabled, true));
+        Assert.Empty(settings.Batches);
+        Assert.Empty(settings.IndividualWrites);
+    }
+
+    [Theory]
+    [InlineData("http://10.20.30.40/sms")]
+    [InlineData("http://sms.corp.local/rest")]
+    [InlineData("https://sms.example/rest?channel=1")]
+    public async Task WriteSmsAsync_AllowsApprovedInternalOrPublicHttpEndpoint(string endpoint)
+    {
+        var settings = new RecordingRuntimeSettings(Runtime);
+
+        await SettingsWriters.WriteSmsAsync(settings, Request(endpoint: endpoint));
+
+        Assert.Equal(endpoint, Assert.Single(settings.Batches).Single(write => write.Key == SettingKeys.SmsEndpoint).Value);
+    }
+
     [Fact]
     public async Task WriteSmsAsync_OmittedPasswordUsesStoredSecretAndCommitsOneOrderedBatch()
     {

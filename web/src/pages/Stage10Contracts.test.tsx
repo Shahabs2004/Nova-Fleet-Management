@@ -7,9 +7,9 @@ import { MissionDetailsPage } from './MissionDetailsPage'
 import { SmsPage } from './SmsPage'
 import { SettingsPage } from './SettingsPage'
 import { jalaliOf } from '../lib/date'
-import { jalaliValueToUtc } from '../components/JalaliDateField'
+import { jalaliValueToUtc } from '../lib/jalali'
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({ can: () => true, user: { username: 'stage10.user', displayName: 'آزمون' } }),
 }))
 

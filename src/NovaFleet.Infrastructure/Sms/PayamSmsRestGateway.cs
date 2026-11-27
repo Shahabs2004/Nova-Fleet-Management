@@ -340,6 +340,11 @@ public sealed class PayamSmsRestGateway(
         public string? MissingParts()
         {
             var missing = new List<string>();
+            if (!Settings.SettingsWriters.IsValidEndpoint(Endpoint))
+            {
+                missing.Add("آدرس سرویس معتبر");
+            }
+
             if (string.IsNullOrWhiteSpace(Organization))
             {
                 missing.Add("سازمان");

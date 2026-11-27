@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { useAuth } from '../auth/AuthContext'
+import { useState } from 'react'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import type {
   ConnectionTestResult,
@@ -254,15 +254,16 @@ function DatabaseCard() {
     queryKey: ['connections-database', user?.username],
     queryFn: () => api.get<DatabaseSettings>('/api/settings/connections/database'),
   })
+  const [source, setSource] = useState<DatabaseSettings | undefined>(undefined)
   const [value, setValue] = useState('')
   const [note, setNote] = useState<SettingsSaveResult | null>(null)
   const [test, setTest] = useState<ConnectionTestResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable value after the async read.
-    if (query.data?.connectionString) setValue(query.data.connectionString)
-  }, [query.data])
+  if (source !== query.data) {
+    setSource(query.data)
+    if (query.data) setValue(query.data.connectionString ?? '')
+  }
 
   const save = useMutation({
     mutationFn: () => {
@@ -334,6 +335,7 @@ function DirectoryCard() {
     queryKey: ['connections-directory', user?.username],
     queryFn: () => api.get<DirectorySettings>('/api/settings/connections/directory'),
   })
+  const [source, setSource] = useState<DirectorySettings | undefined>(undefined)
   const [draft, setDraft] = useState<DirectorySettings>(EMPTY_DIRECTORY)
   const [bindPassword, setBindPassword] = useState('')
   const [sample, setSample] = useState('')
@@ -341,10 +343,10 @@ function DirectoryCard() {
   const [test, setTest] = useState<ConnectionTestResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable draft after the async read.
+  if (source !== query.data) {
+    setSource(query.data)
     if (query.data) setDraft(query.data)
-  }, [query.data])
+  }
 
   const save = useMutation({
     mutationFn: () => {
@@ -444,6 +446,7 @@ function SmsCard() {
     queryKey: ['connections-sms', user?.username],
     queryFn: () => api.get<SmsConnectionSettings>('/api/settings/connections/sms'),
   })
+  const [source, setSource] = useState<SmsConnectionSettings | undefined>(undefined)
   const [draft, setDraft] = useState<SmsConnectionSettings>(EMPTY_SMS)
   const [password, setPassword] = useState('')
   const [clearPassword, setClearPassword] = useState(false)
@@ -453,10 +456,10 @@ function SmsCard() {
   const [sendNote, setSendNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect -- Hydrate the editable draft after the async read.
+  if (source !== query.data) {
+    setSource(query.data)
     if (query.data) setDraft(query.data)
-  }, [query.data])
+  }
 
   const save = useMutation({
     mutationFn: () => {

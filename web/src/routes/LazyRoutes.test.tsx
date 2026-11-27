@@ -5,7 +5,7 @@ import { createAppRoutes } from './AppRoutes'
 
 const loaded = vi.hoisted(() => ({ pages: [] as string[] }))
 
-vi.mock('../auth/AuthContext', () => ({
+vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({ user: { username: 'route.user' }, loading: false }),
 }))
 

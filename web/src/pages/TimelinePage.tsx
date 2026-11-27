@@ -2,11 +2,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
-import { JalaliDateField, jalaliValueToUtc, type JalaliDateValue } from '../components/JalaliDateField'
+import { JalaliDateField } from '../components/JalaliDateField'
+import { jalaliValueToUtc, type JalaliDateValue } from '../lib/jalali'
 import { EmptyState, Modal, PageHeader, Spinner } from '../components/ui'
 import { Plate } from '../components/Plate'
 import { Avatar } from '../components/Avatar'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { api } from '../lib/api'
 import {
   faWeekdayShort,
@@ -17,7 +18,6 @@ import {
   jalaliOf,
   tehranHour,
   tehranWeekdayIndex,
-  todayJalali,
   toFa,
 } from '../lib/date'
 import { MISSION_STATUS, MISSION_TYPE } from '../lib/labels'
@@ -100,7 +100,8 @@ export function TimelinePage() {
   const { can, user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [year] = todayJalali()
+  const [now, setNow] = useState(() => Date.now())
+  const year = jalaliOf(new Date(now))[0]
   const [from, setFrom] = useState<JalaliDateValue | null>(() => shiftDays(-7))
   const [to, setTo] = useState<JalaliDateValue | null>(() => shiftDays(14))
   const [driverId, setDriverId] = useState('')
@@ -109,6 +110,11 @@ export function TimelinePage() {
   const [onlyBusyDrivers, setOnlyBusyDrivers] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [tip, setTip] = useState<{ mission: TimelineMission; x: number; y: number; below: boolean } | null>(null)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const showTip = (el: HTMLElement, mission: TimelineMission) => {
     const r = el.getBoundingClientRect()
@@ -160,7 +166,7 @@ export function TimelinePage() {
     const empty = { cells: [] as TimeCell[], bands: [] as MonthBand[] }
     if (!enabled || rangeEnd <= rangeStart) return empty
 
-    const today = todayJalali()
+    const today = jalaliOf(new Date(now))
     const list: TimeCell[] = []
     for (let cursor = rangeStart; cursor < rangeEnd; cursor += cellHours * HOUR_MS) {
       const iso = new Date(cursor).toISOString()
@@ -189,7 +195,7 @@ export function TimelinePage() {
     }
 
     return { cells: list, bands: groups }
-  }, [enabled, rangeStart, rangeEnd, cellHours, cellWidth])
+  }, [enabled, rangeStart, rangeEnd, cellHours, cellWidth, now])
 
   /* ریل همیشه عرض ظرف را پر می‌کند: اگر جمع ستون‌ها کمتر از فضای موجود است مقیاس بالا می‌رود و اگر بیشتر است همان ۱ می‌ماند و اسکرول افقی فعال می‌شود. */
   const naturalWidth = cells.length * cellWidth
@@ -250,8 +256,7 @@ export function TimelinePage() {
   }, [data, drivers.data, onlyBusyDrivers])
 
   const totalMissions = data?.length ?? 0
-  // oxlint-disable-next-line react/purity -- Keep the today marker aligned with the current time on each render.
-  const todayOffset = ((Date.now() - rangeStart) / HOUR_MS) * pxPerHour * scale
+  const todayOffset = ((now - rangeStart) / HOUR_MS) * pxPerHour * scale
   const showToday = hasGrid && todayOffset >= 0 && todayOffset <= trackWidth
 
   const selected = useQuery({

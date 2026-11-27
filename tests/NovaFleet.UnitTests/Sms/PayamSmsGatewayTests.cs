@@ -224,6 +224,24 @@ public sealed class PayamSmsGatewayTests : MissionTestBase
         Assert.Equal(0, handler.CallCount);
     }
 
+    [Theory]
+    [InlineData("http://127.0.0.1/sms")]
+    [InlineData("http://169.254.169.254/latest/meta-data")]
+    [InlineData("https://user:password@sms.example/rest")]
+    public async Task Send_RejectsUnsafeStoredEndpointWithoutCallingTheProvider(string endpoint)
+    {
+        handler = new StubHttpMessageHandler(SendResponse("700123"));
+        var gateway = Gateway();
+        await ConfigureConnectionAsync();
+        await Runtime.SetAsync(SettingKeys.SmsEndpoint, endpoint);
+
+        var result = await gateway.SendAsync(Message);
+
+        Assert.False(result.Accepted);
+        Assert.Contains("آدرس سرویس", result.Error, StringComparison.Ordinal);
+        Assert.Equal(0, handler.CallCount);
+    }
+
     [Fact]
     public async Task Send_RejectsAMobileThatCannotBecomeCountryPrefixedWithoutCallingTheProvider()
     {

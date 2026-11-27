@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { AvatarEditor } from './AvatarEditor'
 import { Spinner } from './ui'
 import { api } from '../lib/api'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import type { OrgUnitDto, RoleDto, UserDetails } from '../lib/types'
 
 interface Props {

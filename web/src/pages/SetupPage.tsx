@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../lib/api'
+import { readOrganizationLogo } from '../lib/organizationLogo'
 import type { SetupDatabaseResult, SetupDatabaseState, SetupStatus } from '../lib/types'
 
 type StepKey = 'database' | 'directory' | 'sms' | 'organization' | 'policy' | 'summary'
@@ -183,7 +184,7 @@ export function SetupPage() {
               )}
               {step === 1 && <DirectoryStep form={form} set={set} />}
               {step === 2 && <SmsStep form={form} set={set} />}
-              {step === 3 && <OrganizationStep form={form} set={set} />}
+              {step === 3 && <OrganizationStep form={form} set={set} setError={setError} />}
               {step === 4 && <PolicyStep form={form} set={set} />}
               {step === 5 && <SummaryStep form={form} />}
 
@@ -490,17 +491,16 @@ function SmsStep({ form, set }: { form: Form; set: Setter }) {
   )
 }
 
-function OrganizationStep({ form, set }: { form: Form; set: Setter }) {
+function OrganizationStep({ form, set, setError }: { form: Form; set: Setter; setError: (message: string | null) => void }) {
   const logoInputRef = useRef<HTMLInputElement>(null)
-  const pickLogo = (file: File | undefined) => {
+  const pickLogo = async (file: File | undefined) => {
     if (!file) return
-    if (file.size > 512 * 1024) {
-      set('logoDataUrl')(null)
-      return
+    try {
+      set('logoDataUrl')(await readOrganizationLogo(file))
+      setError(null)
+    } catch (error) {
+      setError((error as Error).message)
     }
-    const reader = new FileReader()
-    reader.onload = () => set('logoDataUrl')(typeof reader.result === 'string' ? reader.result : null)
-    reader.readAsDataURL(file)
   }
 
   return (
@@ -509,7 +509,7 @@ function OrganizationStep({ form, set }: { form: Form; set: Setter }) {
         <input className="input" value={form.organizationName} onChange={(e) => set('organizationName')(e.target.value)} />
       </Field>
 
-      <Field label="لوگو">
+      <Field label="لوگو" hint="PNG مربع، حداکثر ۲۵۶ × ۲۵۶ پیکسل و ۲۵۶ کیلوبایت.">
         <div className="flex items-center gap-3">
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
             {form.logoDataUrl ? (
@@ -521,7 +521,7 @@ function OrganizationStep({ form, set }: { form: Form; set: Setter }) {
           <input
             ref={logoInputRef}
             type="file"
-            accept="image/png,image/jpeg,image/svg+xml"
+            accept="image/png"
             className="hidden"
             onChange={(e) => {
               pickLogo(e.target.files?.[0])

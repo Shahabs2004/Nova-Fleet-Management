@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { useAuth } from '../../auth/AuthContext'
+import { useAuth } from '../../auth/useAuth'
 import { api } from '../../lib/api'
 import { faNumber, formatFaDate, toFa } from '../../lib/date'
 import { maintenancePath, type MaintenanceReport } from '../../lib/maintenance'
